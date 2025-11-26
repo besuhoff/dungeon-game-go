@@ -7,11 +7,16 @@ A real-time authoritative multiplayer shooter game server written in Go with Web
 - **Authoritative Server Architecture**: All game logic runs on the server to prevent cheating
 - **Real-time Multiplayer**: WebSocket-based communication for low-latency gameplay
 - **Core Game Mechanics**:
-  - Player movement (WASD controls)
+  - Player movement with rotation-based controls (forward/backward in facing direction)
+  - Lives system with invulnerability after taking damage
+  - Bullet recharge system (6 bullets, recharge over time)
   - Shooting mechanics with fire rate limiting
-  - Hit detection and collision system
-  - Health and scoring system
-  - Map boundaries
+  - Hit detection and collision system with sliding collision resolution
+  - Health and scoring system with monetary rewards
+  - Enemy AI with patrol and shooting behavior
+  - Procedural wall generation in chunks
+  - Power-ups: Aid kits (heal) and Night vision goggles
+  - Map boundaries with chunk-based world generation
 - **60 FPS Game Loop**: Smooth server-side physics and updates
 - **Scalable Design**: Concurrent client handling with goroutines
 
@@ -122,9 +127,13 @@ The server will start on `http://localhost:8080`
         "username": "PlayerName",
         "position": { "x": 100, "y": 200 },
         "velocity": { "x": 0, "y": 0 },
-        "health": 80,
+        "lives": 5,
         "score": 3,
-        "direction": 0.5,
+        "money": 150.0,
+        "kills": 15,
+        "rotation": 90.0,
+        "bulletsLeft": 4,
+        "nightVisionTimer": 0,
         "isAlive": true
       }
     },
@@ -132,9 +141,35 @@ The server will start on `http://localhost:8080`
       "bullet-id": {
         "id": "uuid",
         "position": { "x": 150, "y": 220 },
-        "velocity": { "x": 500, "y": 0 },
+        "velocity": { "x": 420, "y": 0 },
         "ownerId": "player-id",
-        "damage": 20
+        "damage": 1
+      }
+    },
+    "walls": {
+      "wall-id": {
+        "id": "uuid",
+        "position": { "x": 500, "y": 500 },
+        "width": 30,
+        "height": 250,
+        "orientation": "vertical"
+      }
+    },
+    "enemies": {
+      "enemy-id": {
+        "id": "uuid",
+        "position": { "x": 520, "y": 600 },
+        "rotation": 90.0,
+        "lives": 1,
+        "wallId": "wall-id",
+        "isDead": false
+      }
+    },
+    "bonuses": {
+      "bonus-id": {
+        "id": "uuid",
+        "position": { "x": 300, "y": 400 },
+        "type": "aid_kit"
       }
     },
     "timestamp": 1234567890
@@ -171,15 +206,35 @@ The server will start on `http://localhost:8080`
 Key constants can be modified in `internal/types/types.go`:
 
 ```go
-MaxHealth        = 100              // Player starting health
-BulletSpeed      = 500.0            // Bullet velocity (units/sec)
-BulletDamage     = 20               // Damage per hit
-FireRate         = 200ms            // Minimum time between shots
-PlayerSpeed      = 200.0            // Player movement speed
-MapWidth         = 2000.0           // Map width
-MapHeight        = 2000.0           // Map height
-PlayerRadius     = 20.0             // Player collision radius
-BulletRadius     = 5.0              // Bullet collision radius
+// Player constants
+PlayerLives               = 5        // Starting lives
+PlayerSpeed               = 300.0    // Units per second
+PlayerSize                = 24.0     // Collision size
+PlayerRotationSpeed       = 180.0    // Degrees per second
+PlayerShootDelay          = 0.2      // Seconds between shots
+PlayerMaxBullets          = 6        // Max bullets before reload
+PlayerBulletRechargeTime  = 1.0      // Seconds per bullet recharge
+PlayerBulletSpeed         = 420.0    // Bullet velocity
+PlayerInvulnerabilityTime = 1.0      // Seconds after hit
+
+// Enemy constants
+EnemySpeed            = 120.0    // Patrol speed
+EnemySize             = 24.0     // Collision size
+EnemyLives            = 1        // Health
+EnemyShootDelay       = 1.0      // Seconds between shots
+EnemyBulletSpeed      = 240.0    // Bullet velocity
+EnemyReward           = 10.0     // Money dropped
+EnemyDropChance       = 0.3      // 30% bonus drop chance
+
+// Bonus constants
+AidKitHealAmount  = 2        // Lives restored
+GogglesActiveTime = 20.0     // Seconds of night vision
+
+// World constants
+MapWidth  = 10000.0    // World width
+MapHeight = 10000.0    // World height
+ChunkSize = 800.0      // Chunk generation size
+TorchRadius = 200.0    // Vision radius
 ```
 
 ## Building for Production
