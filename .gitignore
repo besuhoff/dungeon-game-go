@@ -31,6 +31,7 @@ Thumbs.db
 # Build output
 game-server
 dungeon-game-go
+test-client
 bin/
 dist/
 
@@ -40,3 +41,7 @@ dist/
 # Environment variables
 .env
 .env.local
+
+# Generated protobuf files (keep them in git for convenience)
+# *.pb.go
+

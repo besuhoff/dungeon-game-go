@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package protocol;
+
+option go_package = "github.com/besuhoff/dungeon-game-go/internal/protocol";
+
+// Message types
+enum MessageType {
+  UNKNOWN = 0;
+  CONNECT = 1;
+  INPUT = 2;
+  SHOOT = 3;
+  DISCONNECT = 4;
+  GAME_STATE = 5;
+  PLAYER_JOIN = 6;
+  PLAYER_LEAVE = 7;
+  PLAYER_HIT = 8;
+  PLAYER_DEATH = 9;
+  ERROR = 10;
+}
+
+// Common structures
+message Vector2 {
+  double x = 1;
+  double y = 2;
+}
+
+message Player {
+  string id = 1;
+  string username = 2;
+  Vector2 position = 3;
+  Vector2 velocity = 4;
+  int32 lives = 5;
+  int32 score = 6;
+  double money = 7;
+  int32 kills = 8;
+  double rotation = 9;
+  int32 bullets_left = 10;
+  double night_vision_timer = 11;
+  bool is_alive = 12;
+}
+
+message Bullet {
+  string id = 1;
+  Vector2 position = 2;
+  Vector2 velocity = 3;
+  string owner_id = 4;
+  int32 damage = 5;
+}
+
+message Wall {
+  string id = 1;
+  Vector2 position = 2;
+  double width = 3;
+  double height = 4;
+  string orientation = 5;
+}
+
+message Enemy {
+  string id = 1;
+  Vector2 position = 2;
+  double rotation = 3;
+  int32 lives = 4;
+  string wall_id = 5;
+  bool is_dead = 6;
+}
+
+message Bonus {
+  string id = 1;
+  Vector2 position = 2;
+  string type = 3;
+}
+
+// Client -> Server messages
+message ConnectMessage {
+  string username = 1;
+}
+
+message InputMessage {
+  bool forward = 1;
+  bool backward = 2;
+  bool left = 3;
+  bool right = 4;
+  double direction = 5;
+}
+
+message ShootMessage {
+  double direction = 1;
+}
+
+// Server -> Client messages
+message GameState {
+  map<string, Player> players = 1;
+  map<string, Bullet> bullets = 2;
+  map<string, Wall> walls = 3;
+  map<string, Enemy> enemies = 4;
+  map<string, Bonus> bonuses = 5;
+  int64 timestamp = 6;
+}
+
+message PlayerJoinMessage {
+  Player player = 1;
+}
+
+message PlayerLeaveMessage {
+  string player_id = 1;
+}
+
+message PlayerHitMessage {
+  string player_id = 1;
+  string attacker_id = 2;
+  int32 damage = 3;
+  int32 new_lives = 4;
+}
+
+message PlayerDeathMessage {
+  string player_id = 1;
+  string killer_id = 2;
+}
+
+message ErrorMessage {
+  string message = 1;
+}
+
+// Wrapper message
+message GameMessage {
+  MessageType type = 1;
+  oneof payload {
+    ConnectMessage connect = 2;
+    InputMessage input = 3;
+    ShootMessage shoot = 4;
+    GameState game_state = 5;
+    PlayerJoinMessage player_join = 6;
+    PlayerLeaveMessage player_leave = 7;
+    PlayerHitMessage player_hit = 8;
+    PlayerDeathMessage player_death = 9;
+    ErrorMessage error = 10;
+  }
+}

@@ -9,7 +9,9 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/proto"
 	"github.com/besuhoff/dungeon-game-go/internal/game"
+	"github.com/besuhoff/dungeon-game-go/internal/protocol"
 	"github.com/besuhoff/dungeon-game-go/internal/types"
 )
 
@@ -21,11 +23,12 @@ var upgrader = websocket.Upgrader{
 
 // Client represents a connected client
 type Client struct {
-	ID       string
-	Username string
-	Conn     *websocket.Conn
-	Send     chan []byte
-	Server   *GameServer
+	ID         string
+	Username   string
+	Conn       *websocket.Conn
+	Send       chan []byte
+	Server     *GameServer
+	UseBinary  bool // Whether client prefers binary protocol
 }
 
 // GameServer manages the game and all clients
@@ -163,11 +166,22 @@ func (gs *GameServer) broadcastJSON(v interface{}) {
 
 func (gs *GameServer) broadcastGameState() {
 	gameState := gs.engine.GetGameState()
-	msg := types.Message{
-		Type:    types.MsgTypeGameState,
-		Payload: gameState,
+	
+	gs.mu.RLock()
+	defer gs.mu.RUnlock()
+	
+	// Send to each client in their preferred format
+	for _, client := range gs.clients {
+		if client.UseBinary {
+			client.sendBinaryGameState(gameState)
+		} else {
+			msg := types.Message{
+				Type:    types.MsgTypeGameState,
+				Payload: gameState,
+			}
+			client.SendJSON(msg)
+		}
 	}
-	gs.broadcastJSON(msg)
 }
 
 // HandleWebSocket handles WebSocket connections
@@ -178,13 +192,19 @@ func (gs *GameServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if client wants binary protocol (via query parameter)
+	useBinary := r.URL.Query().Get("protocol") == "binary"
+
 	client := &Client{
-		ID:       uuid.New().String(),
-		Username: "Player_" + uuid.New().String()[:8],
-		Conn:     conn,
-		Send:     make(chan []byte, 256),
-		Server:   gs,
+		ID:        uuid.New().String(),
+		Username:  "Player_" + uuid.New().String()[:8],
+		Conn:      conn,
+		Send:      make(chan []byte, 256),
+		Server:    gs,
+		UseBinary: useBinary,
 	}
+
+	log.Printf("New client connected (ID: %s, Binary: %v)", client.ID, useBinary)
 
 	// Start client goroutines
 	go client.writePump()
@@ -208,7 +228,7 @@ func (c *Client) readPump() {
 	})
 
 	for {
-		_, message, err := c.Conn.ReadMessage()
+		messageType, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("WebSocket error: %v", err)
@@ -216,7 +236,12 @@ func (c *Client) readPump() {
 			break
 		}
 
-		c.handleMessage(message)
+		// Handle binary or text messages
+		if messageType == websocket.BinaryMessage {
+			c.handleBinaryMessage(message)
+		} else {
+			c.handleJSONMessage(message)
+		}
 	}
 }
 
@@ -236,7 +261,13 @@ func (c *Client) writePump() {
 				return
 			}
 
-			if err := c.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
+			// Send as binary or text based on client preference
+			msgType := websocket.TextMessage
+			if c.UseBinary {
+				msgType = websocket.BinaryMessage
+			}
+
+			if err := c.Conn.WriteMessage(msgType, message); err != nil {
 				return
 			}
 
@@ -249,10 +280,10 @@ func (c *Client) writePump() {
 	}
 }
 
-func (c *Client) handleMessage(data []byte) {
+func (c *Client) handleJSONMessage(data []byte) {
 	var msg types.Message
 	if err := json.Unmarshal(data, &msg); err != nil {
-		log.Printf("Error unmarshaling message: %v", err)
+		log.Printf("Error unmarshaling JSON message: %v", err)
 		return
 	}
 
@@ -281,10 +312,78 @@ func (c *Client) handleMessage(data []byte) {
 	}
 }
 
+func (c *Client) handleBinaryMessage(data []byte) {
+	var msg protocol.GameMessage
+	if err := proto.Unmarshal(data, &msg); err != nil {
+		log.Printf("Error unmarshaling binary message: %v", err)
+		return
+	}
+
+	switch msg.Type {
+	case protocol.MessageType_CONNECT:
+		if connect := msg.GetConnect(); connect != nil {
+			payload := protocol.FromProtoConnect(connect)
+			if payload.Username != "" {
+				c.Username = payload.Username
+				if player, exists := c.Server.engine.GetPlayer(c.ID); exists {
+					player.Username = payload.Username
+				}
+			}
+		}
+
+	case protocol.MessageType_INPUT:
+		if input := msg.GetInput(); input != nil {
+			payload := protocol.FromProtoInput(input)
+			c.Server.engine.UpdatePlayerInput(c.ID, payload)
+		}
+
+	case protocol.MessageType_SHOOT:
+		if shoot := msg.GetShoot(); shoot != nil {
+			payload := protocol.FromProtoShoot(shoot)
+			c.Server.engine.Shoot(c.ID, payload.Direction)
+		}
+	}
+}
+
 func (c *Client) SendJSON(v interface{}) {
 	data, err := json.Marshal(v)
 	if err != nil {
 		log.Printf("Error marshaling message: %v", err)
+		return
+	}
+	select {
+	case c.Send <- data:
+	default:
+		// Buffer full
+	}
+}
+
+func (c *Client) sendBinaryGameState(gameState types.GameState) {
+	protoState := protocol.ToProtoGameState(gameState)
+	msg := &protocol.GameMessage{
+		Type: protocol.MessageType_GAME_STATE,
+		Payload: &protocol.GameMessage_GameState{
+			GameState: protoState,
+		},
+	}
+
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		log.Printf("Error marshaling binary game state: %v", err)
+		return
+	}
+
+	select {
+	case c.Send <- data:
+	default:
+		// Buffer full
+	}
+}
+
+func (c *Client) SendBinary(msg *protocol.GameMessage) {
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		log.Printf("Error marshaling binary message: %v", err)
 		return
 	}
 	select {

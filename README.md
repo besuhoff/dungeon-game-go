@@ -6,6 +6,7 @@ A real-time authoritative multiplayer shooter game server written in Go with Web
 
 - **Authoritative Server Architecture**: All game logic runs on the server to prevent cheating
 - **Real-time Multiplayer**: WebSocket-based communication for low-latency gameplay
+- **Binary Protocol Support**: Optional Protocol Buffers encoding for 60% bandwidth reduction (see [Binary Protocol section](docs/binary-protocol.md))
 - **Core Game Mechanics**:
   - Player movement with rotation-based controls (forward/backward in facing direction)
   - Lives system with invulnerability after taking damage
@@ -67,8 +68,11 @@ The server will start on `http://localhost:8080`
 
 ## API Endpoints
 
-- **WebSocket**: `ws://localhost:8080/ws` - Game connection endpoint
+- **WebSocket (JSON)**: `ws://localhost:8080/ws` - Game connection with JSON protocol
+- **WebSocket (Binary)**: `ws://localhost:8080/ws?protocol=binary` - Game connection with Protocol Buffers (60% less bandwidth)
 - **Health Check**: `http://localhost:8080/health` - Server health status
+
+For details on binary protocol usage, see [BINARY_PROTOCOL.md](BINARY_PROTOCOL.md).
 
 ## Client-Server Protocol
 
@@ -250,6 +254,23 @@ Run the compiled binary:
 ```bash
 ./game-server
 ```
+
+## Testing
+
+### Test Binary Protocol
+
+```bash
+# Run server
+go run main.go
+
+# In another terminal, run test client with binary protocol
+go run cmd/test-client/main.go -binary
+
+# Or test with JSON protocol (default)
+go run cmd/test-client/main.go
+```
+
+The test client will connect, send player input, and display received game states.
 
 ## Development
 
