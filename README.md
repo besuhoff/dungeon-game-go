@@ -72,7 +72,7 @@ The server will start on `http://localhost:8080`
 - **WebSocket (Binary)**: `ws://localhost:8080/ws?protocol=binary` - Game connection with Protocol Buffers (60% less bandwidth)
 - **Health Check**: `http://localhost:8080/health` - Server health status
 
-For details on binary protocol usage, see [BINARY_PROTOCOL.md](BINARY_PROTOCOL.md).
+For details on binary protocol usage, see [Binary Protocol](docs/binary-protocol.md).
 
 ## Client-Server Protocol
 

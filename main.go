@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -10,7 +12,24 @@ import (
 	"github.com/besuhoff/dungeon-game-go/internal/server"
 )
 
+var (
+	host     = flag.String("host", getEnv("HOST", "localhost"), "Host to listen on")
+	port     = flag.String("port", getEnv("PORT", "8080"), "Port to listen on")
+	certFile = flag.String("cert", getEnv("TLS_CERT", ""), "TLS certificate file (required for HTTPS)")
+	keyFile  = flag.String("key", getEnv("TLS_KEY", ""), "TLS key file (required for HTTPS)")
+	useTLS   = flag.Bool("tls", getEnv("USE_TLS", "") == "true", "Enable TLS/HTTPS")
+)
+
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
 func main() {
+	flag.Parse()
+
 	// Create game server
 	gameServer := server.NewGameServer()
 	
@@ -24,15 +43,35 @@ func main() {
 		w.Write([]byte("OK"))
 	})
 
-	// Start HTTP server
-	port := ":8080"
-	log.Printf("Starting game server on %s", port)
+	// Prepare address
+	addr := fmt.Sprintf("%s:%s", *host, *port)
 	
+	// Start HTTP/HTTPS server
 	go func() {
-		if err := http.ListenAndServe(port, nil); err != nil {
-			log.Fatal("ListenAndServe error: ", err)
+		if *useTLS || *certFile != "" {
+			if *certFile == "" || *keyFile == "" {
+				log.Fatal("TLS enabled but certificate or key file not provided. Use -cert and -key flags or TLS_CERT and TLS_KEY environment variables.")
+			}
+			log.Printf("Starting game server with TLS on %s", addr)
+			if err := http.ListenAndServeTLS(addr, *certFile, *keyFile, nil); err != nil {
+				log.Fatal("ListenAndServeTLS error: ", err)
+			}
+		} else {
+			log.Printf("Starting game server on %s", addr)
+			if err := http.ListenAndServe(addr, nil); err != nil {
+				log.Fatal("ListenAndServe error: ", err)
+			}
 		}
 	}()
+
+	log.Println("Server started successfully")
+	if *useTLS {
+		log.Printf("WebSocket (JSON): wss://your-domain:%s/ws", *port)
+		log.Printf("WebSocket (Binary): wss://your-domain:%s/ws?protocol=binary", *port)
+	} else {
+		log.Printf("WebSocket (JSON): ws://localhost:%s/ws", *port)
+		log.Printf("WebSocket (Binary): ws://localhost:%s/ws?protocol=binary", *port)
+	}
 
 	// Wait for interrupt signal
 	sigChan := make(chan os.Signal, 1)
