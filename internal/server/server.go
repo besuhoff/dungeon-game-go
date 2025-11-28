@@ -1,15 +1,21 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"google.golang.org/protobuf/proto"
+	
+	"github.com/besuhoff/dungeon-game-go/internal/auth"
+	"github.com/besuhoff/dungeon-game-go/internal/db"
 	"github.com/besuhoff/dungeon-game-go/internal/game"
 	"github.com/besuhoff/dungeon-game-go/internal/protocol"
 	"github.com/besuhoff/dungeon-game-go/internal/types"
@@ -24,6 +30,7 @@ var upgrader = websocket.Upgrader{
 // Client represents a connected client
 type Client struct {
 	ID         string
+	UserID     primitive.ObjectID // MongoDB User ID
 	Username   string
 	Conn       *websocket.Conn
 	Send       chan []byte
@@ -186,6 +193,40 @@ func (gs *GameServer) broadcastGameState() {
 
 // HandleWebSocket handles WebSocket connections
 func (gs *GameServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	// Extract and validate JWT token from query parameters
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		// Check Authorization header as fallback
+		authHeader := r.Header.Get("Authorization")
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			token = strings.TrimPrefix(authHeader, "Bearer ")
+		}
+	}
+	
+	if token == "" {
+		http.Error(w, "Unauthorized: missing token", http.StatusUnauthorized)
+		return
+	}
+
+	// Validate JWT token
+	userID, err := auth.ValidateToken(token)
+	if err != nil {
+		log.Printf("Token validation error: %v", err)
+		http.Error(w, "Unauthorized: invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	// Fetch user from database
+	ctx := context.Background()
+	userRepo := db.NewUserRepository()
+	user, err := userRepo.FindByID(ctx, userID)
+	if err != nil {
+		log.Printf("User lookup error: %v", err)
+		http.Error(w, "Unauthorized: user not found", http.StatusUnauthorized)
+		return
+	}
+
+	// Upgrade to WebSocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("WebSocket upgrade error: %v", err)
@@ -197,7 +238,8 @@ func (gs *GameServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	client := &Client{
 		ID:        uuid.New().String(),
-		Username:  "Player_" + uuid.New().String()[:8],
+		UserID:    user.ID,
+		Username:  user.Username,
 		Conn:      conn,
 		Send:      make(chan []byte, 256),
 		Server:    gs,

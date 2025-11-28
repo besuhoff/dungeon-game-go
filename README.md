@@ -1,12 +1,21 @@
 # Multiplayer Shooter Game Server
 
-A real-time authoritative multiplayer shooter game server written in Go with WebSocket support.
+A real-time authoritative multiplayer shooter game server written in Go with WebSocket support, Google OAuth authentication, and MongoDB persistence.
 
 ## Features
 
+- **Authentication & Authorization**:
+  - Google OAuth 2.0 integration for user authentication
+  - JWT (JSON Web Token) based session management
+  - MongoDB user persistence with automatic account creation
+  - Secure WebSocket connections with token validation
 - **Authoritative Server Architecture**: All game logic runs on the server to prevent cheating
 - **Real-time Multiplayer**: WebSocket-based communication for low-latency gameplay
 - **Binary Protocol Support**: Optional Protocol Buffers encoding for 60% bandwidth reduction (see [Binary Protocol section](docs/binary-protocol.md))
+- **Database Persistence**:
+  - MongoDB integration for user data and game sessions
+  - User profiles with stats, progress tracking
+  - Game session management and state persistence
 - **Core Game Mechanics**:
   - Player movement with rotation-based controls (forward/backward in facing direction)
   - Lives system with invulnerability after taking damage
@@ -27,19 +36,34 @@ A real-time authoritative multiplayer shooter game server written in Go with Web
 dungeon-game-go/
 ├── main.go                          # Server entry point
 ├── go.mod                           # Go module definition
+├── .env.example                     # Environment variables template
 ├── internal/
+│   ├── auth/
+│   │   ├── jwt.go                  # JWT token generation and validation
+│   │   └── google.go               # Google OAuth integration
+│   ├── config/
+│   │   └── config.go               # Configuration management
+│   ├── db/
+│   │   ├── connection.go           # MongoDB connection
+│   │   └── models.go               # Database models (User, GameSession)
 │   ├── game/
 │   │   └── engine.go               # Game logic and physics
 │   ├── server/
 │   │   └── server.go               # WebSocket server and client handling
-│   └── types/
-│       ├── types.go                # Game entities (Player, Bullet, etc.)
-│       └── messages.go             # Client-server message protocol
+│   ├── types/
+│   │   ├── types.go                # Game entities (Player, Bullet, etc.)
+│   │   └── messages.go             # Client-server message protocol
+│   └── protocol/
+│       ├── messages.proto          # Protocol Buffers schema
+│       ├── messages.pb.go          # Generated protobuf code
+│       └── converters.go           # Type conversions
 ```
 
 ## Prerequisites
 
 - Go 1.21 or higher
+- MongoDB (Atlas or local instance)
+- Google OAuth credentials ([Get them here](https://console.cloud.google.com/))
 - Git (for dependency management)
 
 ## Installation
@@ -56,6 +80,49 @@ cd /Users/spereverziev/project/walknhit/dungeon-game-go
 go mod download
 ```
 
+3. Set up environment variables:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your configuration:
+
+```bash
+# MongoDB Connection
+MONGODB_URL=mongodb+srv://username:password@cluster.mongodb.net/
+
+# JWT Secret (generate with: openssl rand -base64 64)
+SECRET_KEY=your-secret-key-here
+
+# Google OAuth Credentials
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+
+# API Configuration
+API_BASE_URL=http://localhost:8080
+FRONTEND_URL=http://localhost:3000
+
+# JWT Token Expiration (in minutes, default 8 days)
+ACCESS_TOKEN_EXPIRE_MINUTES=11520
+
+# Server Configuration
+PORT=8080
+USE_TLS=false
+```
+
+### Setting up Google OAuth
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing
+3. Enable Google+ API
+4. Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
+5. Set application type to "Web application"
+6. Add authorized redirect URIs:
+   - `http://localhost:8080/api/v1/auth/google/callback` (development)
+   - `https://yourdomain.com/api/v1/auth/google/callback` (production)
+7. Copy Client ID and Client Secret to your `.env` file
+
 ## Running the Server
 
 Start the server:
@@ -68,11 +135,33 @@ The server will start on `http://localhost:8080`
 
 ## API Endpoints
 
-- **WebSocket (JSON)**: `ws://localhost:8080/ws` - Game connection with JSON protocol
-- **WebSocket (Binary)**: `ws://localhost:8080/ws?protocol=binary` - Game connection with Protocol Buffers (60% less bandwidth)
-- **Health Check**: `http://localhost:8080/health` - Server health status
+### Authentication
 
-For details on binary protocol usage, see [Binary Protocol](docs/binary-protocol.md).
+- **Get Google Auth URL**: `GET /api/v1/auth/google/url`
+  - Returns: `{ "url": "https://accounts.google.com/...", "state": "..." }`
+  - Use this URL to redirect users to Google login
+- **Google OAuth Callback**: `GET /api/v1/auth/google/callback?code=xxx&state=xxx`
+  - Handles the OAuth callback from Google
+  - Creates/finds user in database
+  - Returns JWT token by redirecting to: `{FRONTEND_URL}?token={jwt}`
+
+### WebSocket Connection
+
+- **WebSocket (JSON)**: `ws://localhost:8080/ws?token={jwt}` - Game connection with JSON protocol
+- **WebSocket (Binary)**: `ws://localhost:8080/ws?token={jwt}&protocol=binary` - Game connection with Protocol Buffers
+
+**Authentication**: Include JWT token in query parameter:
+
+```javascript
+const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+const ws = new WebSocket(`ws://localhost:8080/ws?token=${token}`);
+```
+
+### Health Check
+
+- **Health Check**: `GET /health` - Server health status
+
+For details on binary protocol usage, see [Binary Protocol Documentation](BINARY_PROTOCOL.md).
 
 ## Client-Server Protocol
 

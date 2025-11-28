@@ -146,7 +146,6 @@ func FromProtoInput(input *InputMessage) types.InputPayload {
 		Backward:  input.Backward,
 		Left:      input.Left,
 		Right:     input.Right,
-		Direction: input.Direction,
 	}
 }
 

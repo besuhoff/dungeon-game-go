@@ -9,6 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/besuhoff/dungeon-game-go/internal/auth"
+	"github.com/besuhoff/dungeon-game-go/internal/config"
+	"github.com/besuhoff/dungeon-game-go/internal/db"
 	"github.com/besuhoff/dungeon-game-go/internal/server"
 )
 
@@ -30,14 +33,30 @@ func getEnv(key, defaultValue string) string {
 func main() {
 	flag.Parse()
 
+	// Load configuration
+	cfg := config.LoadConfig()
+	
+	// Connect to MongoDB
+	if err := db.Connect(cfg.MongoDBURL); err != nil {
+		log.Fatal("Failed to connect to MongoDB: ", err)
+	}
+	defer db.Disconnect()
+	
+	log.Println("MongoDB connected successfully")
+
 	// Create game server
 	gameServer := server.NewGameServer()
 	
 	// Start game loop in background
 	go gameServer.Run()
 
+	// Setup auth handlers
+	googleAuth := auth.NewGoogleAuthHandler()
+	
 	// Setup HTTP routes
 	http.HandleFunc("/ws", gameServer.HandleWebSocket)
+	http.HandleFunc("/api/v1/auth/google/url", googleAuth.HandleGetAuthURL)
+	http.HandleFunc("/api/v1/auth/google/callback", googleAuth.HandleCallback)
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
