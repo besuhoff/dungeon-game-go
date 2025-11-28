@@ -11,9 +11,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// Engine handles the game logic
+// Engine handles the game logic for a specific session
 type Engine struct {
 	mu          sync.RWMutex
+	sessionID   string // Session identifier
 	players     map[string]*types.Player
 	bullets     map[string]*types.Bullet
 	walls       map[string]*types.Wall
@@ -24,9 +25,10 @@ type Engine struct {
 	lastUpdate  time.Time
 }
 
-// NewEngine creates a new game engine
-func NewEngine() *Engine {
+// NewEngine creates a new game engine for a session
+func NewEngine(sessionID string) *Engine {
 	return &Engine{
+		sessionID:  sessionID,
 		players:    make(map[string]*types.Player),
 		bullets:    make(map[string]*types.Bullet),
 		walls:      make(map[string]*types.Wall),

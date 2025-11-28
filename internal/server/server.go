@@ -32,16 +32,25 @@ type Client struct {
 	ID         string
 	UserID     primitive.ObjectID // MongoDB User ID
 	Username   string
+	SessionID  string             // Game session ID
 	Conn       *websocket.Conn
 	Send       chan []byte
 	Server     *GameServer
 	UseBinary  bool // Whether client prefers binary protocol
 }
 
+// Session represents a game session with its engine
+type Session struct {
+	ID         string
+	Engine     *game.Engine
+	PlayerCount int
+	mu         sync.Mutex
+}
+
 // GameServer manages the game and all clients
 type GameServer struct {
 	clients    map[string]*Client
-	engine     *game.Engine
+	sessions   map[string]*Session // sessionID -> Session
 	register   chan *Client
 	unregister chan *Client
 	broadcast  chan []byte
@@ -53,7 +62,7 @@ type GameServer struct {
 func NewGameServer() *GameServer {
 	return &GameServer{
 		clients:    make(map[string]*Client),
-		engine:     game.NewEngine(),
+		sessions:   make(map[string]*Session),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		broadcast:  make(chan []byte, 256),
@@ -79,8 +88,15 @@ func (gs *GameServer) Run() {
 			gs.broadcastMessage(message)
 
 		case <-ticker.C:
-			gs.engine.Update()
-			gs.broadcastGameState()
+			// Update all active sessions
+			gs.mu.RLock()
+			for _, session := range gs.sessions {
+				session.Engine.Update()
+			}
+			gs.mu.RUnlock()
+			
+			// Broadcast game state for each session
+			gs.broadcastAllSessionStates()
 		}
 	}
 }
@@ -99,30 +115,69 @@ func (gs *GameServer) Shutdown() {
 
 func (gs *GameServer) registerClient(client *Client) {
 	gs.mu.Lock()
+	defer gs.mu.Unlock()
+
 	gs.clients[client.ID] = client
-	gs.mu.Unlock()
 
-	// Add player to game
-	player := gs.engine.AddPlayer(client.ID, client.Username)
+	// Get or create session
+	session, exists := gs.sessions[client.SessionID]
+	if !exists {
+		// Create new session
+		session = &Session{
+			ID:          client.SessionID,
+			Engine:      game.NewEngine(client.SessionID),
+			PlayerCount: 0,
+		}
+		gs.sessions[client.SessionID] = session
 
-	// Notify all clients about new player
+		// Try to load existing session from database
+		ctx := context.Background()
+		sessionRepo := db.NewGameSessionRepository()
+		
+		if sessionID, err := primitive.ObjectIDFromHex(client.SessionID); err == nil {
+			if dbSession, err := sessionRepo.FindByID(ctx, sessionID); err == nil {
+				log.Printf("Loading existing session %s from database", client.SessionID)
+				session.Engine.LoadFromSession(dbSession)
+			} else {
+				log.Printf("Creating new session %s", client.SessionID)
+			}
+		}
+	}
+
+	session.mu.Lock()
+	session.PlayerCount++
+	session.mu.Unlock()
+
+	// Add player to game engine
+	player := session.Engine.AddPlayer(client.ID, client.Username)
+
+	// Update user's current session in database
+	ctx := context.Background()
+	userRepo := db.NewUserRepository()
+	if user, err := userRepo.FindByID(ctx, client.UserID); err == nil {
+		user.CurrentSession = client.SessionID
+		userRepo.Update(ctx, user)
+	}
+
+	// Notify all clients in this session about new player
 	msg := types.Message{
 		Type: types.MsgTypePlayerJoin,
 		Payload: types.PlayerJoinPayload{
 			Player: player,
 		},
 	}
-	gs.broadcastJSON(msg)
+	gs.broadcastToSession(client.SessionID, msg)
 
 	// Send current game state to new player
-	gameState := gs.engine.GetGameState()
+	gameState := session.Engine.GetGameState()
 	stateMsg := types.Message{
 		Type:    types.MsgTypeGameState,
 		Payload: gameState,
 	}
 	client.SendJSON(stateMsg)
 
-	log.Printf("Player %s (%s) joined", client.Username, client.ID)
+	log.Printf("Player %s (%s) joined session %s (players: %d)", 
+		client.Username, client.ID, client.SessionID, session.PlayerCount)
 }
 
 func (gs *GameServer) unregisterClient(client *Client) {
@@ -132,21 +187,78 @@ func (gs *GameServer) unregisterClient(client *Client) {
 		close(client.Send)
 		client.Conn.Close()
 	}
+	
+	session, sessionExists := gs.sessions[client.SessionID]
 	gs.mu.Unlock()
 
-	// Remove player from game
-	gs.engine.RemovePlayer(client.ID)
-
-	// Notify all clients
-	msg := types.Message{
-		Type: types.MsgTypePlayerLeave,
-		Payload: types.PlayerLeavePayload{
-			PlayerID: client.ID,
-		},
+	if !sessionExists {
+		return
 	}
-	gs.broadcastJSON(msg)
 
-	log.Printf("Player %s (%s) left", client.Username, client.ID)
+	// Remove player from game engine
+	session.Engine.RemovePlayer(client.ID)
+
+	// Decrement player count
+	session.mu.Lock()
+	session.PlayerCount--
+	playerCount := session.PlayerCount
+	session.mu.Unlock()
+
+	// Clear user's current session in database
+	ctx := context.Background()
+	userRepo := db.NewUserRepository()
+	if user, err := userRepo.FindByID(ctx, client.UserID); err == nil {
+		user.CurrentSession = ""
+		userRepo.Update(ctx, user)
+	}
+
+	// If this was the last player, save session to database and clear from memory
+	if playerCount == 0 {
+		log.Printf("Last player left session %s, saving to database", client.SessionID)
+		
+		sessionRepo := db.NewGameSessionRepository()
+		if sessionID, err := primitive.ObjectIDFromHex(client.SessionID); err == nil {
+			// Load or create database session
+			dbSession, err := sessionRepo.FindByID(ctx, sessionID)
+			if err != nil {
+				// Create new session
+				dbSession = &db.GameSession{
+					ID:         sessionID,
+					Name:       "Session " + client.SessionID[:8],
+					HostID:     client.UserID,
+					MaxPlayers: 10,
+					IsActive:   true,
+				}
+				sessionRepo.Create(ctx, dbSession)
+			}
+			
+			// Save engine state to session
+			session.Engine.SaveToSession(dbSession)
+			sessionRepo.Update(ctx, dbSession)
+			
+			log.Printf("Session %s saved to database", client.SessionID)
+		}
+		
+		// Remove session from memory
+		gs.mu.Lock()
+		delete(gs.sessions, client.SessionID)
+		gs.mu.Unlock()
+		
+		// Clear engine state
+		session.Engine.Clear()
+	} else {
+		// Notify remaining clients in this session
+		msg := types.Message{
+			Type: types.MsgTypePlayerLeave,
+			Payload: types.PlayerLeavePayload{
+				PlayerID: client.ID,
+			},
+		}
+		gs.broadcastToSession(client.SessionID, msg)
+	}
+
+	log.Printf("Player %s (%s) left session %s (remaining: %d)", 
+		client.Username, client.ID, client.SessionID, playerCount)
 }
 
 func (gs *GameServer) broadcastMessage(message []byte) {
@@ -171,24 +283,59 @@ func (gs *GameServer) broadcastJSON(v interface{}) {
 	gs.broadcast <- data
 }
 
-func (gs *GameServer) broadcastGameState() {
-	gameState := gs.engine.GetGameState()
-	
+func (gs *GameServer) broadcastToSession(sessionID string, v interface{}) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		log.Printf("Error marshaling message: %v", err)
+		return
+	}
+
 	gs.mu.RLock()
 	defer gs.mu.RUnlock()
-	
-	// Send to each client in their preferred format
+
 	for _, client := range gs.clients {
-		if client.UseBinary {
-			client.sendBinaryGameState(gameState)
-		} else {
-			msg := types.Message{
-				Type:    types.MsgTypeGameState,
-				Payload: gameState,
+		if client.SessionID == sessionID {
+			select {
+			case client.Send <- data:
+			default:
+				// Client buffer full, skip
 			}
-			client.SendJSON(msg)
 		}
 	}
+}
+
+func (gs *GameServer) broadcastAllSessionStates() {
+	gs.mu.RLock()
+	sessions := make(map[string]*Session)
+	for id, session := range gs.sessions {
+		sessions[id] = session
+	}
+	gs.mu.RUnlock()
+
+	for sessionID, session := range sessions {
+		gameState := session.Engine.GetGameState()
+		
+		gs.mu.RLock()
+		for _, client := range gs.clients {
+			if client.SessionID == sessionID {
+				if client.UseBinary {
+					client.sendBinaryGameState(gameState)
+				} else {
+					msg := types.Message{
+						Type:    types.MsgTypeGameState,
+						Payload: gameState,
+					}
+					client.SendJSON(msg)
+				}
+			}
+		}
+		gs.mu.RUnlock()
+	}
+}
+
+func (gs *GameServer) broadcastGameState() {
+	// Deprecated - use broadcastAllSessionStates
+	gs.broadcastAllSessionStates()
 }
 
 // HandleWebSocket handles WebSocket connections
@@ -226,6 +373,30 @@ func (gs *GameServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get session ID from query parameter or use user's current session
+	sessionID := r.URL.Query().Get("sessionId")
+	if sessionID == "" {
+		// Try to use user's current session
+		if user.CurrentSession != "" {
+			sessionID = user.CurrentSession
+		} else {
+			// Create a new session
+			sessionRepo := db.NewGameSessionRepository()
+			newSession := &db.GameSession{
+				Name:       user.Username + "'s Game",
+				HostID:     user.ID,
+				MaxPlayers: 10,
+				IsActive:   true,
+			}
+			if err := sessionRepo.Create(ctx, newSession); err != nil {
+				http.Error(w, "Failed to create session", http.StatusInternalServerError)
+				return
+			}
+			sessionID = newSession.ID.Hex()
+			log.Printf("Created new session %s for user %s", sessionID, user.Username)
+		}
+	}
+
 	// Upgrade to WebSocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -240,13 +411,15 @@ func (gs *GameServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		ID:        uuid.New().String(),
 		UserID:    user.ID,
 		Username:  user.Username,
+		SessionID: sessionID,
 		Conn:      conn,
 		Send:      make(chan []byte, 256),
 		Server:    gs,
 		UseBinary: useBinary,
 	}
 
-	log.Printf("New client connected (ID: %s, Binary: %v)", client.ID, useBinary)
+	log.Printf("New client connected (ID: %s, User: %s, Session: %s, Binary: %v)", 
+		client.ID, client.Username, client.SessionID, useBinary)
 
 	// Start client goroutines
 	go client.writePump()
@@ -329,13 +502,23 @@ func (c *Client) handleJSONMessage(data []byte) {
 		return
 	}
 
+	// Get session engine
+	c.Server.mu.RLock()
+	session, exists := c.Server.sessions[c.SessionID]
+	c.Server.mu.RUnlock()
+	
+	if !exists {
+		log.Printf("Session %s not found for client %s", c.SessionID, c.ID)
+		return
+	}
+
 	switch msg.Type {
 	case types.MsgTypeConnect:
 		var payload types.ConnectPayload
 		if err := remarshal(msg.Payload, &payload); err == nil && payload.Username != "" {
 			c.Username = payload.Username
 			// Update player username in engine
-			if player, exists := c.Server.engine.GetPlayer(c.ID); exists {
+			if player, exists := session.Engine.GetPlayer(c.ID); exists {
 				player.Username = payload.Username
 			}
 		}
@@ -343,13 +526,13 @@ func (c *Client) handleJSONMessage(data []byte) {
 	case types.MsgTypeInput:
 		var payload types.InputPayload
 		if err := remarshal(msg.Payload, &payload); err == nil {
-			c.Server.engine.UpdatePlayerInput(c.ID, payload)
+			session.Engine.UpdatePlayerInput(c.ID, payload)
 		}
 
 	case types.MsgTypeShoot:
 		var payload types.ShootPayload
 		if err := remarshal(msg.Payload, &payload); err == nil {
-			c.Server.engine.Shoot(c.ID, payload.Direction)
+			session.Engine.Shoot(c.ID, payload.Direction)
 		}
 	}
 }
@@ -361,13 +544,23 @@ func (c *Client) handleBinaryMessage(data []byte) {
 		return
 	}
 
+	// Get session engine
+	c.Server.mu.RLock()
+	session, exists := c.Server.sessions[c.SessionID]
+	c.Server.mu.RUnlock()
+	
+	if !exists {
+		log.Printf("Session %s not found for client %s", c.SessionID, c.ID)
+		return
+	}
+
 	switch msg.Type {
 	case protocol.MessageType_CONNECT:
 		if connect := msg.GetConnect(); connect != nil {
 			payload := protocol.FromProtoConnect(connect)
 			if payload.Username != "" {
 				c.Username = payload.Username
-				if player, exists := c.Server.engine.GetPlayer(c.ID); exists {
+				if player, exists := session.Engine.GetPlayer(c.ID); exists {
 					player.Username = payload.Username
 				}
 			}
@@ -376,13 +569,13 @@ func (c *Client) handleBinaryMessage(data []byte) {
 	case protocol.MessageType_INPUT:
 		if input := msg.GetInput(); input != nil {
 			payload := protocol.FromProtoInput(input)
-			c.Server.engine.UpdatePlayerInput(c.ID, payload)
+			session.Engine.UpdatePlayerInput(c.ID, payload)
 		}
 
 	case protocol.MessageType_SHOOT:
 		if shoot := msg.GetShoot(); shoot != nil {
 			payload := protocol.FromProtoShoot(shoot)
-			c.Server.engine.Shoot(c.ID, payload.Direction)
+			session.Engine.Shoot(c.ID, payload.Direction)
 		}
 	}
 }

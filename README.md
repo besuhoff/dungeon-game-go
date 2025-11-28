@@ -147,15 +147,28 @@ The server will start on `http://localhost:8080`
 
 ### WebSocket Connection
 
-- **WebSocket (JSON)**: `ws://localhost:8080/ws?token={jwt}` - Game connection with JSON protocol
-- **WebSocket (Binary)**: `ws://localhost:8080/ws?token={jwt}&protocol=binary` - Game connection with Protocol Buffers
+**Session-Based Multiplayer**: Each game session has its own isolated game state, allowing multiple independent games to run simultaneously.
+
+- **WebSocket (JSON)**: `ws://localhost:8080/ws?token={jwt}&sessionId={sessionId}` - Game connection with JSON protocol
+- **WebSocket (Binary)**: `ws://localhost:8080/ws?token={jwt}&sessionId={sessionId}&protocol=binary` - Game connection with Protocol Buffers
 
 **Authentication**: Include JWT token in query parameter:
 
 ```javascript
 const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
-const ws = new WebSocket(`ws://localhost:8080/ws?token=${token}`);
+const sessionId = "507f1f77bcf86cd799439011"; // Optional - auto-created if not provided
+const ws = new WebSocket(
+  `ws://localhost:8080/ws?token=${token}&sessionId=${sessionId}`
+);
 ```
+
+**Session Behavior**:
+
+- If no `sessionId` is provided, a new session is automatically created
+- When the first player joins a session, game state is loaded from MongoDB (if it exists)
+- When the last player leaves a session, game state is saved to MongoDB and cleared from memory
+- Each session has its own independent chunk generation, enemies, bonuses, and game world
+- Multiple sessions can run simultaneously without interfering with each other
 
 ### Health Check
 
