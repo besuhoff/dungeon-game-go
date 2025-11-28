@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"sync"
@@ -18,6 +19,7 @@ type Engine struct {
 	walls       map[string]*types.Wall
 	enemies     map[string]*types.Enemy
 	bonuses     map[string]*types.Bonus
+	chunkHash   map[string]bool // Track generated chunks
 	tickRate    time.Duration
 	lastUpdate  time.Time
 }
@@ -30,6 +32,7 @@ func NewEngine() *Engine {
 		walls:      make(map[string]*types.Wall),
 		enemies:    make(map[string]*types.Enemy),
 		bonuses:    make(map[string]*types.Bonus),
+		chunkHash:  make(map[string]bool),
 		tickRate:   16 * time.Millisecond, // ~60 FPS
 		lastUpdate: time.Now(),
 	}
@@ -84,6 +87,13 @@ func (e *Engine) generateInitialWorld(center types.Vector2) {
 
 // generateChunk generates walls and enemies for a specific chunk
 func (e *Engine) generateChunk(chunkX, chunkY int, playerPos types.Vector2) {
+	// Check if chunk already exists
+	chunkKey := fmt.Sprintf("%d,%d", chunkX, chunkY)
+	if e.chunkHash[chunkKey] {
+		return // Chunk already generated
+	}
+	e.chunkHash[chunkKey] = true
+	
 	chunkStartX := float64(chunkX) * types.ChunkSize
 	chunkStartY := float64(chunkY) * types.ChunkSize
 	
