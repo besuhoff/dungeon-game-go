@@ -12,6 +12,7 @@ enum MessageType {
   SHOOT = 3;
   DISCONNECT = 4;
   GAME_STATE = 5;
+  GAME_STATE_DELTA = 11;
   PLAYER_JOIN = 6;
   PLAYER_LEAVE = 7;
   PLAYER_HIT = 8;
@@ -97,6 +98,27 @@ message GameState {
   int64 timestamp = 6;
 }
 
+message GameStateDelta {
+  map<string, Player> added_players = 1;
+  map<string, Player> updated_players = 2;
+  repeated string removed_players = 3;
+  
+  map<string, Bullet> added_bullets = 4;
+  repeated string removed_bullets = 5;
+  
+  map<string, Wall> added_walls = 6;
+  repeated string removed_walls = 7;
+  
+  map<string, Enemy> added_enemies = 8;
+  map<string, Enemy> updated_enemies = 9;
+  repeated string removed_enemies = 10;
+  
+  map<string, Bonus> added_bonuses = 11;
+  repeated string removed_bonuses = 12;
+  
+  int64 timestamp = 13;
+}
+
 message PlayerJoinMessage {
   Player player = 1;
 }
@@ -129,6 +151,7 @@ message GameMessage {
     InputMessage input = 3;
     ShootMessage shoot = 4;
     GameState game_state = 5;
+    GameStateDelta game_state_delta = 11;
     PlayerJoinMessage player_join = 6;
     PlayerLeaveMessage player_leave = 7;
     PlayerHitMessage player_hit = 8;

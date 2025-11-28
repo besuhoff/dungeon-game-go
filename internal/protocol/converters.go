@@ -136,6 +136,60 @@ func ToProtoGameState(gs types.GameState) *GameState {
 	}
 }
 
+// ToProtoGameStateDelta converts types.GameStateDelta to proto GameStateDelta
+func ToProtoGameStateDelta(delta types.GameStateDelta) *GameStateDelta {
+	protoAddedPlayers := make(map[string]*Player)
+	for k, v := range delta.AddedPlayers {
+		protoAddedPlayers[k] = ToProtoPlayer(v)
+	}
+
+	protoUpdatedPlayers := make(map[string]*Player)
+	for k, v := range delta.UpdatedPlayers {
+		protoUpdatedPlayers[k] = ToProtoPlayer(v)
+	}
+
+	protoAddedBullets := make(map[string]*Bullet)
+	for k, v := range delta.AddedBullets {
+		protoAddedBullets[k] = ToProtoBullet(v)
+	}
+
+	protoAddedWalls := make(map[string]*Wall)
+	for k, v := range delta.AddedWalls {
+		protoAddedWalls[k] = ToProtoWall(v)
+	}
+
+	protoAddedEnemies := make(map[string]*Enemy)
+	for k, v := range delta.AddedEnemies {
+		protoAddedEnemies[k] = ToProtoEnemy(v)
+	}
+
+	protoUpdatedEnemies := make(map[string]*Enemy)
+	for k, v := range delta.UpdatedEnemies {
+		protoUpdatedEnemies[k] = ToProtoEnemy(v)
+	}
+
+	protoAddedBonuses := make(map[string]*Bonus)
+	for k, v := range delta.AddedBonuses {
+		protoAddedBonuses[k] = ToProtoBonus(v)
+	}
+
+	return &GameStateDelta{
+		AddedPlayers:   protoAddedPlayers,
+		UpdatedPlayers: protoUpdatedPlayers,
+		RemovedPlayers: delta.RemovedPlayers,
+		AddedBullets:   protoAddedBullets,
+		RemovedBullets: delta.RemovedBullets,
+		AddedWalls:     protoAddedWalls,
+		RemovedWalls:   delta.RemovedWalls,
+		AddedEnemies:   protoAddedEnemies,
+		UpdatedEnemies: protoUpdatedEnemies,
+		RemovedEnemies: delta.RemovedEnemies,
+		AddedBonuses:   protoAddedBonuses,
+		RemovedBonuses: delta.RemovedBonuses,
+		Timestamp:      delta.Timestamp,
+	}
+}
+
 // FromProtoInput converts proto InputMessage to types.InputPayload
 func FromProtoInput(input *InputMessage) types.InputPayload {
 	if input == nil {

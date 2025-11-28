@@ -11,12 +11,13 @@ const (
 	MsgTypeDisconnect MessageType = "disconnect"
 	
 	// Server -> Client
-	MsgTypeGameState  MessageType = "gameState"
-	MsgTypePlayerJoin MessageType = "playerJoin"
-	MsgTypePlayerLeave MessageType = "playerLeave"
-	MsgTypePlayerHit  MessageType = "playerHit"
-	MsgTypePlayerDeath MessageType = "playerDeath"
-	MsgTypeError      MessageType = "error"
+	MsgTypeGameState      MessageType = "gameState"
+	MsgTypeGameStateDelta MessageType = "gameStateDelta"
+	MsgTypePlayerJoin     MessageType = "playerJoin"
+	MsgTypePlayerLeave    MessageType = "playerLeave"
+	MsgTypePlayerHit      MessageType = "playerHit"
+	MsgTypePlayerDeath    MessageType = "playerDeath"
+	MsgTypeError          MessageType = "error"
 )
 
 // Message is the base message structure

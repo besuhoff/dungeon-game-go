@@ -47,6 +47,37 @@ type GameState struct {
 	Timestamp int64              `json:"timestamp"`
 }
 
+// GameStateDelta represents changes to the game state
+type GameStateDelta struct {
+	AddedPlayers   map[string]*Player `json:"addedPlayers,omitempty"`
+	UpdatedPlayers map[string]*Player `json:"updatedPlayers,omitempty"`
+	RemovedPlayers []string           `json:"removedPlayers,omitempty"`
+	
+	AddedBullets   map[string]*Bullet `json:"addedBullets,omitempty"`
+	RemovedBullets []string           `json:"removedBullets,omitempty"`
+	
+	AddedWalls   map[string]*Wall `json:"addedWalls,omitempty"`
+	RemovedWalls []string         `json:"removedWalls,omitempty"`
+	
+	AddedEnemies   map[string]*Enemy `json:"addedEnemies,omitempty"`
+	UpdatedEnemies map[string]*Enemy `json:"updatedEnemies,omitempty"`
+	RemovedEnemies []string          `json:"removedEnemies,omitempty"`
+	
+	AddedBonuses   map[string]*Bonus `json:"addedBonuses,omitempty"`
+	RemovedBonuses []string          `json:"removedBonuses,omitempty"`
+	
+	Timestamp int64 `json:"timestamp"`
+}
+
+// IsEmpty checks if the delta contains no changes
+func (d *GameStateDelta) IsEmpty() bool {
+	return len(d.AddedPlayers) == 0 && len(d.UpdatedPlayers) == 0 && len(d.RemovedPlayers) == 0 &&
+		len(d.AddedBullets) == 0 && len(d.RemovedBullets) == 0 &&
+		len(d.AddedWalls) == 0 && len(d.RemovedWalls) == 0 &&
+		len(d.AddedEnemies) == 0 && len(d.UpdatedEnemies) == 0 && len(d.RemovedEnemies) == 0 &&
+		len(d.AddedBonuses) == 0 && len(d.RemovedBonuses) == 0
+}
+
 // Wall represents a wall obstacle
 type Wall struct {
 	ID          string  `json:"id"`

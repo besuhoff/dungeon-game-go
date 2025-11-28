@@ -21,22 +21,32 @@ type Engine struct {
 	enemies     map[string]*types.Enemy
 	bonuses     map[string]*types.Bonus
 	chunkHash   map[string]bool // Track generated chunks
-	tickRate    time.Duration
+	
+	// Previous state for delta computation
+	prevPlayers map[string]*types.Player
+	prevBullets map[string]*types.Bullet
+	prevWalls   map[string]*types.Wall
+	prevEnemies map[string]*types.Enemy
+	prevBonuses map[string]*types.Bonus
 	lastUpdate  time.Time
 }
 
 // NewEngine creates a new game engine for a session
 func NewEngine(sessionID string) *Engine {
 	return &Engine{
-		sessionID:  sessionID,
-		players:    make(map[string]*types.Player),
-		bullets:    make(map[string]*types.Bullet),
-		walls:      make(map[string]*types.Wall),
-		enemies:    make(map[string]*types.Enemy),
-		bonuses:    make(map[string]*types.Bonus),
-		chunkHash:  make(map[string]bool),
-		tickRate:   16 * time.Millisecond, // ~60 FPS
-		lastUpdate: time.Now(),
+		sessionID:   sessionID,
+		players:     make(map[string]*types.Player),
+		bullets:     make(map[string]*types.Bullet),
+		walls:       make(map[string]*types.Wall),
+		enemies:     make(map[string]*types.Enemy),
+		bonuses:     make(map[string]*types.Bonus),
+		chunkHash:   make(map[string]bool),
+		prevPlayers: make(map[string]*types.Player),
+		prevBullets: make(map[string]*types.Bullet),
+		prevWalls:   make(map[string]*types.Wall),
+		prevEnemies: make(map[string]*types.Enemy),
+		prevBonuses: make(map[string]*types.Bonus),
+		lastUpdate:  time.Now(),
 	}
 }
 
@@ -218,6 +228,9 @@ func (e *Engine) UpdatePlayerInput(playerID string, input types.InputPayload) {
 		return
 	}
 
+	// Calculate delta time since last update
+	deltaTime := time.Since(e.lastUpdate).Seconds()
+
 	// Calculate velocity based on forward/backward movement in the direction player is facing
 	var forward float64
 	if input.Forward {
@@ -236,10 +249,10 @@ func (e *Engine) UpdatePlayerInput(playerID string, input types.InputPayload) {
 
 	// Handle left/right rotation
 	if input.Left {
-		player.Rotation -= types.PlayerRotationSpeed * 0.016 // Approximate dt for input updates
+		player.Rotation -= types.PlayerRotationSpeed * deltaTime
 	}
 	if input.Right {
-		player.Rotation += types.PlayerRotationSpeed * 0.016
+		player.Rotation += types.PlayerRotationSpeed * deltaTime
 	}
 
 	// Normalize rotation to 0-360 range
@@ -756,6 +769,145 @@ func (e *Engine) GetGameState() types.GameState {
 		Bonuses:   bonusesCopy,
 		Timestamp: time.Now().UnixMilli(),
 	}
+}
+
+// GetGameStateDelta computes the delta between current and previous state
+func (e *Engine) GetGameStateDelta() types.GameStateDelta {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	
+	delta := types.GameStateDelta{
+		AddedPlayers:   make(map[string]*types.Player),
+		UpdatedPlayers: make(map[string]*types.Player),
+		RemovedPlayers: make([]string, 0),
+		AddedBullets:   make(map[string]*types.Bullet),
+		RemovedBullets: make([]string, 0),
+		AddedWalls:     make(map[string]*types.Wall),
+		RemovedWalls:   make([]string, 0),
+		AddedEnemies:   make(map[string]*types.Enemy),
+		UpdatedEnemies: make(map[string]*types.Enemy),
+		RemovedEnemies: make([]string, 0),
+		AddedBonuses:   make(map[string]*types.Bonus),
+		RemovedBonuses: make([]string, 0),
+		Timestamp:      time.Now().UnixMilli(),
+	}
+	
+	// Check for added/updated players
+	for id, player := range e.players {
+		playerCopy := *player
+		if prev, exists := e.prevPlayers[id]; !exists {
+			delta.AddedPlayers[id] = &playerCopy
+		} else if !playersEqual(prev, player) {
+			delta.UpdatedPlayers[id] = &playerCopy
+		}
+	}
+	
+	// Check for removed players
+	for id := range e.prevPlayers {
+		if _, exists := e.players[id]; !exists {
+			delta.RemovedPlayers = append(delta.RemovedPlayers, id)
+		}
+	}
+	
+	// Check for added/removed bullets
+	for id, bullet := range e.bullets {
+		if _, exists := e.prevBullets[id]; !exists {
+			bulletCopy := *bullet
+			delta.AddedBullets[id] = &bulletCopy
+		}
+	}
+	for id := range e.prevBullets {
+		if _, exists := e.bullets[id]; !exists {
+			delta.RemovedBullets = append(delta.RemovedBullets, id)
+		}
+	}
+	
+	// Check for added/removed walls
+	for id, wall := range e.walls {
+		if _, exists := e.prevWalls[id]; !exists {
+			wallCopy := *wall
+			delta.AddedWalls[id] = &wallCopy
+		}
+	}
+	for id := range e.prevWalls {
+		if _, exists := e.walls[id]; !exists {
+			delta.RemovedWalls = append(delta.RemovedWalls, id)
+		}
+	}
+	
+	// Check for added/updated/removed enemies
+	for id, enemy := range e.enemies {
+		enemyCopy := *enemy
+		if prev, exists := e.prevEnemies[id]; !exists {
+			delta.AddedEnemies[id] = &enemyCopy
+		} else if !enemiesEqual(prev, enemy) {
+			delta.UpdatedEnemies[id] = &enemyCopy
+		}
+	}
+	for id := range e.prevEnemies {
+		if _, exists := e.enemies[id]; !exists {
+			delta.RemovedEnemies = append(delta.RemovedEnemies, id)
+		}
+	}
+	
+	// Check for added/removed bonuses
+	for id, bonus := range e.bonuses {
+		if _, exists := e.prevBonuses[id]; !exists {
+			bonusCopy := *bonus
+			delta.AddedBonuses[id] = &bonusCopy
+		}
+	}
+	for id := range e.prevBonuses {
+		if _, exists := e.bonuses[id]; !exists {
+			delta.RemovedBonuses = append(delta.RemovedBonuses, id)
+		}
+	}
+	
+	// Update previous state with deep copies
+	e.prevPlayers = make(map[string]*types.Player)
+	for k, v := range e.players {
+		p := *v
+		e.prevPlayers[k] = &p
+	}
+	
+	e.prevBullets = make(map[string]*types.Bullet)
+	for k, v := range e.bullets {
+		b := *v
+		e.prevBullets[k] = &b
+	}
+	
+	e.prevWalls = make(map[string]*types.Wall)
+	for k, v := range e.walls {
+		w := *v
+		e.prevWalls[k] = &w
+	}
+	
+	e.prevEnemies = make(map[string]*types.Enemy)
+	for k, v := range e.enemies {
+		en := *v
+		e.prevEnemies[k] = &en
+	}
+	
+	e.prevBonuses = make(map[string]*types.Bonus)
+	for k, v := range e.bonuses {
+		b := *v
+		e.prevBonuses[k] = &b
+	}
+	
+	return delta
+}
+
+// Helper functions to compare entities
+func playersEqual(a, b *types.Player) bool {
+	return a.Position.X == b.Position.X && a.Position.Y == b.Position.Y &&
+		a.Rotation == b.Rotation && a.Lives == b.Lives && a.Score == b.Score &&
+		a.Money == b.Money && a.Kills == b.Kills && a.BulletsLeft == b.BulletsLeft &&
+		a.NightVisionTimer == b.NightVisionTimer && a.IsAlive == b.IsAlive
+}
+
+func enemiesEqual(a, b *types.Enemy) bool {
+	return a.Position.X == b.Position.X && a.Position.Y == b.Position.Y &&
+		a.Rotation == b.Rotation && a.Lives == b.Lives && a.IsDead == b.IsDead
 }
 
 // GetPlayer returns a player by ID

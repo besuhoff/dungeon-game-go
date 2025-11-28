@@ -75,7 +75,7 @@ func NewGameServer() *GameServer {
 // Run starts the game server loop
 func (gs *GameServer) Run() {
 	gs.running = true
-	ticker := time.NewTicker(16 * time.Millisecond) // ~60 FPS
+	ticker := time.NewTicker(50 * time.Millisecond) // ~20 FPS
 	defer ticker.Stop()
 
 	for {
@@ -347,15 +347,21 @@ func (gs *GameServer) broadcastAllSessionStates() {
 	gs.mu.RUnlock()
 
 	for sessionID, session := range sessions {
-		gameState := session.Engine.GetGameState()
+		// Get delta instead of full state
+		delta := session.Engine.GetGameStateDelta()
+		
+		// Only broadcast if there are changes
+		if delta.IsEmpty() {
+			continue
+		}
 		
 		gs.mu.RLock()
 		for _, client := range gs.clients {
 			if client.SessionID == sessionID {
 				if client.UseBinary {
-					client.sendBinaryGameState(gameState)
+					client.sendBinaryGameStateDelta(delta)
 				} else {
-					client.sendJSONGameState(gameState)
+					client.sendJSONGameStateDelta(delta)
 				}
 			}
 		}
@@ -613,6 +619,14 @@ func (c *Client) sendJSONGameState(gameState types.GameState) {
 	c.SendJSON(stateMsg)
 }
 
+func (c *Client) sendJSONGameStateDelta(delta types.GameStateDelta) {
+	deltaMsg := types.Message{
+		Type:    types.MsgTypeGameStateDelta,
+		Payload: delta,
+	}
+	c.SendJSON(deltaMsg)
+}
+
 func (c *Client) SendJSON(v interface{}) {
 	data, err := json.Marshal(v)
 	if err != nil {
@@ -638,6 +652,28 @@ func (c *Client) sendBinaryGameState(gameState types.GameState) {
 	data, err := proto.Marshal(msg)
 	if err != nil {
 		log.Printf("Error marshaling binary game state: %v", err)
+		return
+	}
+
+	select {
+	case c.Send <- data:
+	default:
+		// Buffer full
+	}
+}
+
+func (c *Client) sendBinaryGameStateDelta(delta types.GameStateDelta) {
+	protoDelta := protocol.ToProtoGameStateDelta(delta)
+	msg := &protocol.GameMessage{
+		Type: protocol.MessageType_GAME_STATE_DELTA,
+		Payload: &protocol.GameMessage_GameStateDelta{
+			GameStateDelta: protoDelta,
+		},
+	}
+
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		log.Printf("Error marshaling binary game state delta: %v", err)
 		return
 	}
 

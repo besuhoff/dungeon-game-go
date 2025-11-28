@@ -25,17 +25,18 @@ const (
 type MessageType int32
 
 const (
-	MessageType_UNKNOWN      MessageType = 0
-	MessageType_CONNECT      MessageType = 1
-	MessageType_INPUT        MessageType = 2
-	MessageType_SHOOT        MessageType = 3
-	MessageType_DISCONNECT   MessageType = 4
-	MessageType_GAME_STATE   MessageType = 5
-	MessageType_PLAYER_JOIN  MessageType = 6
-	MessageType_PLAYER_LEAVE MessageType = 7
-	MessageType_PLAYER_HIT   MessageType = 8
-	MessageType_PLAYER_DEATH MessageType = 9
-	MessageType_ERROR        MessageType = 10
+	MessageType_UNKNOWN          MessageType = 0
+	MessageType_CONNECT          MessageType = 1
+	MessageType_INPUT            MessageType = 2
+	MessageType_SHOOT            MessageType = 3
+	MessageType_DISCONNECT       MessageType = 4
+	MessageType_GAME_STATE       MessageType = 5
+	MessageType_GAME_STATE_DELTA MessageType = 11
+	MessageType_PLAYER_JOIN      MessageType = 6
+	MessageType_PLAYER_LEAVE     MessageType = 7
+	MessageType_PLAYER_HIT       MessageType = 8
+	MessageType_PLAYER_DEATH     MessageType = 9
+	MessageType_ERROR            MessageType = 10
 )
 
 // Enum value maps for MessageType.
@@ -47,6 +48,7 @@ var (
 		3:  "SHOOT",
 		4:  "DISCONNECT",
 		5:  "GAME_STATE",
+		11: "GAME_STATE_DELTA",
 		6:  "PLAYER_JOIN",
 		7:  "PLAYER_LEAVE",
 		8:  "PLAYER_HIT",
@@ -54,17 +56,18 @@ var (
 		10: "ERROR",
 	}
 	MessageType_value = map[string]int32{
-		"UNKNOWN":      0,
-		"CONNECT":      1,
-		"INPUT":        2,
-		"SHOOT":        3,
-		"DISCONNECT":   4,
-		"GAME_STATE":   5,
-		"PLAYER_JOIN":  6,
-		"PLAYER_LEAVE": 7,
-		"PLAYER_HIT":   8,
-		"PLAYER_DEATH": 9,
-		"ERROR":        10,
+		"UNKNOWN":          0,
+		"CONNECT":          1,
+		"INPUT":            2,
+		"SHOOT":            3,
+		"DISCONNECT":       4,
+		"GAME_STATE":       5,
+		"GAME_STATE_DELTA": 11,
+		"PLAYER_JOIN":      6,
+		"PLAYER_LEAVE":     7,
+		"PLAYER_HIT":       8,
+		"PLAYER_DEATH":     9,
+		"ERROR":            10,
 	}
 )
 
@@ -818,6 +821,146 @@ func (x *GameState) GetTimestamp() int64 {
 	return 0
 }
 
+type GameStateDelta struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AddedPlayers   map[string]*Player     `protobuf:"bytes,1,rep,name=added_players,json=addedPlayers,proto3" json:"added_players,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	UpdatedPlayers map[string]*Player     `protobuf:"bytes,2,rep,name=updated_players,json=updatedPlayers,proto3" json:"updated_players,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	RemovedPlayers []string               `protobuf:"bytes,3,rep,name=removed_players,json=removedPlayers,proto3" json:"removed_players,omitempty"`
+	AddedBullets   map[string]*Bullet     `protobuf:"bytes,4,rep,name=added_bullets,json=addedBullets,proto3" json:"added_bullets,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	RemovedBullets []string               `protobuf:"bytes,5,rep,name=removed_bullets,json=removedBullets,proto3" json:"removed_bullets,omitempty"`
+	AddedWalls     map[string]*Wall       `protobuf:"bytes,6,rep,name=added_walls,json=addedWalls,proto3" json:"added_walls,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	RemovedWalls   []string               `protobuf:"bytes,7,rep,name=removed_walls,json=removedWalls,proto3" json:"removed_walls,omitempty"`
+	AddedEnemies   map[string]*Enemy      `protobuf:"bytes,8,rep,name=added_enemies,json=addedEnemies,proto3" json:"added_enemies,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	UpdatedEnemies map[string]*Enemy      `protobuf:"bytes,9,rep,name=updated_enemies,json=updatedEnemies,proto3" json:"updated_enemies,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	RemovedEnemies []string               `protobuf:"bytes,10,rep,name=removed_enemies,json=removedEnemies,proto3" json:"removed_enemies,omitempty"`
+	AddedBonuses   map[string]*Bonus      `protobuf:"bytes,11,rep,name=added_bonuses,json=addedBonuses,proto3" json:"added_bonuses,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	RemovedBonuses []string               `protobuf:"bytes,12,rep,name=removed_bonuses,json=removedBonuses,proto3" json:"removed_bonuses,omitempty"`
+	Timestamp      int64                  `protobuf:"varint,13,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GameStateDelta) Reset() {
+	*x = GameStateDelta{}
+	mi := &file_internal_protocol_messages_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GameStateDelta) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GameStateDelta) ProtoMessage() {}
+
+func (x *GameStateDelta) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_protocol_messages_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GameStateDelta.ProtoReflect.Descriptor instead.
+func (*GameStateDelta) Descriptor() ([]byte, []int) {
+	return file_internal_protocol_messages_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *GameStateDelta) GetAddedPlayers() map[string]*Player {
+	if x != nil {
+		return x.AddedPlayers
+	}
+	return nil
+}
+
+func (x *GameStateDelta) GetUpdatedPlayers() map[string]*Player {
+	if x != nil {
+		return x.UpdatedPlayers
+	}
+	return nil
+}
+
+func (x *GameStateDelta) GetRemovedPlayers() []string {
+	if x != nil {
+		return x.RemovedPlayers
+	}
+	return nil
+}
+
+func (x *GameStateDelta) GetAddedBullets() map[string]*Bullet {
+	if x != nil {
+		return x.AddedBullets
+	}
+	return nil
+}
+
+func (x *GameStateDelta) GetRemovedBullets() []string {
+	if x != nil {
+		return x.RemovedBullets
+	}
+	return nil
+}
+
+func (x *GameStateDelta) GetAddedWalls() map[string]*Wall {
+	if x != nil {
+		return x.AddedWalls
+	}
+	return nil
+}
+
+func (x *GameStateDelta) GetRemovedWalls() []string {
+	if x != nil {
+		return x.RemovedWalls
+	}
+	return nil
+}
+
+func (x *GameStateDelta) GetAddedEnemies() map[string]*Enemy {
+	if x != nil {
+		return x.AddedEnemies
+	}
+	return nil
+}
+
+func (x *GameStateDelta) GetUpdatedEnemies() map[string]*Enemy {
+	if x != nil {
+		return x.UpdatedEnemies
+	}
+	return nil
+}
+
+func (x *GameStateDelta) GetRemovedEnemies() []string {
+	if x != nil {
+		return x.RemovedEnemies
+	}
+	return nil
+}
+
+func (x *GameStateDelta) GetAddedBonuses() map[string]*Bonus {
+	if x != nil {
+		return x.AddedBonuses
+	}
+	return nil
+}
+
+func (x *GameStateDelta) GetRemovedBonuses() []string {
+	if x != nil {
+		return x.RemovedBonuses
+	}
+	return nil
+}
+
+func (x *GameStateDelta) GetTimestamp() int64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
 type PlayerJoinMessage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Player        *Player                `protobuf:"bytes,1,opt,name=player,proto3" json:"player,omitempty"`
@@ -827,7 +970,7 @@ type PlayerJoinMessage struct {
 
 func (x *PlayerJoinMessage) Reset() {
 	*x = PlayerJoinMessage{}
-	mi := &file_internal_protocol_messages_proto_msgTypes[10]
+	mi := &file_internal_protocol_messages_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -839,7 +982,7 @@ func (x *PlayerJoinMessage) String() string {
 func (*PlayerJoinMessage) ProtoMessage() {}
 
 func (x *PlayerJoinMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_protocol_messages_proto_msgTypes[10]
+	mi := &file_internal_protocol_messages_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -852,7 +995,7 @@ func (x *PlayerJoinMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerJoinMessage.ProtoReflect.Descriptor instead.
 func (*PlayerJoinMessage) Descriptor() ([]byte, []int) {
-	return file_internal_protocol_messages_proto_rawDescGZIP(), []int{10}
+	return file_internal_protocol_messages_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *PlayerJoinMessage) GetPlayer() *Player {
@@ -871,7 +1014,7 @@ type PlayerLeaveMessage struct {
 
 func (x *PlayerLeaveMessage) Reset() {
 	*x = PlayerLeaveMessage{}
-	mi := &file_internal_protocol_messages_proto_msgTypes[11]
+	mi := &file_internal_protocol_messages_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -883,7 +1026,7 @@ func (x *PlayerLeaveMessage) String() string {
 func (*PlayerLeaveMessage) ProtoMessage() {}
 
 func (x *PlayerLeaveMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_protocol_messages_proto_msgTypes[11]
+	mi := &file_internal_protocol_messages_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -896,7 +1039,7 @@ func (x *PlayerLeaveMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerLeaveMessage.ProtoReflect.Descriptor instead.
 func (*PlayerLeaveMessage) Descriptor() ([]byte, []int) {
-	return file_internal_protocol_messages_proto_rawDescGZIP(), []int{11}
+	return file_internal_protocol_messages_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *PlayerLeaveMessage) GetPlayerId() string {
@@ -918,7 +1061,7 @@ type PlayerHitMessage struct {
 
 func (x *PlayerHitMessage) Reset() {
 	*x = PlayerHitMessage{}
-	mi := &file_internal_protocol_messages_proto_msgTypes[12]
+	mi := &file_internal_protocol_messages_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -930,7 +1073,7 @@ func (x *PlayerHitMessage) String() string {
 func (*PlayerHitMessage) ProtoMessage() {}
 
 func (x *PlayerHitMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_protocol_messages_proto_msgTypes[12]
+	mi := &file_internal_protocol_messages_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -943,7 +1086,7 @@ func (x *PlayerHitMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerHitMessage.ProtoReflect.Descriptor instead.
 func (*PlayerHitMessage) Descriptor() ([]byte, []int) {
-	return file_internal_protocol_messages_proto_rawDescGZIP(), []int{12}
+	return file_internal_protocol_messages_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *PlayerHitMessage) GetPlayerId() string {
@@ -984,7 +1127,7 @@ type PlayerDeathMessage struct {
 
 func (x *PlayerDeathMessage) Reset() {
 	*x = PlayerDeathMessage{}
-	mi := &file_internal_protocol_messages_proto_msgTypes[13]
+	mi := &file_internal_protocol_messages_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -996,7 +1139,7 @@ func (x *PlayerDeathMessage) String() string {
 func (*PlayerDeathMessage) ProtoMessage() {}
 
 func (x *PlayerDeathMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_protocol_messages_proto_msgTypes[13]
+	mi := &file_internal_protocol_messages_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1009,7 +1152,7 @@ func (x *PlayerDeathMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerDeathMessage.ProtoReflect.Descriptor instead.
 func (*PlayerDeathMessage) Descriptor() ([]byte, []int) {
-	return file_internal_protocol_messages_proto_rawDescGZIP(), []int{13}
+	return file_internal_protocol_messages_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *PlayerDeathMessage) GetPlayerId() string {
@@ -1035,7 +1178,7 @@ type ErrorMessage struct {
 
 func (x *ErrorMessage) Reset() {
 	*x = ErrorMessage{}
-	mi := &file_internal_protocol_messages_proto_msgTypes[14]
+	mi := &file_internal_protocol_messages_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1047,7 +1190,7 @@ func (x *ErrorMessage) String() string {
 func (*ErrorMessage) ProtoMessage() {}
 
 func (x *ErrorMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_protocol_messages_proto_msgTypes[14]
+	mi := &file_internal_protocol_messages_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1060,7 +1203,7 @@ func (x *ErrorMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorMessage.ProtoReflect.Descriptor instead.
 func (*ErrorMessage) Descriptor() ([]byte, []int) {
-	return file_internal_protocol_messages_proto_rawDescGZIP(), []int{14}
+	return file_internal_protocol_messages_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ErrorMessage) GetMessage() string {
@@ -1080,6 +1223,7 @@ type GameMessage struct {
 	//	*GameMessage_Input
 	//	*GameMessage_Shoot
 	//	*GameMessage_GameState
+	//	*GameMessage_GameStateDelta
 	//	*GameMessage_PlayerJoin
 	//	*GameMessage_PlayerLeave
 	//	*GameMessage_PlayerHit
@@ -1092,7 +1236,7 @@ type GameMessage struct {
 
 func (x *GameMessage) Reset() {
 	*x = GameMessage{}
-	mi := &file_internal_protocol_messages_proto_msgTypes[15]
+	mi := &file_internal_protocol_messages_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1104,7 +1248,7 @@ func (x *GameMessage) String() string {
 func (*GameMessage) ProtoMessage() {}
 
 func (x *GameMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_protocol_messages_proto_msgTypes[15]
+	mi := &file_internal_protocol_messages_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1117,7 +1261,7 @@ func (x *GameMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GameMessage.ProtoReflect.Descriptor instead.
 func (*GameMessage) Descriptor() ([]byte, []int) {
-	return file_internal_protocol_messages_proto_rawDescGZIP(), []int{15}
+	return file_internal_protocol_messages_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GameMessage) GetType() MessageType {
@@ -1165,6 +1309,15 @@ func (x *GameMessage) GetGameState() *GameState {
 	if x != nil {
 		if x, ok := x.Payload.(*GameMessage_GameState); ok {
 			return x.GameState
+		}
+	}
+	return nil
+}
+
+func (x *GameMessage) GetGameStateDelta() *GameStateDelta {
+	if x != nil {
+		if x, ok := x.Payload.(*GameMessage_GameStateDelta); ok {
+			return x.GameStateDelta
 		}
 	}
 	return nil
@@ -1235,6 +1388,10 @@ type GameMessage_GameState struct {
 	GameState *GameState `protobuf:"bytes,5,opt,name=game_state,json=gameState,proto3,oneof"`
 }
 
+type GameMessage_GameStateDelta struct {
+	GameStateDelta *GameStateDelta `protobuf:"bytes,11,opt,name=game_state_delta,json=gameStateDelta,proto3,oneof"`
+}
+
 type GameMessage_PlayerJoin struct {
 	PlayerJoin *PlayerJoinMessage `protobuf:"bytes,6,opt,name=player_join,json=playerJoin,proto3,oneof"`
 }
@@ -1262,6 +1419,8 @@ func (*GameMessage_Input) isGameMessage_Payload() {}
 func (*GameMessage_Shoot) isGameMessage_Payload() {}
 
 func (*GameMessage_GameState) isGameMessage_Payload() {}
+
+func (*GameMessage_GameStateDelta) isGameMessage_Payload() {}
 
 func (*GameMessage_PlayerJoin) isGameMessage_Payload() {}
 
@@ -1349,6 +1508,44 @@ const file_internal_protocol_messages_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\v2\x0f.protocol.EnemyR\x05value:\x028\x01\x1aK\n" +
 	"\fBonusesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12%\n" +
+	"\x05value\x18\x02 \x01(\v2\x0f.protocol.BonusR\x05value:\x028\x01\"\xf6\n" +
+	"\n" +
+	"\x0eGameStateDelta\x12O\n" +
+	"\radded_players\x18\x01 \x03(\v2*.protocol.GameStateDelta.AddedPlayersEntryR\faddedPlayers\x12U\n" +
+	"\x0fupdated_players\x18\x02 \x03(\v2,.protocol.GameStateDelta.UpdatedPlayersEntryR\x0eupdatedPlayers\x12'\n" +
+	"\x0fremoved_players\x18\x03 \x03(\tR\x0eremovedPlayers\x12O\n" +
+	"\radded_bullets\x18\x04 \x03(\v2*.protocol.GameStateDelta.AddedBulletsEntryR\faddedBullets\x12'\n" +
+	"\x0fremoved_bullets\x18\x05 \x03(\tR\x0eremovedBullets\x12I\n" +
+	"\vadded_walls\x18\x06 \x03(\v2(.protocol.GameStateDelta.AddedWallsEntryR\n" +
+	"addedWalls\x12#\n" +
+	"\rremoved_walls\x18\a \x03(\tR\fremovedWalls\x12O\n" +
+	"\radded_enemies\x18\b \x03(\v2*.protocol.GameStateDelta.AddedEnemiesEntryR\faddedEnemies\x12U\n" +
+	"\x0fupdated_enemies\x18\t \x03(\v2,.protocol.GameStateDelta.UpdatedEnemiesEntryR\x0eupdatedEnemies\x12'\n" +
+	"\x0fremoved_enemies\x18\n" +
+	" \x03(\tR\x0eremovedEnemies\x12O\n" +
+	"\radded_bonuses\x18\v \x03(\v2*.protocol.GameStateDelta.AddedBonusesEntryR\faddedBonuses\x12'\n" +
+	"\x0fremoved_bonuses\x18\f \x03(\tR\x0eremovedBonuses\x12\x1c\n" +
+	"\ttimestamp\x18\r \x01(\x03R\ttimestamp\x1aQ\n" +
+	"\x11AddedPlayersEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12&\n" +
+	"\x05value\x18\x02 \x01(\v2\x10.protocol.PlayerR\x05value:\x028\x01\x1aS\n" +
+	"\x13UpdatedPlayersEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12&\n" +
+	"\x05value\x18\x02 \x01(\v2\x10.protocol.PlayerR\x05value:\x028\x01\x1aQ\n" +
+	"\x11AddedBulletsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12&\n" +
+	"\x05value\x18\x02 \x01(\v2\x10.protocol.BulletR\x05value:\x028\x01\x1aM\n" +
+	"\x0fAddedWallsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12$\n" +
+	"\x05value\x18\x02 \x01(\v2\x0e.protocol.WallR\x05value:\x028\x01\x1aP\n" +
+	"\x11AddedEnemiesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12%\n" +
+	"\x05value\x18\x02 \x01(\v2\x0f.protocol.EnemyR\x05value:\x028\x01\x1aR\n" +
+	"\x13UpdatedEnemiesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12%\n" +
+	"\x05value\x18\x02 \x01(\v2\x0f.protocol.EnemyR\x05value:\x028\x01\x1aP\n" +
+	"\x11AddedBonusesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12%\n" +
 	"\x05value\x18\x02 \x01(\v2\x0f.protocol.BonusR\x05value:\x028\x01\"=\n" +
 	"\x11PlayerJoinMessage\x12(\n" +
 	"\x06player\x18\x01 \x01(\v2\x10.protocol.PlayerR\x06player\"1\n" +
@@ -1364,14 +1561,15 @@ const file_internal_protocol_messages_proto_rawDesc = "" +
 	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\x12\x1b\n" +
 	"\tkiller_id\x18\x02 \x01(\tR\bkillerId\"(\n" +
 	"\fErrorMessage\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage\"\xc2\x04\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\"\x88\x05\n" +
 	"\vGameMessage\x12)\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x15.protocol.MessageTypeR\x04type\x124\n" +
 	"\aconnect\x18\x02 \x01(\v2\x18.protocol.ConnectMessageH\x00R\aconnect\x12.\n" +
 	"\x05input\x18\x03 \x01(\v2\x16.protocol.InputMessageH\x00R\x05input\x12.\n" +
 	"\x05shoot\x18\x04 \x01(\v2\x16.protocol.ShootMessageH\x00R\x05shoot\x124\n" +
 	"\n" +
-	"game_state\x18\x05 \x01(\v2\x13.protocol.GameStateH\x00R\tgameState\x12>\n" +
+	"game_state\x18\x05 \x01(\v2\x13.protocol.GameStateH\x00R\tgameState\x12D\n" +
+	"\x10game_state_delta\x18\v \x01(\v2\x18.protocol.GameStateDeltaH\x00R\x0egameStateDelta\x12>\n" +
 	"\vplayer_join\x18\x06 \x01(\v2\x1b.protocol.PlayerJoinMessageH\x00R\n" +
 	"playerJoin\x12A\n" +
 	"\fplayer_leave\x18\a \x01(\v2\x1c.protocol.PlayerLeaveMessageH\x00R\vplayerLeave\x12;\n" +
@@ -1380,7 +1578,7 @@ const file_internal_protocol_messages_proto_rawDesc = "" +
 	"\fplayer_death\x18\t \x01(\v2\x1c.protocol.PlayerDeathMessageH\x00R\vplayerDeath\x12.\n" +
 	"\x05error\x18\n" +
 	" \x01(\v2\x16.protocol.ErrorMessageH\x00R\x05errorB\t\n" +
-	"\apayload*\xad\x01\n" +
+	"\apayload*\xc3\x01\n" +
 	"\vMessageType\x12\v\n" +
 	"\aUNKNOWN\x10\x00\x12\v\n" +
 	"\aCONNECT\x10\x01\x12\t\n" +
@@ -1389,7 +1587,8 @@ const file_internal_protocol_messages_proto_rawDesc = "" +
 	"\n" +
 	"DISCONNECT\x10\x04\x12\x0e\n" +
 	"\n" +
-	"GAME_STATE\x10\x05\x12\x0f\n" +
+	"GAME_STATE\x10\x05\x12\x14\n" +
+	"\x10GAME_STATE_DELTA\x10\v\x12\x0f\n" +
 	"\vPLAYER_JOIN\x10\x06\x12\x10\n" +
 	"\fPLAYER_LEAVE\x10\a\x12\x0e\n" +
 	"\n" +
@@ -1411,7 +1610,7 @@ func file_internal_protocol_messages_proto_rawDescGZIP() []byte {
 }
 
 var file_internal_protocol_messages_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_internal_protocol_messages_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_internal_protocol_messages_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
 var file_internal_protocol_messages_proto_goTypes = []any{
 	(MessageType)(0),           // 0: protocol.MessageType
 	(*Vector2)(nil),            // 1: protocol.Vector2
@@ -1424,17 +1623,25 @@ var file_internal_protocol_messages_proto_goTypes = []any{
 	(*InputMessage)(nil),       // 8: protocol.InputMessage
 	(*ShootMessage)(nil),       // 9: protocol.ShootMessage
 	(*GameState)(nil),          // 10: protocol.GameState
-	(*PlayerJoinMessage)(nil),  // 11: protocol.PlayerJoinMessage
-	(*PlayerLeaveMessage)(nil), // 12: protocol.PlayerLeaveMessage
-	(*PlayerHitMessage)(nil),   // 13: protocol.PlayerHitMessage
-	(*PlayerDeathMessage)(nil), // 14: protocol.PlayerDeathMessage
-	(*ErrorMessage)(nil),       // 15: protocol.ErrorMessage
-	(*GameMessage)(nil),        // 16: protocol.GameMessage
-	nil,                        // 17: protocol.GameState.PlayersEntry
-	nil,                        // 18: protocol.GameState.BulletsEntry
-	nil,                        // 19: protocol.GameState.WallsEntry
-	nil,                        // 20: protocol.GameState.EnemiesEntry
-	nil,                        // 21: protocol.GameState.BonusesEntry
+	(*GameStateDelta)(nil),     // 11: protocol.GameStateDelta
+	(*PlayerJoinMessage)(nil),  // 12: protocol.PlayerJoinMessage
+	(*PlayerLeaveMessage)(nil), // 13: protocol.PlayerLeaveMessage
+	(*PlayerHitMessage)(nil),   // 14: protocol.PlayerHitMessage
+	(*PlayerDeathMessage)(nil), // 15: protocol.PlayerDeathMessage
+	(*ErrorMessage)(nil),       // 16: protocol.ErrorMessage
+	(*GameMessage)(nil),        // 17: protocol.GameMessage
+	nil,                        // 18: protocol.GameState.PlayersEntry
+	nil,                        // 19: protocol.GameState.BulletsEntry
+	nil,                        // 20: protocol.GameState.WallsEntry
+	nil,                        // 21: protocol.GameState.EnemiesEntry
+	nil,                        // 22: protocol.GameState.BonusesEntry
+	nil,                        // 23: protocol.GameStateDelta.AddedPlayersEntry
+	nil,                        // 24: protocol.GameStateDelta.UpdatedPlayersEntry
+	nil,                        // 25: protocol.GameStateDelta.AddedBulletsEntry
+	nil,                        // 26: protocol.GameStateDelta.AddedWallsEntry
+	nil,                        // 27: protocol.GameStateDelta.AddedEnemiesEntry
+	nil,                        // 28: protocol.GameStateDelta.UpdatedEnemiesEntry
+	nil,                        // 29: protocol.GameStateDelta.AddedBonusesEntry
 }
 var file_internal_protocol_messages_proto_depIdxs = []int32{
 	1,  // 0: protocol.Player.position:type_name -> protocol.Vector2
@@ -1444,32 +1651,47 @@ var file_internal_protocol_messages_proto_depIdxs = []int32{
 	1,  // 4: protocol.Wall.position:type_name -> protocol.Vector2
 	1,  // 5: protocol.Enemy.position:type_name -> protocol.Vector2
 	1,  // 6: protocol.Bonus.position:type_name -> protocol.Vector2
-	17, // 7: protocol.GameState.players:type_name -> protocol.GameState.PlayersEntry
-	18, // 8: protocol.GameState.bullets:type_name -> protocol.GameState.BulletsEntry
-	19, // 9: protocol.GameState.walls:type_name -> protocol.GameState.WallsEntry
-	20, // 10: protocol.GameState.enemies:type_name -> protocol.GameState.EnemiesEntry
-	21, // 11: protocol.GameState.bonuses:type_name -> protocol.GameState.BonusesEntry
-	2,  // 12: protocol.PlayerJoinMessage.player:type_name -> protocol.Player
-	0,  // 13: protocol.GameMessage.type:type_name -> protocol.MessageType
-	7,  // 14: protocol.GameMessage.connect:type_name -> protocol.ConnectMessage
-	8,  // 15: protocol.GameMessage.input:type_name -> protocol.InputMessage
-	9,  // 16: protocol.GameMessage.shoot:type_name -> protocol.ShootMessage
-	10, // 17: protocol.GameMessage.game_state:type_name -> protocol.GameState
-	11, // 18: protocol.GameMessage.player_join:type_name -> protocol.PlayerJoinMessage
-	12, // 19: protocol.GameMessage.player_leave:type_name -> protocol.PlayerLeaveMessage
-	13, // 20: protocol.GameMessage.player_hit:type_name -> protocol.PlayerHitMessage
-	14, // 21: protocol.GameMessage.player_death:type_name -> protocol.PlayerDeathMessage
-	15, // 22: protocol.GameMessage.error:type_name -> protocol.ErrorMessage
-	2,  // 23: protocol.GameState.PlayersEntry.value:type_name -> protocol.Player
-	3,  // 24: protocol.GameState.BulletsEntry.value:type_name -> protocol.Bullet
-	4,  // 25: protocol.GameState.WallsEntry.value:type_name -> protocol.Wall
-	5,  // 26: protocol.GameState.EnemiesEntry.value:type_name -> protocol.Enemy
-	6,  // 27: protocol.GameState.BonusesEntry.value:type_name -> protocol.Bonus
-	28, // [28:28] is the sub-list for method output_type
-	28, // [28:28] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	18, // 7: protocol.GameState.players:type_name -> protocol.GameState.PlayersEntry
+	19, // 8: protocol.GameState.bullets:type_name -> protocol.GameState.BulletsEntry
+	20, // 9: protocol.GameState.walls:type_name -> protocol.GameState.WallsEntry
+	21, // 10: protocol.GameState.enemies:type_name -> protocol.GameState.EnemiesEntry
+	22, // 11: protocol.GameState.bonuses:type_name -> protocol.GameState.BonusesEntry
+	23, // 12: protocol.GameStateDelta.added_players:type_name -> protocol.GameStateDelta.AddedPlayersEntry
+	24, // 13: protocol.GameStateDelta.updated_players:type_name -> protocol.GameStateDelta.UpdatedPlayersEntry
+	25, // 14: protocol.GameStateDelta.added_bullets:type_name -> protocol.GameStateDelta.AddedBulletsEntry
+	26, // 15: protocol.GameStateDelta.added_walls:type_name -> protocol.GameStateDelta.AddedWallsEntry
+	27, // 16: protocol.GameStateDelta.added_enemies:type_name -> protocol.GameStateDelta.AddedEnemiesEntry
+	28, // 17: protocol.GameStateDelta.updated_enemies:type_name -> protocol.GameStateDelta.UpdatedEnemiesEntry
+	29, // 18: protocol.GameStateDelta.added_bonuses:type_name -> protocol.GameStateDelta.AddedBonusesEntry
+	2,  // 19: protocol.PlayerJoinMessage.player:type_name -> protocol.Player
+	0,  // 20: protocol.GameMessage.type:type_name -> protocol.MessageType
+	7,  // 21: protocol.GameMessage.connect:type_name -> protocol.ConnectMessage
+	8,  // 22: protocol.GameMessage.input:type_name -> protocol.InputMessage
+	9,  // 23: protocol.GameMessage.shoot:type_name -> protocol.ShootMessage
+	10, // 24: protocol.GameMessage.game_state:type_name -> protocol.GameState
+	11, // 25: protocol.GameMessage.game_state_delta:type_name -> protocol.GameStateDelta
+	12, // 26: protocol.GameMessage.player_join:type_name -> protocol.PlayerJoinMessage
+	13, // 27: protocol.GameMessage.player_leave:type_name -> protocol.PlayerLeaveMessage
+	14, // 28: protocol.GameMessage.player_hit:type_name -> protocol.PlayerHitMessage
+	15, // 29: protocol.GameMessage.player_death:type_name -> protocol.PlayerDeathMessage
+	16, // 30: protocol.GameMessage.error:type_name -> protocol.ErrorMessage
+	2,  // 31: protocol.GameState.PlayersEntry.value:type_name -> protocol.Player
+	3,  // 32: protocol.GameState.BulletsEntry.value:type_name -> protocol.Bullet
+	4,  // 33: protocol.GameState.WallsEntry.value:type_name -> protocol.Wall
+	5,  // 34: protocol.GameState.EnemiesEntry.value:type_name -> protocol.Enemy
+	6,  // 35: protocol.GameState.BonusesEntry.value:type_name -> protocol.Bonus
+	2,  // 36: protocol.GameStateDelta.AddedPlayersEntry.value:type_name -> protocol.Player
+	2,  // 37: protocol.GameStateDelta.UpdatedPlayersEntry.value:type_name -> protocol.Player
+	3,  // 38: protocol.GameStateDelta.AddedBulletsEntry.value:type_name -> protocol.Bullet
+	4,  // 39: protocol.GameStateDelta.AddedWallsEntry.value:type_name -> protocol.Wall
+	5,  // 40: protocol.GameStateDelta.AddedEnemiesEntry.value:type_name -> protocol.Enemy
+	5,  // 41: protocol.GameStateDelta.UpdatedEnemiesEntry.value:type_name -> protocol.Enemy
+	6,  // 42: protocol.GameStateDelta.AddedBonusesEntry.value:type_name -> protocol.Bonus
+	43, // [43:43] is the sub-list for method output_type
+	43, // [43:43] is the sub-list for method input_type
+	43, // [43:43] is the sub-list for extension type_name
+	43, // [43:43] is the sub-list for extension extendee
+	0,  // [0:43] is the sub-list for field type_name
 }
 
 func init() { file_internal_protocol_messages_proto_init() }
@@ -1477,11 +1699,12 @@ func file_internal_protocol_messages_proto_init() {
 	if File_internal_protocol_messages_proto != nil {
 		return
 	}
-	file_internal_protocol_messages_proto_msgTypes[15].OneofWrappers = []any{
+	file_internal_protocol_messages_proto_msgTypes[16].OneofWrappers = []any{
 		(*GameMessage_Connect)(nil),
 		(*GameMessage_Input)(nil),
 		(*GameMessage_Shoot)(nil),
 		(*GameMessage_GameState)(nil),
+		(*GameMessage_GameStateDelta)(nil),
 		(*GameMessage_PlayerJoin)(nil),
 		(*GameMessage_PlayerLeave)(nil),
 		(*GameMessage_PlayerHit)(nil),
@@ -1494,7 +1717,7 @@ func file_internal_protocol_messages_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_protocol_messages_proto_rawDesc), len(file_internal_protocol_messages_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   21,
+			NumMessages:   29,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
