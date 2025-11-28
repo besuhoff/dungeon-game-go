@@ -36,7 +36,6 @@ type InputPayload struct {
 	Backward  bool    `json:"backward"`
 	Left      bool    `json:"left"`
 	Right     bool    `json:"right"`
-	Direction float64 `json:"direction"` // player facing direction in degrees
 }
 
 // ShootPayload for shooting

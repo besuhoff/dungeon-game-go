@@ -627,7 +627,6 @@ type InputMessage struct {
 	Backward      bool                   `protobuf:"varint,2,opt,name=backward,proto3" json:"backward,omitempty"`
 	Left          bool                   `protobuf:"varint,3,opt,name=left,proto3" json:"left,omitempty"`
 	Right         bool                   `protobuf:"varint,4,opt,name=right,proto3" json:"right,omitempty"`
-	Direction     float64                `protobuf:"fixed64,5,opt,name=direction,proto3" json:"direction,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -688,13 +687,6 @@ func (x *InputMessage) GetRight() bool {
 		return x.Right
 	}
 	return false
-}
-
-func (x *InputMessage) GetDirection() float64 {
-	if x != nil {
-		return x.Direction
-	}
-	return 0
 }
 
 type ShootMessage struct {
@@ -1327,13 +1319,12 @@ const file_internal_protocol_messages_proto_rawDesc = "" +
 	"\bposition\x18\x02 \x01(\v2\x11.protocol.Vector2R\bposition\x12\x12\n" +
 	"\x04type\x18\x03 \x01(\tR\x04type\",\n" +
 	"\x0eConnectMessage\x12\x1a\n" +
-	"\busername\x18\x01 \x01(\tR\busername\"\x8c\x01\n" +
+	"\busername\x18\x01 \x01(\tR\busername\"n\n" +
 	"\fInputMessage\x12\x18\n" +
 	"\aforward\x18\x01 \x01(\bR\aforward\x12\x1a\n" +
 	"\bbackward\x18\x02 \x01(\bR\bbackward\x12\x12\n" +
 	"\x04left\x18\x03 \x01(\bR\x04left\x12\x14\n" +
-	"\x05right\x18\x04 \x01(\bR\x05right\x12\x1c\n" +
-	"\tdirection\x18\x05 \x01(\x01R\tdirection\",\n" +
+	"\x05right\x18\x04 \x01(\bR\x05right\",\n" +
 	"\fShootMessage\x12\x1c\n" +
 	"\tdirection\x18\x01 \x01(\x01R\tdirection\"\xcf\x05\n" +
 	"\tGameState\x12:\n" +

@@ -81,7 +81,6 @@ message InputMessage {
   bool backward = 2;
   bool left = 3;
   bool right = 4;
-  double direction = 5;
 }
 
 message ShootMessage {

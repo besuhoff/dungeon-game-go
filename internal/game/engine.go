@@ -206,9 +206,6 @@ func (e *Engine) UpdatePlayerInput(playerID string, input types.InputPayload) {
 		return
 	}
 
-	// Update rotation (player facing direction)
-	player.Rotation = input.Direction
-
 	// Calculate velocity based on forward/backward movement in the direction player is facing
 	var forward float64
 	if input.Forward {
