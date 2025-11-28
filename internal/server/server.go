@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"google.golang.org/protobuf/proto"
-	
+
 	"github.com/besuhoff/dungeon-game-go/internal/auth"
 	"github.com/besuhoff/dungeon-game-go/internal/db"
 	"github.com/besuhoff/dungeon-game-go/internal/game"
@@ -54,6 +54,7 @@ type GameServer struct {
 	register   chan *Client
 	unregister chan *Client
 	broadcast  chan []byte
+	shutdown   chan struct{}
 	mu         sync.RWMutex
 	running    bool
 }
@@ -66,6 +67,7 @@ func NewGameServer() *GameServer {
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		broadcast:  make(chan []byte, 256),
+		shutdown:   make(chan struct{}),
 		running:    false,
 	}
 }
@@ -76,8 +78,12 @@ func (gs *GameServer) Run() {
 	ticker := time.NewTicker(16 * time.Millisecond) // ~60 FPS
 	defer ticker.Stop()
 
-	for gs.running {
+	for {
 		select {
+		case <-gs.shutdown:
+			log.Println("Game server loop shutting down...")
+			return
+
 		case client := <-gs.register:
 			gs.registerClient(client)
 
@@ -103,19 +109,48 @@ func (gs *GameServer) Run() {
 
 // Shutdown gracefully shuts down the server
 func (gs *GameServer) Shutdown() {
-	gs.running = false
+	log.Println("Starting graceful shutdown...")
+	
+	// Signal the Run loop to stop
+	close(gs.shutdown)
+	
+	// Give it a moment to process
+	time.Sleep(100 * time.Millisecond)
+	
 	gs.mu.Lock()
 	defer gs.mu.Unlock()
 
-	for _, client := range gs.clients {
-		close(client.Send)
+	// Close all client connections gracefully
+	log.Printf("Closing %d client connections...", len(gs.clients))
+	for id, client := range gs.clients {
+		// Send close message to client
+		client.Conn.WriteControl(websocket.CloseMessage, 
+			websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Server shutting down"),
+			time.Now().Add(time.Second))
 		client.Conn.Close()
+		delete(gs.clients, id)
 	}
+	
+	// Save all active sessions to database
+	log.Printf("Saving %d active sessions to database...", len(gs.sessions))
+	ctx := context.Background()
+	sessionRepo := db.NewGameSessionRepository()
+	
+	for sessionID, session := range gs.sessions {
+		if sessionObjID, err := primitive.ObjectIDFromHex(sessionID); err == nil {
+			if dbSession, err := sessionRepo.FindByID(ctx, sessionObjID); err == nil {
+				session.Engine.SaveToSession(dbSession)
+				sessionRepo.Update(ctx, dbSession)
+				log.Printf("Saved session %s", sessionID)
+			}
+		}
+	}
+	
+	log.Println("Graceful shutdown complete")
 }
 
 func (gs *GameServer) registerClient(client *Client) {
 	gs.mu.Lock()
-	defer gs.mu.Unlock()
 
 	gs.clients[client.ID] = client
 
@@ -146,7 +181,11 @@ func (gs *GameServer) registerClient(client *Client) {
 
 	session.mu.Lock()
 	session.PlayerCount++
+	playerCount := session.PlayerCount
 	session.mu.Unlock()
+	
+	// Unlock before calling methods that need to acquire locks
+	gs.mu.Unlock()
 
 	// Add player to game engine
 	player := session.Engine.AddPlayer(client.ID, client.Username)
@@ -170,26 +209,30 @@ func (gs *GameServer) registerClient(client *Client) {
 
 	// Send current game state to new player
 	gameState := session.Engine.GetGameState()
-	stateMsg := types.Message{
-		Type:    types.MsgTypeGameState,
-		Payload: gameState,
+
+	if client.UseBinary {
+		client.sendBinaryGameState(gameState)
+	} else {
+		client.sendJSONGameState(gameState)
 	}
-	client.SendJSON(stateMsg)
 
 	log.Printf("Player %s (%s) joined session %s (players: %d)", 
-		client.Username, client.ID, client.SessionID, session.PlayerCount)
+		client.Username, client.ID, client.SessionID, playerCount)
 }
 
 func (gs *GameServer) unregisterClient(client *Client) {
 	gs.mu.Lock()
-	if _, ok := gs.clients[client.ID]; ok {
+	_, exists := gs.clients[client.ID]
+	if exists {
 		delete(gs.clients, client.ID)
-		close(client.Send)
-		client.Conn.Close()
 	}
 	
 	session, sessionExists := gs.sessions[client.SessionID]
 	gs.mu.Unlock()
+
+	if !exists {
+		return
+	}
 
 	if !sessionExists {
 		return
@@ -274,15 +317,6 @@ func (gs *GameServer) broadcastMessage(message []byte) {
 	}
 }
 
-func (gs *GameServer) broadcastJSON(v interface{}) {
-	data, err := json.Marshal(v)
-	if err != nil {
-		log.Printf("Error marshaling message: %v", err)
-		return
-	}
-	gs.broadcast <- data
-}
-
 func (gs *GameServer) broadcastToSession(sessionID string, v interface{}) {
 	data, err := json.Marshal(v)
 	if err != nil {
@@ -321,21 +355,12 @@ func (gs *GameServer) broadcastAllSessionStates() {
 				if client.UseBinary {
 					client.sendBinaryGameState(gameState)
 				} else {
-					msg := types.Message{
-						Type:    types.MsgTypeGameState,
-						Payload: gameState,
-					}
-					client.SendJSON(msg)
+					client.sendJSONGameState(gameState)
 				}
 			}
 		}
 		gs.mu.RUnlock()
 	}
-}
-
-func (gs *GameServer) broadcastGameState() {
-	// Deprecated - use broadcastAllSessionStates
-	gs.broadcastAllSessionStates()
 }
 
 // HandleWebSocket handles WebSocket connections
@@ -578,6 +603,14 @@ func (c *Client) handleBinaryMessage(data []byte) {
 			session.Engine.Shoot(c.ID, payload.Direction)
 		}
 	}
+}
+
+func (c *Client) sendJSONGameState(gameState types.GameState) {
+	stateMsg := types.Message{
+		Type:    types.MsgTypeGameState,
+		Payload: gameState,
+	}
+	c.SendJSON(stateMsg)
 }
 
 func (c *Client) SendJSON(v interface{}) {

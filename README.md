@@ -47,7 +47,8 @@ dungeon-game-go/
 │   │   ├── connection.go           # MongoDB connection
 │   │   └── models.go               # Database models (User, GameSession)
 │   ├── game/
-│   │   └── engine.go               # Game logic and physics
+│   │   ├── engine.go               # Game logic and physics
+│   │   └── session.go              # Game session management and conversion
 │   ├── server/
 │   │   └── server.go               # WebSocket server and client handling
 │   ├── types/
@@ -144,6 +145,21 @@ The server will start on `http://localhost:8080`
   - Handles the OAuth callback from Google
   - Creates/finds user in database
   - Returns JWT token by redirecting to: `{FRONTEND_URL}?token={jwt}`
+- **Get Current User**: `GET /api/v1/auth/user`
+  - Headers: `Authorization: Bearer {jwt}`
+  - Returns current authenticated user information
+  - Response:
+    ```json
+    {
+      "id": "507f1f77bcf86cd799439011",
+      "email": "user@example.com",
+      "google_id": "1234567890",
+      "username": "user",
+      "is_active": true,
+      "created_at": "2025-01-01T00:00:00Z",
+      "current_session": "507f1f77bcf86cd799439012"
+    }
+    ```
 
 ### WebSocket Connection
 

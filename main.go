@@ -1,17 +1,21 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/besuhoff/dungeon-game-go/internal/auth"
 	"github.com/besuhoff/dungeon-game-go/internal/config"
 	"github.com/besuhoff/dungeon-game-go/internal/db"
+	"github.com/besuhoff/dungeon-game-go/internal/handlers"
 	"github.com/besuhoff/dungeon-game-go/internal/server"
 )
 
@@ -28,6 +32,23 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// CORS middleware
+func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", config.AppConfig.FrontendURL)
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		
+		next(w, r)
+	}
 }
 
 func main() {
@@ -52,11 +73,42 @@ func main() {
 
 	// Setup auth handlers
 	googleAuth := auth.NewGoogleAuthHandler()
+	sessionHandler := handlers.NewSessionHandler()
+	leaderboardHandler := handlers.NewLeaderboardHandler()
 	
 	// Setup HTTP routes
 	http.HandleFunc("/ws", gameServer.HandleWebSocket)
-	http.HandleFunc("/api/v1/auth/google/url", googleAuth.HandleGetAuthURL)
+	
+	// Auth endpoints
+	http.HandleFunc("/api/v1/auth/google/url", corsMiddleware(googleAuth.HandleGetAuthURL))
 	http.HandleFunc("/api/v1/auth/google/callback", googleAuth.HandleCallback)
+	http.HandleFunc("/api/v1/auth/user", corsMiddleware(googleAuth.HandleGetUser))
+	
+	// Session endpoints
+	http.HandleFunc("/api/v1/sessions", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			sessionHandler.HandleCreateSession(w, r)
+		} else if r.Method == http.MethodGet {
+			sessionHandler.HandleListSessions(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+	http.HandleFunc("/api/v1/sessions/", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/join") {
+			sessionHandler.HandleJoinSession(w, r)
+		} else if strings.HasSuffix(r.URL.Path, "/leave") {
+			sessionHandler.HandleLeaveSession(w, r)
+		} else {
+			http.Error(w, "Not found", http.StatusNotFound)
+		}
+	}))
+	
+	// Leaderboard endpoints
+	http.HandleFunc("/api/v1/leaderboard/global", corsMiddleware(leaderboardHandler.HandleGetGlobalLeaderboard))
+	http.HandleFunc("/api/v1/leaderboard/user/", corsMiddleware(leaderboardHandler.HandleGetUserStats))
+	
+	// Health check
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
@@ -65,6 +117,15 @@ func main() {
 	// Prepare address
 	addr := fmt.Sprintf("%s:%s", *host, *port)
 	
+	// Create HTTP server with proper configuration
+	httpServer := &http.Server{
+		Addr:         addr,
+		Handler:      nil, // Uses DefaultServeMux
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+	
 	// Start HTTP/HTTPS server
 	go func() {
 		if *useTLS || *certFile != "" {
@@ -72,12 +133,12 @@ func main() {
 				log.Fatal("TLS enabled but certificate or key file not provided. Use -cert and -key flags or TLS_CERT and TLS_KEY environment variables.")
 			}
 			log.Printf("Starting game server with TLS on %s", addr)
-			if err := http.ListenAndServeTLS(addr, *certFile, *keyFile, nil); err != nil {
+			if err := httpServer.ListenAndServeTLS(*certFile, *keyFile); err != nil && err != http.ErrServerClosed {
 				log.Fatal("ListenAndServeTLS error: ", err)
 			}
 		} else {
 			log.Printf("Starting game server on %s", addr)
-			if err := http.ListenAndServe(addr, nil); err != nil {
+			if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Fatal("ListenAndServe error: ", err)
 			}
 		}
@@ -97,6 +158,20 @@ func main() {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	<-sigChan
 
-	log.Println("Shutting down server...")
+	log.Println("Received shutdown signal, shutting down gracefully...")
+	
+	// Shutdown game server first (save sessions, close websockets)
 	gameServer.Shutdown()
+	
+	// Shutdown HTTP server with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	
+	if err := httpServer.Shutdown(ctx); err != nil {
+		log.Printf("HTTP server shutdown error: %v", err)
+	} else {
+		log.Println("HTTP server shut down successfully")
+	}
+	
+	log.Println("Server stopped")
 }

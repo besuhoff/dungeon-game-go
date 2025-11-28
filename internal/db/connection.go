@@ -82,3 +82,8 @@ func Disconnect() error {
 	}
 	return nil
 }
+
+// GetDatabase returns the database instance
+func GetDatabase() *mongo.Database {
+	return Database
+}

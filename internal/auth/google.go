@@ -175,3 +175,42 @@ func generateRandomState() (string, error) {
 	}
 	return base64.URLEncoding.EncodeToString(b), nil
 }
+
+// HandleGetUser returns the current authenticated user's information
+func (h *GoogleAuthHandler) HandleGetUser(w http.ResponseWriter, r *http.Request) {
+	// Extract token from Authorization header
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Missing authorization header", http.StatusUnauthorized)
+		return
+	}
+
+	// Remove "Bearer " prefix
+	token := authHeader
+	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+		token = authHeader[7:]
+	}
+
+	// Validate JWT token
+	userID, err := ValidateToken(token)
+	if err != nil {
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	// Fetch user from database
+	ctx := context.Background()
+	user, err := h.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			http.Error(w, "User not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Return user info
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+}

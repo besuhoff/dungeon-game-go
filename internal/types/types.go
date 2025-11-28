@@ -39,12 +39,12 @@ type Bullet struct {
 
 // GameState represents the current state of the game
 type GameState struct {
-	Players   map[string]*Player `json:\"players\"`
-	Bullets   map[string]*Bullet `json:\"bullets\"`
-	Walls     map[string]*Wall   `json:\"walls\"`
-	Enemies   map[string]*Enemy  `json:\"enemies\"`
-	Bonuses   map[string]*Bonus  `json:\"bonuses\"`
-	Timestamp int64              `json:\"timestamp\"`
+	Players   map[string]*Player `json:"players"`
+	Bullets   map[string]*Bullet `json:"bullets"`
+	Walls     map[string]*Wall   `json:"walls"`
+	Enemies   map[string]*Enemy  `json:"enemies"`
+	Bonuses   map[string]*Bonus  `json:"bonuses"`
+	Timestamp int64              `json:"timestamp"`
 }
 
 // Wall represents a wall obstacle

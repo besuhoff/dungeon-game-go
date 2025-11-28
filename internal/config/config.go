@@ -49,7 +49,7 @@ func LoadConfig() *Config {
 		GoogleClientID:          getEnvOrDefault("GOOGLE_CLIENT_ID", ""),
 		GoogleClientSecret:      getEnvOrDefault("GOOGLE_CLIENT_SECRET", ""),
 		APIBaseURL:              getEnvOrDefault("API_BASE_URL", "http://localhost:8080"),
-		FrontendURL:             getEnvOrDefault("FRONTEND_URL", "http://localhost:3000"),
+		FrontendURL:             getEnvOrDefault("FRONTEND_URL", "http://localhost:9000"),
 		AccessTokenExpireMinutes: expireMinutes,
 		Port:                    getEnvOrDefault("PORT", "8080"),
 		UseTLS:                  useTLS,
