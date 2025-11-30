@@ -1,0 +1,21 @@
+{
+  "name": "dungeon-game-go",
+  "version": "0.0.1-alpha2",
+  "description": "Dungeon game with protobuf support",
+  "main": "dist/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "proto:generate": "./scripts/generate-proto.sh"
+  },
+  "devDependencies": {
+    "@protobuf-ts/plugin": "^2.11.1",
+    "@types/node": "^20.0.0",
+    "protobufjs": "^7.2.0",
+    "protoc": "^33.1.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@protobuf-ts/runtime": "^2.11.1"
+  }
+}

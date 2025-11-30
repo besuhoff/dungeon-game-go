@@ -207,8 +207,8 @@ func (gs *GameServer) registerClient(client *Client) {
 	}
 	gs.broadcastToSession(client.SessionID, msg)
 
-	// Send current game state to new player
-	gameState := session.Engine.GetGameState()
+	// Send player-specific game state to new player (filtered to surrounding chunks)
+	gameState := session.Engine.GetGameStateForPlayer(client.ID)
 
 	if client.UseBinary {
 		client.sendBinaryGameState(gameState)
@@ -347,21 +347,23 @@ func (gs *GameServer) broadcastAllSessionStates() {
 	gs.mu.RUnlock()
 
 	for sessionID, session := range sessions {
-		// Get delta instead of full state
-		delta := session.Engine.GetGameStateDelta()
+		// First update previous state for delta computation
+		session.Engine.GetGameStateDelta()
 		
-		// Only broadcast if there are changes
-		if delta.IsEmpty() {
-			continue
-		}
-		
+		// Send individualized delta to each player in the session
 		gs.mu.RLock()
 		for _, client := range gs.clients {
 			if client.SessionID == sessionID {
-				if client.UseBinary {
-					client.sendBinaryGameStateDelta(delta)
-				} else {
-					client.sendJSONGameStateDelta(delta)
+				// Get player-specific delta (filtered to surrounding chunks)
+				delta := session.Engine.GetGameStateDeltaForPlayer(client.ID)
+				
+				// Only send if there are changes
+				if !delta.IsEmpty() {
+					if client.UseBinary {
+						client.sendBinaryGameStateDelta(delta)
+					} else {
+						client.sendJSONGameStateDelta(delta)
+					}
 				}
 			}
 		}

@@ -99,24 +99,22 @@ message GameState {
 }
 
 message GameStateDelta {
-  map<string, Player> added_players = 1;
-  map<string, Player> updated_players = 2;
-  repeated string removed_players = 3;
+  map<string, Player> updated_players = 1;
+  repeated string removed_players = 2;
   
-  map<string, Bullet> added_bullets = 4;
-  repeated string removed_bullets = 5;
+  map<string, Bullet> updated_bullets = 3;
+  repeated string removed_bullets = 4;
   
-  map<string, Wall> added_walls = 6;
-  repeated string removed_walls = 7;
+  map<string, Wall> updated_walls = 5;
+  repeated string removed_walls = 6;
   
-  map<string, Enemy> added_enemies = 8;
-  map<string, Enemy> updated_enemies = 9;
-  repeated string removed_enemies = 10;
+  map<string, Enemy> updated_enemies = 7;
+  repeated string removed_enemies = 8;
   
-  map<string, Bonus> added_bonuses = 11;
-  repeated string removed_bonuses = 12;
+  map<string, Bonus> updated_bonuses = 9;
+  repeated string removed_bonuses = 10;
   
-  int64 timestamp = 13;
+  int64 timestamp = 11;
 }
 
 message PlayerJoinMessage {

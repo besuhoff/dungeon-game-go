@@ -138,29 +138,19 @@ func ToProtoGameState(gs types.GameState) *GameState {
 
 // ToProtoGameStateDelta converts types.GameStateDelta to proto GameStateDelta
 func ToProtoGameStateDelta(delta types.GameStateDelta) *GameStateDelta {
-	protoAddedPlayers := make(map[string]*Player)
-	for k, v := range delta.AddedPlayers {
-		protoAddedPlayers[k] = ToProtoPlayer(v)
-	}
-
 	protoUpdatedPlayers := make(map[string]*Player)
 	for k, v := range delta.UpdatedPlayers {
 		protoUpdatedPlayers[k] = ToProtoPlayer(v)
 	}
 
-	protoAddedBullets := make(map[string]*Bullet)
-	for k, v := range delta.AddedBullets {
-		protoAddedBullets[k] = ToProtoBullet(v)
+	protoUpdatedBullets := make(map[string]*Bullet)
+	for k, v := range delta.UpdatedBullets {
+		protoUpdatedBullets[k] = ToProtoBullet(v)
 	}
 
-	protoAddedWalls := make(map[string]*Wall)
-	for k, v := range delta.AddedWalls {
-		protoAddedWalls[k] = ToProtoWall(v)
-	}
-
-	protoAddedEnemies := make(map[string]*Enemy)
-	for k, v := range delta.AddedEnemies {
-		protoAddedEnemies[k] = ToProtoEnemy(v)
+	protoUpdatedWalls := make(map[string]*Wall)
+	for k, v := range delta.UpdatedWalls {
+		protoUpdatedWalls[k] = ToProtoWall(v)
 	}
 
 	protoUpdatedEnemies := make(map[string]*Enemy)
@@ -168,23 +158,21 @@ func ToProtoGameStateDelta(delta types.GameStateDelta) *GameStateDelta {
 		protoUpdatedEnemies[k] = ToProtoEnemy(v)
 	}
 
-	protoAddedBonuses := make(map[string]*Bonus)
-	for k, v := range delta.AddedBonuses {
-		protoAddedBonuses[k] = ToProtoBonus(v)
+	protoUpdatedBonuses := make(map[string]*Bonus)
+	for k, v := range delta.UpdatedBonuses {
+		protoUpdatedBonuses[k] = ToProtoBonus(v)
 	}
 
 	return &GameStateDelta{
-		AddedPlayers:   protoAddedPlayers,
 		UpdatedPlayers: protoUpdatedPlayers,
 		RemovedPlayers: delta.RemovedPlayers,
-		AddedBullets:   protoAddedBullets,
+		UpdatedBullets:   protoUpdatedBullets,
 		RemovedBullets: delta.RemovedBullets,
-		AddedWalls:     protoAddedWalls,
+		UpdatedWalls:     protoUpdatedWalls,
 		RemovedWalls:   delta.RemovedWalls,
-		AddedEnemies:   protoAddedEnemies,
-		UpdatedEnemies: protoUpdatedEnemies,
+		UpdatedEnemies:   protoUpdatedEnemies,
 		RemovedEnemies: delta.RemovedEnemies,
-		AddedBonuses:   protoAddedBonuses,
+		UpdatedBonuses:   protoUpdatedBonuses,
 		RemovedBonuses: delta.RemovedBonuses,
 		Timestamp:      delta.Timestamp,
 	}

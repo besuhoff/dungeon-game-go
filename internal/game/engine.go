@@ -771,23 +771,102 @@ func (e *Engine) GetGameState() types.GameState {
 	}
 }
 
+// GetGameStateForPlayer returns game state filtered to player's surrounding chunks (-1 to 1)
+func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	player, exists := e.players[playerID]
+	if !exists {
+		// Return empty state if player doesn't exist
+		return types.GameState{
+			Players:   make(map[string]*types.Player),
+			Bullets:   make(map[string]*types.Bullet),
+			Walls:     make(map[string]*types.Wall),
+			Enemies:   make(map[string]*types.Enemy),
+			Bonuses:   make(map[string]*types.Bonus),
+			Timestamp: time.Now().UnixMilli(),
+		}
+	}
+
+	// Calculate player's chunk and surrounding chunk range
+	playerChunkX := int(player.Position.X / types.ChunkSize)
+	playerChunkY := int(player.Position.Y / types.ChunkSize)
+
+	// Helper function to check if position is in visible chunks
+	isInVisibleChunks := func(x, y float64) bool {
+		entityChunkX := int(x / types.ChunkSize)
+		entityChunkY := int(y / types.ChunkSize)
+		return entityChunkX >= playerChunkX-1 && entityChunkX <= playerChunkX+1 &&
+			entityChunkY >= playerChunkY-1 && entityChunkY <= playerChunkY+1
+	}
+
+	// Deep copy with filtering
+	playersCopy := make(map[string]*types.Player)
+	for k, v := range e.players {
+		if isInVisibleChunks(v.Position.X, v.Position.Y) {
+			p := *v
+			playersCopy[k] = &p
+		}
+	}
+
+	bulletsCopy := make(map[string]*types.Bullet)
+	for k, v := range e.bullets {
+		if isInVisibleChunks(v.Position.X, v.Position.Y) {
+			b := *v
+			bulletsCopy[k] = &b
+		}
+	}
+
+	wallsCopy := make(map[string]*types.Wall)
+	for k, v := range e.walls {
+		if isInVisibleChunks(v.Position.X, v.Position.Y) {
+			w := *v
+			wallsCopy[k] = &w
+		}
+	}
+
+	enemiesCopy := make(map[string]*types.Enemy)
+	for k, v := range e.enemies {
+		if isInVisibleChunks(v.Position.X, v.Position.Y) {
+			e := *v
+			enemiesCopy[k] = &e
+		}
+	}
+
+	bonusesCopy := make(map[string]*types.Bonus)
+	for k, v := range e.bonuses {
+		if isInVisibleChunks(v.Position.X, v.Position.Y) {
+			b := *v
+			bonusesCopy[k] = &b
+		}
+	}
+
+	return types.GameState{
+		Players:   playersCopy,
+		Bullets:   bulletsCopy,
+		Walls:     wallsCopy,
+		Enemies:   enemiesCopy,
+		Bonuses:   bonusesCopy,
+		Timestamp: time.Now().UnixMilli(),
+	}
+}
+
 // GetGameStateDelta computes the delta between current and previous state
 func (e *Engine) GetGameStateDelta() types.GameStateDelta {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	
 	delta := types.GameStateDelta{
-		AddedPlayers:   make(map[string]*types.Player),
 		UpdatedPlayers: make(map[string]*types.Player),
 		RemovedPlayers: make([]string, 0),
-		AddedBullets:   make(map[string]*types.Bullet),
+		UpdatedBullets:   make(map[string]*types.Bullet),
 		RemovedBullets: make([]string, 0),
-		AddedWalls:     make(map[string]*types.Wall),
+		UpdatedWalls:     make(map[string]*types.Wall),
 		RemovedWalls:   make([]string, 0),
-		AddedEnemies:   make(map[string]*types.Enemy),
 		UpdatedEnemies: make(map[string]*types.Enemy),
 		RemovedEnemies: make([]string, 0),
-		AddedBonuses:   make(map[string]*types.Bonus),
+		UpdatedBonuses:   make(map[string]*types.Bonus),
 		RemovedBonuses: make([]string, 0),
 		Timestamp:      time.Now().UnixMilli(),
 	}
@@ -795,9 +874,8 @@ func (e *Engine) GetGameStateDelta() types.GameStateDelta {
 	// Check for added/updated players
 	for id, player := range e.players {
 		playerCopy := *player
-		if prev, exists := e.prevPlayers[id]; !exists {
-			delta.AddedPlayers[id] = &playerCopy
-		} else if !playersEqual(prev, player) {
+		prev := e.prevPlayers[id];
+		if !playersEqual(prev, player) {
 			delta.UpdatedPlayers[id] = &playerCopy
 		}
 	}
@@ -813,7 +891,7 @@ func (e *Engine) GetGameStateDelta() types.GameStateDelta {
 	for id, bullet := range e.bullets {
 		if _, exists := e.prevBullets[id]; !exists {
 			bulletCopy := *bullet
-			delta.AddedBullets[id] = &bulletCopy
+			delta.UpdatedBullets[id] = &bulletCopy
 		}
 	}
 	for id := range e.prevBullets {
@@ -826,7 +904,7 @@ func (e *Engine) GetGameStateDelta() types.GameStateDelta {
 	for id, wall := range e.walls {
 		if _, exists := e.prevWalls[id]; !exists {
 			wallCopy := *wall
-			delta.AddedWalls[id] = &wallCopy
+			delta.UpdatedWalls[id] = &wallCopy
 		}
 	}
 	for id := range e.prevWalls {
@@ -838,9 +916,8 @@ func (e *Engine) GetGameStateDelta() types.GameStateDelta {
 	// Check for added/updated/removed enemies
 	for id, enemy := range e.enemies {
 		enemyCopy := *enemy
-		if prev, exists := e.prevEnemies[id]; !exists {
-			delta.AddedEnemies[id] = &enemyCopy
-		} else if !enemiesEqual(prev, enemy) {
+		prev := e.prevEnemies[id]; 
+		if !enemiesEqual(prev, enemy) {
 			delta.UpdatedEnemies[id] = &enemyCopy
 		}
 	}
@@ -854,7 +931,7 @@ func (e *Engine) GetGameStateDelta() types.GameStateDelta {
 	for id, bonus := range e.bonuses {
 		if _, exists := e.prevBonuses[id]; !exists {
 			bonusCopy := *bonus
-			delta.AddedBonuses[id] = &bonusCopy
+			delta.UpdatedBonuses[id] = &bonusCopy
 		}
 	}
 	for id := range e.prevBonuses {
@@ -897,8 +974,161 @@ func (e *Engine) GetGameStateDelta() types.GameStateDelta {
 	return delta
 }
 
+// GetGameStateDeltaForPlayer computes the delta filtered to player's surrounding chunks (-1 to 1)
+func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelta {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	player, exists := e.players[playerID]
+	if !exists {
+		// Return empty delta if player doesn't exist
+		return types.GameStateDelta{
+			UpdatedPlayers: make(map[string]*types.Player),
+			RemovedPlayers: make([]string, 0),
+			UpdatedBullets:   make(map[string]*types.Bullet),
+			RemovedBullets: make([]string, 0),
+			UpdatedWalls:     make(map[string]*types.Wall),
+			RemovedWalls:   make([]string, 0),
+			UpdatedEnemies: make(map[string]*types.Enemy),
+			RemovedEnemies: make([]string, 0),
+			UpdatedBonuses:   make(map[string]*types.Bonus),
+			RemovedBonuses: make([]string, 0),
+			Timestamp:      time.Now().UnixMilli(),
+		}
+	}
+
+	// Calculate player's chunk and surrounding chunk range
+	playerChunkX := int(player.Position.X / types.ChunkSize)
+	playerChunkY := int(player.Position.Y / types.ChunkSize)
+
+	// Helper function to check if position is in visible chunks
+	isInVisibleChunks := func(x, y float64) bool {
+		entityChunkX := int(x / types.ChunkSize)
+		entityChunkY := int(y / types.ChunkSize)
+		return entityChunkX >= playerChunkX-1 && entityChunkX <= playerChunkX+1 &&
+			entityChunkY >= playerChunkY-1 && entityChunkY <= playerChunkY+1
+	}
+
+	delta := types.GameStateDelta{
+		UpdatedPlayers: make(map[string]*types.Player),
+		RemovedPlayers: make([]string, 0),
+		UpdatedBullets:   make(map[string]*types.Bullet),
+		RemovedBullets: make([]string, 0),
+		UpdatedWalls:     make(map[string]*types.Wall),
+		RemovedWalls:   make([]string, 0),
+		UpdatedEnemies: make(map[string]*types.Enemy),
+		RemovedEnemies: make([]string, 0),
+		UpdatedBonuses:   make(map[string]*types.Bonus),
+		RemovedBonuses: make([]string, 0),
+		Timestamp:      time.Now().UnixMilli(),
+	}
+
+	// Check for added/updated players in visible chunks
+	for id, p := range e.players {
+		if isInVisibleChunks(p.Position.X, p.Position.Y) {
+			playerCopy := *p
+			prev := e.prevPlayers[id]; 
+			if !playersEqual(prev, p) {
+				delta.UpdatedPlayers[id] = &playerCopy
+			}
+		}
+	}
+
+	// Check for removed players that were in visible chunks
+	for id, prev := range e.prevPlayers {
+		if isInVisibleChunks(prev.Position.X, prev.Position.Y) {
+			if _, exists := e.players[id]; !exists {
+				delta.RemovedPlayers = append(delta.RemovedPlayers, id)
+			}
+		}
+	}
+
+	// Check for added bullets in visible chunks
+	for id, bullet := range e.bullets {
+		if isInVisibleChunks(bullet.Position.X, bullet.Position.Y) {
+			if _, exists := e.prevBullets[id]; !exists {
+				bulletCopy := *bullet
+				delta.UpdatedBullets[id] = &bulletCopy
+			}
+		}
+	}
+
+	// Check for removed bullets that were in visible chunks
+	for id, prev := range e.prevBullets {
+		if isInVisibleChunks(prev.Position.X, prev.Position.Y) {
+			if _, exists := e.bullets[id]; !exists {
+				delta.RemovedBullets = append(delta.RemovedBullets, id)
+			}
+		}
+	}
+
+	// Check for added walls in visible chunks
+	for id, wall := range e.walls {
+		if isInVisibleChunks(wall.Position.X, wall.Position.Y) {
+			if _, exists := e.prevWalls[id]; !exists {
+				wallCopy := *wall
+				delta.UpdatedWalls[id] = &wallCopy
+			}
+		}
+	}
+
+	// Check for removed walls that were in visible chunks
+	for id, prev := range e.prevWalls {
+		if isInVisibleChunks(prev.Position.X, prev.Position.Y) {
+			if _, exists := e.walls[id]; !exists {
+				delta.RemovedWalls = append(delta.RemovedWalls, id)
+			}
+		}
+	}
+
+	// Check for added/updated enemies in visible chunks
+	for id, enemy := range e.enemies {
+		if isInVisibleChunks(enemy.Position.X, enemy.Position.Y) {
+			enemyCopy := *enemy
+			prev := e.prevEnemies[id]; 
+			if !enemiesEqual(prev, enemy) {
+				delta.UpdatedEnemies[id] = &enemyCopy
+			}
+		}
+	}
+
+	// Check for removed enemies that were in visible chunks
+	for id, prev := range e.prevEnemies {
+		if isInVisibleChunks(prev.Position.X, prev.Position.Y) {
+			if _, exists := e.enemies[id]; !exists {
+				delta.RemovedEnemies = append(delta.RemovedEnemies, id)
+			}
+		}
+	}
+
+	// Check for added bonuses in visible chunks
+	for id, bonus := range e.bonuses {
+		if isInVisibleChunks(bonus.Position.X, bonus.Position.Y) {
+			if _, exists := e.prevBonuses[id]; !exists {
+				bonusCopy := *bonus
+				delta.UpdatedBonuses[id] = &bonusCopy
+			}
+		}
+	}
+
+	// Check for removed bonuses that were in visible chunks
+	for id, prev := range e.prevBonuses {
+		if isInVisibleChunks(prev.Position.X, prev.Position.Y) {
+			if _, exists := e.bonuses[id]; !exists {
+				delta.RemovedBonuses = append(delta.RemovedBonuses, id)
+			}
+		}
+	}
+
+	return delta
+}
+
 // Helper functions to compare entities
 func playersEqual(a, b *types.Player) bool {
+	if a != nil && b == nil || a == nil && b != nil {
+		return false
+	}
+
 	return a.Position.X == b.Position.X && a.Position.Y == b.Position.Y &&
 		a.Rotation == b.Rotation && a.Lives == b.Lives && a.Score == b.Score &&
 		a.Money == b.Money && a.Kills == b.Kills && a.BulletsLeft == b.BulletsLeft &&
@@ -906,6 +1136,10 @@ func playersEqual(a, b *types.Player) bool {
 }
 
 func enemiesEqual(a, b *types.Enemy) bool {
+	if a != nil && b == nil || a == nil && b != nil {
+		return false
+	}
+
 	return a.Position.X == b.Position.X && a.Position.Y == b.Position.Y &&
 		a.Rotation == b.Rotation && a.Lives == b.Lives && a.IsDead == b.IsDead
 }

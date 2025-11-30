@@ -1,5 +1,6 @@
 #!/bin/bash
 # Script to generate Protocol Buffer code
+export PATH="$PATH:$(go env GOPATH)/bin"
 
 # Install protoc if not present
 if ! command -v protoc &> /dev/null; then
@@ -15,10 +16,18 @@ if ! command -v protoc-gen-go &> /dev/null; then
     go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 fi
 
+mkdir -p internal/protocol/generated
+npm ci
+
 # Generate Go code from proto files
 echo "Generating Protocol Buffer code..."
-protoc --go_out=. --go_opt=paths=source_relative \
+protoc --go_out=internal/protocol \
+    --go_opt=paths=source_relative \
+    --proto_path=internal/protocol \
     internal/protocol/messages.proto
 
-echo "Done! Generated files:"
-ls -lh internal/protocol/*.pb.go
+# Generate TypeScript code with JSON support
+echo "Generating TypeScript Protocol Buffer code..."
+npx protoc --ts_out=internal/protocol \
+    --proto_path=internal/protocol \
+    internal/protocol/messages.proto

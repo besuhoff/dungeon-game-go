@@ -33,7 +33,6 @@ game-server
 dungeon-game-go
 test-client
 bin/
-dist/
 
 # Logs
 *.log
@@ -42,6 +41,4 @@ dist/
 .env
 .env.local
 
-# Generated protobuf files (keep them in git for convenience)
-# *.pb.go
-
+node_modules/
