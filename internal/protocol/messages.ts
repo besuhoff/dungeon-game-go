@@ -50,11 +50,15 @@ export interface Player {
      */
     lives: number;
     /**
+     * @generated from protobuf field: double invulnerable_timer = 13
+     */
+    invulnerableTimer: number;
+    /**
      * @generated from protobuf field: int32 score = 6
      */
     score: number;
     /**
-     * @generated from protobuf field: double money = 7
+     * @generated from protobuf field: int32 money = 7
      */
     money: number;
     /**
@@ -102,6 +106,10 @@ export interface Bullet {
      * @generated from protobuf field: int32 damage = 5
      */
     damage: number;
+    /**
+     * @generated from protobuf field: bool is_enemy = 6
+     */
+    isEnemy: boolean;
 }
 /**
  * @generated from protobuf message protocol.Wall
@@ -173,17 +181,10 @@ export interface Bonus {
      * @generated from protobuf field: string type = 3
      */
     type: string;
-}
-/**
- * Client -> Server messages
- *
- * @generated from protobuf message protocol.ConnectMessage
- */
-export interface ConnectMessage {
     /**
-     * @generated from protobuf field: string username = 1
+     * @generated from protobuf field: string picked_up_by = 4
      */
-    username: string;
+    pickedUpBy: string;
 }
 /**
  * @generated from protobuf message protocol.InputMessage
@@ -205,22 +206,17 @@ export interface InputMessage {
      * @generated from protobuf field: bool right = 4
      */
     right: boolean;
-}
-/**
- * @generated from protobuf message protocol.ShootMessage
- */
-export interface ShootMessage {
     /**
-     * @generated from protobuf field: double direction = 1
+     * @generated from protobuf field: bool shoot = 5
      */
-    direction: number;
+    shoot: boolean;
 }
 /**
  * Server -> Client messages
  *
- * @generated from protobuf message protocol.GameState
+ * @generated from protobuf message protocol.GameStateMessage
  */
-export interface GameState {
+export interface GameStateMessage {
     /**
      * @generated from protobuf field: map<string, protocol.Player> players = 1
      */
@@ -257,9 +253,9 @@ export interface GameState {
     timestamp: bigint;
 }
 /**
- * @generated from protobuf message protocol.GameStateDelta
+ * @generated from protobuf message protocol.GameStateDeltaMessage
  */
-export interface GameStateDelta {
+export interface GameStateDeltaMessage {
     /**
      * @generated from protobuf field: map<string, protocol.Player> updated_players = 1
      */
@@ -277,9 +273,11 @@ export interface GameStateDelta {
         [key: string]: Bullet;
     };
     /**
-     * @generated from protobuf field: repeated string removed_bullets = 4
+     * @generated from protobuf field: map<string, protocol.Bullet> removed_bullets = 4
      */
-    removedBullets: string[];
+    removedBullets: {
+        [key: string]: Bullet;
+    };
     /**
      * @generated from protobuf field: map<string, protocol.Wall> updated_walls = 5
      */
@@ -307,10 +305,6 @@ export interface GameStateDelta {
         [key: string]: Bonus;
     };
     /**
-     * @generated from protobuf field: repeated string removed_bonuses = 10
-     */
-    removedBonuses: string[];
-    /**
      * @generated from protobuf field: int64 timestamp = 11
      */
     timestamp: bigint;
@@ -334,38 +328,13 @@ export interface PlayerLeaveMessage {
     playerId: string;
 }
 /**
- * @generated from protobuf message protocol.PlayerHitMessage
+ * @generated from protobuf message protocol.PlayerRespawnMessage
  */
-export interface PlayerHitMessage {
+export interface PlayerRespawnMessage {
     /**
      * @generated from protobuf field: string player_id = 1
      */
     playerId: string;
-    /**
-     * @generated from protobuf field: string attacker_id = 2
-     */
-    attackerId: string;
-    /**
-     * @generated from protobuf field: int32 damage = 3
-     */
-    damage: number;
-    /**
-     * @generated from protobuf field: int32 new_lives = 4
-     */
-    newLives: number;
-}
-/**
- * @generated from protobuf message protocol.PlayerDeathMessage
- */
-export interface PlayerDeathMessage {
-    /**
-     * @generated from protobuf field: string player_id = 1
-     */
-    playerId: string;
-    /**
-     * @generated from protobuf field: string killer_id = 2
-     */
-    killerId: string;
 }
 /**
  * @generated from protobuf message protocol.ErrorMessage
@@ -390,35 +359,23 @@ export interface GameMessage {
      * @generated from protobuf oneof: payload
      */
     payload: {
-        oneofKind: "connect";
-        /**
-         * @generated from protobuf field: protocol.ConnectMessage connect = 2
-         */
-        connect: ConnectMessage;
-    } | {
         oneofKind: "input";
         /**
          * @generated from protobuf field: protocol.InputMessage input = 3
          */
         input: InputMessage;
     } | {
-        oneofKind: "shoot";
-        /**
-         * @generated from protobuf field: protocol.ShootMessage shoot = 4
-         */
-        shoot: ShootMessage;
-    } | {
         oneofKind: "gameState";
         /**
-         * @generated from protobuf field: protocol.GameState game_state = 5
+         * @generated from protobuf field: protocol.GameStateMessage game_state = 5
          */
-        gameState: GameState;
+        gameState: GameStateMessage;
     } | {
         oneofKind: "gameStateDelta";
         /**
-         * @generated from protobuf field: protocol.GameStateDelta game_state_delta = 11
+         * @generated from protobuf field: protocol.GameStateDeltaMessage game_state_delta = 11
          */
-        gameStateDelta: GameStateDelta;
+        gameStateDelta: GameStateDeltaMessage;
     } | {
         oneofKind: "playerJoin";
         /**
@@ -432,17 +389,11 @@ export interface GameMessage {
          */
         playerLeave: PlayerLeaveMessage;
     } | {
-        oneofKind: "playerHit";
+        oneofKind: "playerRespawn";
         /**
-         * @generated from protobuf field: protocol.PlayerHitMessage player_hit = 8
+         * @generated from protobuf field: protocol.PlayerRespawnMessage player_respawn = 8
          */
-        playerHit: PlayerHitMessage;
-    } | {
-        oneofKind: "playerDeath";
-        /**
-         * @generated from protobuf field: protocol.PlayerDeathMessage player_death = 9
-         */
-        playerDeath: PlayerDeathMessage;
+        playerRespawn: PlayerRespawnMessage;
     } | {
         oneofKind: "error";
         /**
@@ -464,21 +415,9 @@ export enum MessageType {
      */
     UNKNOWN = 0,
     /**
-     * @generated from protobuf enum value: CONNECT = 1;
-     */
-    CONNECT = 1,
-    /**
      * @generated from protobuf enum value: INPUT = 2;
      */
     INPUT = 2,
-    /**
-     * @generated from protobuf enum value: SHOOT = 3;
-     */
-    SHOOT = 3,
-    /**
-     * @generated from protobuf enum value: DISCONNECT = 4;
-     */
-    DISCONNECT = 4,
     /**
      * @generated from protobuf enum value: GAME_STATE = 5;
      */
@@ -496,13 +435,9 @@ export enum MessageType {
      */
     PLAYER_LEAVE = 7,
     /**
-     * @generated from protobuf enum value: PLAYER_HIT = 8;
+     * @generated from protobuf enum value: PLAYER_RESPAWN = 8;
      */
-    PLAYER_HIT = 8,
-    /**
-     * @generated from protobuf enum value: PLAYER_DEATH = 9;
-     */
-    PLAYER_DEATH = 9,
+    PLAYER_RESPAWN = 8,
     /**
      * @generated from protobuf enum value: ERROR = 10;
      */
@@ -572,8 +507,9 @@ class Player$Type extends MessageType$<Player> {
             { no: 3, name: "position", kind: "message", T: () => Vector2 },
             { no: 4, name: "velocity", kind: "message", T: () => Vector2 },
             { no: 5, name: "lives", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 13, name: "invulnerable_timer", kind: "scalar", T: 1 /*ScalarType.DOUBLE*/ },
             { no: 6, name: "score", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 7, name: "money", kind: "scalar", T: 1 /*ScalarType.DOUBLE*/ },
+            { no: 7, name: "money", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
             { no: 8, name: "kills", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
             { no: 9, name: "rotation", kind: "scalar", T: 1 /*ScalarType.DOUBLE*/ },
             { no: 10, name: "bullets_left", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
@@ -586,6 +522,7 @@ class Player$Type extends MessageType$<Player> {
         message.id = "";
         message.username = "";
         message.lives = 0;
+        message.invulnerableTimer = 0;
         message.score = 0;
         message.money = 0;
         message.kills = 0;
@@ -617,11 +554,14 @@ class Player$Type extends MessageType$<Player> {
                 case /* int32 lives */ 5:
                     message.lives = reader.int32();
                     break;
+                case /* double invulnerable_timer */ 13:
+                    message.invulnerableTimer = reader.double();
+                    break;
                 case /* int32 score */ 6:
                     message.score = reader.int32();
                     break;
-                case /* double money */ 7:
-                    message.money = reader.double();
+                case /* int32 money */ 7:
+                    message.money = reader.int32();
                     break;
                 case /* int32 kills */ 8:
                     message.kills = reader.int32();
@@ -668,9 +608,9 @@ class Player$Type extends MessageType$<Player> {
         /* int32 score = 6; */
         if (message.score !== 0)
             writer.tag(6, WireType.Varint).int32(message.score);
-        /* double money = 7; */
+        /* int32 money = 7; */
         if (message.money !== 0)
-            writer.tag(7, WireType.Bit64).double(message.money);
+            writer.tag(7, WireType.Varint).int32(message.money);
         /* int32 kills = 8; */
         if (message.kills !== 0)
             writer.tag(8, WireType.Varint).int32(message.kills);
@@ -686,6 +626,9 @@ class Player$Type extends MessageType$<Player> {
         /* bool is_alive = 12; */
         if (message.isAlive !== false)
             writer.tag(12, WireType.Varint).bool(message.isAlive);
+        /* double invulnerable_timer = 13; */
+        if (message.invulnerableTimer !== 0)
+            writer.tag(13, WireType.Bit64).double(message.invulnerableTimer);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -704,7 +647,8 @@ class Bullet$Type extends MessageType$<Bullet> {
             { no: 2, name: "position", kind: "message", T: () => Vector2 },
             { no: 3, name: "velocity", kind: "message", T: () => Vector2 },
             { no: 4, name: "owner_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "damage", kind: "scalar", T: 5 /*ScalarType.INT32*/ }
+            { no: 5, name: "damage", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 6, name: "is_enemy", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
         ]);
     }
     create(value?: PartialMessage<Bullet>): Bullet {
@@ -712,6 +656,7 @@ class Bullet$Type extends MessageType$<Bullet> {
         message.id = "";
         message.ownerId = "";
         message.damage = 0;
+        message.isEnemy = false;
         if (value !== undefined)
             reflectionMergePartial<Bullet>(this, message, value);
         return message;
@@ -735,6 +680,9 @@ class Bullet$Type extends MessageType$<Bullet> {
                     break;
                 case /* int32 damage */ 5:
                     message.damage = reader.int32();
+                    break;
+                case /* bool is_enemy */ 6:
+                    message.isEnemy = reader.bool();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -763,6 +711,9 @@ class Bullet$Type extends MessageType$<Bullet> {
         /* int32 damage = 5; */
         if (message.damage !== 0)
             writer.tag(5, WireType.Varint).int32(message.damage);
+        /* bool is_enemy = 6; */
+        if (message.isEnemy !== false)
+            writer.tag(6, WireType.Varint).bool(message.isEnemy);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -943,13 +894,15 @@ class Bonus$Type extends MessageType$<Bonus> {
         super("protocol.Bonus", [
             { no: 1, name: "id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "position", kind: "message", T: () => Vector2 },
-            { no: 3, name: "type", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+            { no: 3, name: "type", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "picked_up_by", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<Bonus>): Bonus {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.id = "";
         message.type = "";
+        message.pickedUpBy = "";
         if (value !== undefined)
             reflectionMergePartial<Bonus>(this, message, value);
         return message;
@@ -967,6 +920,9 @@ class Bonus$Type extends MessageType$<Bonus> {
                     break;
                 case /* string type */ 3:
                     message.type = reader.string();
+                    break;
+                case /* string picked_up_by */ 4:
+                    message.pickedUpBy = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -989,6 +945,9 @@ class Bonus$Type extends MessageType$<Bonus> {
         /* string type = 3; */
         if (message.type !== "")
             writer.tag(3, WireType.LengthDelimited).string(message.type);
+        /* string picked_up_by = 4; */
+        if (message.pickedUpBy !== "")
+            writer.tag(4, WireType.LengthDelimited).string(message.pickedUpBy);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1000,60 +959,14 @@ class Bonus$Type extends MessageType$<Bonus> {
  */
 export const Bonus = new Bonus$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class ConnectMessage$Type extends MessageType$<ConnectMessage> {
-    constructor() {
-        super("protocol.ConnectMessage", [
-            { no: 1, name: "username", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-    create(value?: PartialMessage<ConnectMessage>): ConnectMessage {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.username = "";
-        if (value !== undefined)
-            reflectionMergePartial<ConnectMessage>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ConnectMessage): ConnectMessage {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* string username */ 1:
-                    message.username = reader.string();
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: ConnectMessage, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string username = 1; */
-        if (message.username !== "")
-            writer.tag(1, WireType.LengthDelimited).string(message.username);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message protocol.ConnectMessage
- */
-export const ConnectMessage = new ConnectMessage$Type();
-// @generated message type with reflection information, may provide speed optimized methods
 class InputMessage$Type extends MessageType$<InputMessage> {
     constructor() {
         super("protocol.InputMessage", [
             { no: 1, name: "forward", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 2, name: "backward", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 3, name: "left", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
-            { no: 4, name: "right", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
+            { no: 4, name: "right", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 5, name: "shoot", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
         ]);
     }
     create(value?: PartialMessage<InputMessage>): InputMessage {
@@ -1062,6 +975,7 @@ class InputMessage$Type extends MessageType$<InputMessage> {
         message.backward = false;
         message.left = false;
         message.right = false;
+        message.shoot = false;
         if (value !== undefined)
             reflectionMergePartial<InputMessage>(this, message, value);
         return message;
@@ -1082,6 +996,9 @@ class InputMessage$Type extends MessageType$<InputMessage> {
                     break;
                 case /* bool right */ 4:
                     message.right = reader.bool();
+                    break;
+                case /* bool shoot */ 5:
+                    message.shoot = reader.bool();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1107,6 +1024,9 @@ class InputMessage$Type extends MessageType$<InputMessage> {
         /* bool right = 4; */
         if (message.right !== false)
             writer.tag(4, WireType.Varint).bool(message.right);
+        /* bool shoot = 5; */
+        if (message.shoot !== false)
+            writer.tag(5, WireType.Varint).bool(message.shoot);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1118,56 +1038,9 @@ class InputMessage$Type extends MessageType$<InputMessage> {
  */
 export const InputMessage = new InputMessage$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class ShootMessage$Type extends MessageType$<ShootMessage> {
+class GameStateMessage$Type extends MessageType$<GameStateMessage> {
     constructor() {
-        super("protocol.ShootMessage", [
-            { no: 1, name: "direction", kind: "scalar", T: 1 /*ScalarType.DOUBLE*/ }
-        ]);
-    }
-    create(value?: PartialMessage<ShootMessage>): ShootMessage {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.direction = 0;
-        if (value !== undefined)
-            reflectionMergePartial<ShootMessage>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ShootMessage): ShootMessage {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* double direction */ 1:
-                    message.direction = reader.double();
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: ShootMessage, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* double direction = 1; */
-        if (message.direction !== 0)
-            writer.tag(1, WireType.Bit64).double(message.direction);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message protocol.ShootMessage
- */
-export const ShootMessage = new ShootMessage$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class GameState$Type extends MessageType$<GameState> {
-    constructor() {
-        super("protocol.GameState", [
+        super("protocol.GameStateMessage", [
             { no: 1, name: "players", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Player } },
             { no: 2, name: "bullets", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Bullet } },
             { no: 3, name: "walls", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Wall } },
@@ -1176,7 +1049,7 @@ class GameState$Type extends MessageType$<GameState> {
             { no: 6, name: "timestamp", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ }
         ]);
     }
-    create(value?: PartialMessage<GameState>): GameState {
+    create(value?: PartialMessage<GameStateMessage>): GameStateMessage {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.players = {};
         message.bullets = {};
@@ -1185,10 +1058,10 @@ class GameState$Type extends MessageType$<GameState> {
         message.bonuses = {};
         message.timestamp = 0n;
         if (value !== undefined)
-            reflectionMergePartial<GameState>(this, message, value);
+            reflectionMergePartial<GameStateMessage>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GameState): GameState {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GameStateMessage): GameStateMessage {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -1222,8 +1095,8 @@ class GameState$Type extends MessageType$<GameState> {
         }
         return message;
     }
-    private binaryReadMap1(map: GameState["players"], reader: IBinaryReader, options: BinaryReadOptions): void {
-        let len = reader.uint32(), end = reader.pos + len, key: keyof GameState["players"] | undefined, val: GameState["players"][any] | undefined;
+    private binaryReadMap1(map: GameStateMessage["players"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateMessage["players"] | undefined, val: GameStateMessage["players"][any] | undefined;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
@@ -1233,13 +1106,13 @@ class GameState$Type extends MessageType$<GameState> {
                 case 2:
                     val = Player.internalBinaryRead(reader, reader.uint32(), options);
                     break;
-                default: throw new globalThis.Error("unknown map entry field for protocol.GameState.players");
+                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateMessage.players");
             }
         }
         map[key ?? ""] = val ?? Player.create();
     }
-    private binaryReadMap2(map: GameState["bullets"], reader: IBinaryReader, options: BinaryReadOptions): void {
-        let len = reader.uint32(), end = reader.pos + len, key: keyof GameState["bullets"] | undefined, val: GameState["bullets"][any] | undefined;
+    private binaryReadMap2(map: GameStateMessage["bullets"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateMessage["bullets"] | undefined, val: GameStateMessage["bullets"][any] | undefined;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
@@ -1249,13 +1122,13 @@ class GameState$Type extends MessageType$<GameState> {
                 case 2:
                     val = Bullet.internalBinaryRead(reader, reader.uint32(), options);
                     break;
-                default: throw new globalThis.Error("unknown map entry field for protocol.GameState.bullets");
+                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateMessage.bullets");
             }
         }
         map[key ?? ""] = val ?? Bullet.create();
     }
-    private binaryReadMap3(map: GameState["walls"], reader: IBinaryReader, options: BinaryReadOptions): void {
-        let len = reader.uint32(), end = reader.pos + len, key: keyof GameState["walls"] | undefined, val: GameState["walls"][any] | undefined;
+    private binaryReadMap3(map: GameStateMessage["walls"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateMessage["walls"] | undefined, val: GameStateMessage["walls"][any] | undefined;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
@@ -1265,13 +1138,13 @@ class GameState$Type extends MessageType$<GameState> {
                 case 2:
                     val = Wall.internalBinaryRead(reader, reader.uint32(), options);
                     break;
-                default: throw new globalThis.Error("unknown map entry field for protocol.GameState.walls");
+                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateMessage.walls");
             }
         }
         map[key ?? ""] = val ?? Wall.create();
     }
-    private binaryReadMap4(map: GameState["enemies"], reader: IBinaryReader, options: BinaryReadOptions): void {
-        let len = reader.uint32(), end = reader.pos + len, key: keyof GameState["enemies"] | undefined, val: GameState["enemies"][any] | undefined;
+    private binaryReadMap4(map: GameStateMessage["enemies"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateMessage["enemies"] | undefined, val: GameStateMessage["enemies"][any] | undefined;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
@@ -1281,13 +1154,13 @@ class GameState$Type extends MessageType$<GameState> {
                 case 2:
                     val = Enemy.internalBinaryRead(reader, reader.uint32(), options);
                     break;
-                default: throw new globalThis.Error("unknown map entry field for protocol.GameState.enemies");
+                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateMessage.enemies");
             }
         }
         map[key ?? ""] = val ?? Enemy.create();
     }
-    private binaryReadMap5(map: GameState["bonuses"], reader: IBinaryReader, options: BinaryReadOptions): void {
-        let len = reader.uint32(), end = reader.pos + len, key: keyof GameState["bonuses"] | undefined, val: GameState["bonuses"][any] | undefined;
+    private binaryReadMap5(map: GameStateMessage["bonuses"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateMessage["bonuses"] | undefined, val: GameStateMessage["bonuses"][any] | undefined;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
@@ -1297,12 +1170,12 @@ class GameState$Type extends MessageType$<GameState> {
                 case 2:
                     val = Bonus.internalBinaryRead(reader, reader.uint32(), options);
                     break;
-                default: throw new globalThis.Error("unknown map entry field for protocol.GameState.bonuses");
+                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateMessage.bonuses");
             }
         }
         map[key ?? ""] = val ?? Bonus.create();
     }
-    internalBinaryWrite(message: GameState, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: GameStateMessage, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* map<string, protocol.Player> players = 1; */
         for (let k of globalThis.Object.keys(message.players)) {
             writer.tag(1, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
@@ -1348,44 +1221,42 @@ class GameState$Type extends MessageType$<GameState> {
     }
 }
 /**
- * @generated MessageType for protobuf message protocol.GameState
+ * @generated MessageType for protobuf message protocol.GameStateMessage
  */
-export const GameState = new GameState$Type();
+export const GameStateMessage = new GameStateMessage$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class GameStateDelta$Type extends MessageType$<GameStateDelta> {
+class GameStateDeltaMessage$Type extends MessageType$<GameStateDeltaMessage> {
     constructor() {
-        super("protocol.GameStateDelta", [
+        super("protocol.GameStateDeltaMessage", [
             { no: 1, name: "updated_players", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Player } },
             { no: 2, name: "removed_players", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 3, name: "updated_bullets", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Bullet } },
-            { no: 4, name: "removed_bullets", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "removed_bullets", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Bullet } },
             { no: 5, name: "updated_walls", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Wall } },
             { no: 6, name: "removed_walls", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 7, name: "updated_enemies", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Enemy } },
             { no: 8, name: "removed_enemies", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 9, name: "updated_bonuses", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Bonus } },
-            { no: 10, name: "removed_bonuses", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 11, name: "timestamp", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ }
         ]);
     }
-    create(value?: PartialMessage<GameStateDelta>): GameStateDelta {
+    create(value?: PartialMessage<GameStateDeltaMessage>): GameStateDeltaMessage {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.updatedPlayers = {};
         message.removedPlayers = [];
         message.updatedBullets = {};
-        message.removedBullets = [];
+        message.removedBullets = {};
         message.updatedWalls = {};
         message.removedWalls = [];
         message.updatedEnemies = {};
         message.removedEnemies = [];
         message.updatedBonuses = {};
-        message.removedBonuses = [];
         message.timestamp = 0n;
         if (value !== undefined)
-            reflectionMergePartial<GameStateDelta>(this, message, value);
+            reflectionMergePartial<GameStateDeltaMessage>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GameStateDelta): GameStateDelta {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GameStateDeltaMessage): GameStateDeltaMessage {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -1399,8 +1270,8 @@ class GameStateDelta$Type extends MessageType$<GameStateDelta> {
                 case /* map<string, protocol.Bullet> updated_bullets */ 3:
                     this.binaryReadMap3(message.updatedBullets, reader, options);
                     break;
-                case /* repeated string removed_bullets */ 4:
-                    message.removedBullets.push(reader.string());
+                case /* map<string, protocol.Bullet> removed_bullets */ 4:
+                    this.binaryReadMap4(message.removedBullets, reader, options);
                     break;
                 case /* map<string, protocol.Wall> updated_walls */ 5:
                     this.binaryReadMap5(message.updatedWalls, reader, options);
@@ -1417,9 +1288,6 @@ class GameStateDelta$Type extends MessageType$<GameStateDelta> {
                 case /* map<string, protocol.Bonus> updated_bonuses */ 9:
                     this.binaryReadMap9(message.updatedBonuses, reader, options);
                     break;
-                case /* repeated string removed_bonuses */ 10:
-                    message.removedBonuses.push(reader.string());
-                    break;
                 case /* int64 timestamp */ 11:
                     message.timestamp = reader.int64().toBigInt();
                     break;
@@ -1434,8 +1302,8 @@ class GameStateDelta$Type extends MessageType$<GameStateDelta> {
         }
         return message;
     }
-    private binaryReadMap1(map: GameStateDelta["updatedPlayers"], reader: IBinaryReader, options: BinaryReadOptions): void {
-        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateDelta["updatedPlayers"] | undefined, val: GameStateDelta["updatedPlayers"][any] | undefined;
+    private binaryReadMap1(map: GameStateDeltaMessage["updatedPlayers"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateDeltaMessage["updatedPlayers"] | undefined, val: GameStateDeltaMessage["updatedPlayers"][any] | undefined;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
@@ -1445,13 +1313,13 @@ class GameStateDelta$Type extends MessageType$<GameStateDelta> {
                 case 2:
                     val = Player.internalBinaryRead(reader, reader.uint32(), options);
                     break;
-                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateDelta.updated_players");
+                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateDeltaMessage.updated_players");
             }
         }
         map[key ?? ""] = val ?? Player.create();
     }
-    private binaryReadMap3(map: GameStateDelta["updatedBullets"], reader: IBinaryReader, options: BinaryReadOptions): void {
-        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateDelta["updatedBullets"] | undefined, val: GameStateDelta["updatedBullets"][any] | undefined;
+    private binaryReadMap3(map: GameStateDeltaMessage["updatedBullets"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateDeltaMessage["updatedBullets"] | undefined, val: GameStateDeltaMessage["updatedBullets"][any] | undefined;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
@@ -1461,13 +1329,29 @@ class GameStateDelta$Type extends MessageType$<GameStateDelta> {
                 case 2:
                     val = Bullet.internalBinaryRead(reader, reader.uint32(), options);
                     break;
-                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateDelta.updated_bullets");
+                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateDeltaMessage.updated_bullets");
             }
         }
         map[key ?? ""] = val ?? Bullet.create();
     }
-    private binaryReadMap5(map: GameStateDelta["updatedWalls"], reader: IBinaryReader, options: BinaryReadOptions): void {
-        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateDelta["updatedWalls"] | undefined, val: GameStateDelta["updatedWalls"][any] | undefined;
+    private binaryReadMap4(map: GameStateDeltaMessage["removedBullets"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateDeltaMessage["removedBullets"] | undefined, val: GameStateDeltaMessage["removedBullets"][any] | undefined;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case 1:
+                    key = reader.string();
+                    break;
+                case 2:
+                    val = Bullet.internalBinaryRead(reader, reader.uint32(), options);
+                    break;
+                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateDeltaMessage.removed_bullets");
+            }
+        }
+        map[key ?? ""] = val ?? Bullet.create();
+    }
+    private binaryReadMap5(map: GameStateDeltaMessage["updatedWalls"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateDeltaMessage["updatedWalls"] | undefined, val: GameStateDeltaMessage["updatedWalls"][any] | undefined;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
@@ -1477,13 +1361,13 @@ class GameStateDelta$Type extends MessageType$<GameStateDelta> {
                 case 2:
                     val = Wall.internalBinaryRead(reader, reader.uint32(), options);
                     break;
-                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateDelta.updated_walls");
+                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateDeltaMessage.updated_walls");
             }
         }
         map[key ?? ""] = val ?? Wall.create();
     }
-    private binaryReadMap7(map: GameStateDelta["updatedEnemies"], reader: IBinaryReader, options: BinaryReadOptions): void {
-        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateDelta["updatedEnemies"] | undefined, val: GameStateDelta["updatedEnemies"][any] | undefined;
+    private binaryReadMap7(map: GameStateDeltaMessage["updatedEnemies"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateDeltaMessage["updatedEnemies"] | undefined, val: GameStateDeltaMessage["updatedEnemies"][any] | undefined;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
@@ -1493,13 +1377,13 @@ class GameStateDelta$Type extends MessageType$<GameStateDelta> {
                 case 2:
                     val = Enemy.internalBinaryRead(reader, reader.uint32(), options);
                     break;
-                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateDelta.updated_enemies");
+                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateDeltaMessage.updated_enemies");
             }
         }
         map[key ?? ""] = val ?? Enemy.create();
     }
-    private binaryReadMap9(map: GameStateDelta["updatedBonuses"], reader: IBinaryReader, options: BinaryReadOptions): void {
-        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateDelta["updatedBonuses"] | undefined, val: GameStateDelta["updatedBonuses"][any] | undefined;
+    private binaryReadMap9(map: GameStateDeltaMessage["updatedBonuses"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateDeltaMessage["updatedBonuses"] | undefined, val: GameStateDeltaMessage["updatedBonuses"][any] | undefined;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
@@ -1509,12 +1393,12 @@ class GameStateDelta$Type extends MessageType$<GameStateDelta> {
                 case 2:
                     val = Bonus.internalBinaryRead(reader, reader.uint32(), options);
                     break;
-                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateDelta.updated_bonuses");
+                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateDeltaMessage.updated_bonuses");
             }
         }
         map[key ?? ""] = val ?? Bonus.create();
     }
-    internalBinaryWrite(message: GameStateDelta, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: GameStateDeltaMessage, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* map<string, protocol.Player> updated_players = 1; */
         for (let k of globalThis.Object.keys(message.updatedPlayers)) {
             writer.tag(1, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
@@ -1532,9 +1416,13 @@ class GameStateDelta$Type extends MessageType$<GameStateDelta> {
             Bullet.internalBinaryWrite(message.updatedBullets[k], writer, options);
             writer.join().join();
         }
-        /* repeated string removed_bullets = 4; */
-        for (let i = 0; i < message.removedBullets.length; i++)
-            writer.tag(4, WireType.LengthDelimited).string(message.removedBullets[i]);
+        /* map<string, protocol.Bullet> removed_bullets = 4; */
+        for (let k of globalThis.Object.keys(message.removedBullets)) {
+            writer.tag(4, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
+            writer.tag(2, WireType.LengthDelimited).fork();
+            Bullet.internalBinaryWrite(message.removedBullets[k], writer, options);
+            writer.join().join();
+        }
         /* map<string, protocol.Wall> updated_walls = 5; */
         for (let k of globalThis.Object.keys(message.updatedWalls)) {
             writer.tag(5, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
@@ -1562,9 +1450,6 @@ class GameStateDelta$Type extends MessageType$<GameStateDelta> {
             Bonus.internalBinaryWrite(message.updatedBonuses[k], writer, options);
             writer.join().join();
         }
-        /* repeated string removed_bonuses = 10; */
-        for (let i = 0; i < message.removedBonuses.length; i++)
-            writer.tag(10, WireType.LengthDelimited).string(message.removedBonuses[i]);
         /* int64 timestamp = 11; */
         if (message.timestamp !== 0n)
             writer.tag(11, WireType.Varint).int64(message.timestamp);
@@ -1575,9 +1460,9 @@ class GameStateDelta$Type extends MessageType$<GameStateDelta> {
     }
 }
 /**
- * @generated MessageType for protobuf message protocol.GameStateDelta
+ * @generated MessageType for protobuf message protocol.GameStateDeltaMessage
  */
-export const GameStateDelta = new GameStateDelta$Type();
+export const GameStateDeltaMessage = new GameStateDeltaMessage$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class PlayerJoinMessage$Type extends MessageType$<PlayerJoinMessage> {
     constructor() {
@@ -1672,41 +1557,26 @@ class PlayerLeaveMessage$Type extends MessageType$<PlayerLeaveMessage> {
  */
 export const PlayerLeaveMessage = new PlayerLeaveMessage$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class PlayerHitMessage$Type extends MessageType$<PlayerHitMessage> {
+class PlayerRespawnMessage$Type extends MessageType$<PlayerRespawnMessage> {
     constructor() {
-        super("protocol.PlayerHitMessage", [
-            { no: 1, name: "player_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "attacker_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "damage", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 4, name: "new_lives", kind: "scalar", T: 5 /*ScalarType.INT32*/ }
+        super("protocol.PlayerRespawnMessage", [
+            { no: 1, name: "player_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
-    create(value?: PartialMessage<PlayerHitMessage>): PlayerHitMessage {
+    create(value?: PartialMessage<PlayerRespawnMessage>): PlayerRespawnMessage {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.playerId = "";
-        message.attackerId = "";
-        message.damage = 0;
-        message.newLives = 0;
         if (value !== undefined)
-            reflectionMergePartial<PlayerHitMessage>(this, message, value);
+            reflectionMergePartial<PlayerRespawnMessage>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: PlayerHitMessage): PlayerHitMessage {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: PlayerRespawnMessage): PlayerRespawnMessage {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
                 case /* string player_id */ 1:
                     message.playerId = reader.string();
-                    break;
-                case /* string attacker_id */ 2:
-                    message.attackerId = reader.string();
-                    break;
-                case /* int32 damage */ 3:
-                    message.damage = reader.int32();
-                    break;
-                case /* int32 new_lives */ 4:
-                    message.newLives = reader.int32();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1719,19 +1589,10 @@ class PlayerHitMessage$Type extends MessageType$<PlayerHitMessage> {
         }
         return message;
     }
-    internalBinaryWrite(message: PlayerHitMessage, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: PlayerRespawnMessage, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* string player_id = 1; */
         if (message.playerId !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.playerId);
-        /* string attacker_id = 2; */
-        if (message.attackerId !== "")
-            writer.tag(2, WireType.LengthDelimited).string(message.attackerId);
-        /* int32 damage = 3; */
-        if (message.damage !== 0)
-            writer.tag(3, WireType.Varint).int32(message.damage);
-        /* int32 new_lives = 4; */
-        if (message.newLives !== 0)
-            writer.tag(4, WireType.Varint).int32(message.newLives);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1739,64 +1600,9 @@ class PlayerHitMessage$Type extends MessageType$<PlayerHitMessage> {
     }
 }
 /**
- * @generated MessageType for protobuf message protocol.PlayerHitMessage
+ * @generated MessageType for protobuf message protocol.PlayerRespawnMessage
  */
-export const PlayerHitMessage = new PlayerHitMessage$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class PlayerDeathMessage$Type extends MessageType$<PlayerDeathMessage> {
-    constructor() {
-        super("protocol.PlayerDeathMessage", [
-            { no: 1, name: "player_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "killer_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-    create(value?: PartialMessage<PlayerDeathMessage>): PlayerDeathMessage {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.playerId = "";
-        message.killerId = "";
-        if (value !== undefined)
-            reflectionMergePartial<PlayerDeathMessage>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: PlayerDeathMessage): PlayerDeathMessage {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* string player_id */ 1:
-                    message.playerId = reader.string();
-                    break;
-                case /* string killer_id */ 2:
-                    message.killerId = reader.string();
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: PlayerDeathMessage, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string player_id = 1; */
-        if (message.playerId !== "")
-            writer.tag(1, WireType.LengthDelimited).string(message.playerId);
-        /* string killer_id = 2; */
-        if (message.killerId !== "")
-            writer.tag(2, WireType.LengthDelimited).string(message.killerId);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message protocol.PlayerDeathMessage
- */
-export const PlayerDeathMessage = new PlayerDeathMessage$Type();
+export const PlayerRespawnMessage = new PlayerRespawnMessage$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class ErrorMessage$Type extends MessageType$<ErrorMessage> {
     constructor() {
@@ -1849,15 +1655,12 @@ class GameMessage$Type extends MessageType$<GameMessage> {
     constructor() {
         super("protocol.GameMessage", [
             { no: 1, name: "type", kind: "enum", T: () => ["protocol.MessageType", MessageType] },
-            { no: 2, name: "connect", kind: "message", oneof: "payload", T: () => ConnectMessage },
             { no: 3, name: "input", kind: "message", oneof: "payload", T: () => InputMessage },
-            { no: 4, name: "shoot", kind: "message", oneof: "payload", T: () => ShootMessage },
-            { no: 5, name: "game_state", kind: "message", oneof: "payload", T: () => GameState },
-            { no: 11, name: "game_state_delta", kind: "message", oneof: "payload", T: () => GameStateDelta },
+            { no: 5, name: "game_state", kind: "message", oneof: "payload", T: () => GameStateMessage },
+            { no: 11, name: "game_state_delta", kind: "message", oneof: "payload", T: () => GameStateDeltaMessage },
             { no: 6, name: "player_join", kind: "message", oneof: "payload", T: () => PlayerJoinMessage },
             { no: 7, name: "player_leave", kind: "message", oneof: "payload", T: () => PlayerLeaveMessage },
-            { no: 8, name: "player_hit", kind: "message", oneof: "payload", T: () => PlayerHitMessage },
-            { no: 9, name: "player_death", kind: "message", oneof: "payload", T: () => PlayerDeathMessage },
+            { no: 8, name: "player_respawn", kind: "message", oneof: "payload", T: () => PlayerRespawnMessage },
             { no: 10, name: "error", kind: "message", oneof: "payload", T: () => ErrorMessage }
         ]);
     }
@@ -1877,34 +1680,22 @@ class GameMessage$Type extends MessageType$<GameMessage> {
                 case /* protocol.MessageType type */ 1:
                     message.type = reader.int32();
                     break;
-                case /* protocol.ConnectMessage connect */ 2:
-                    message.payload = {
-                        oneofKind: "connect",
-                        connect: ConnectMessage.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).connect)
-                    };
-                    break;
                 case /* protocol.InputMessage input */ 3:
                     message.payload = {
                         oneofKind: "input",
                         input: InputMessage.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).input)
                     };
                     break;
-                case /* protocol.ShootMessage shoot */ 4:
-                    message.payload = {
-                        oneofKind: "shoot",
-                        shoot: ShootMessage.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).shoot)
-                    };
-                    break;
-                case /* protocol.GameState game_state */ 5:
+                case /* protocol.GameStateMessage game_state */ 5:
                     message.payload = {
                         oneofKind: "gameState",
-                        gameState: GameState.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).gameState)
+                        gameState: GameStateMessage.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).gameState)
                     };
                     break;
-                case /* protocol.GameStateDelta game_state_delta */ 11:
+                case /* protocol.GameStateDeltaMessage game_state_delta */ 11:
                     message.payload = {
                         oneofKind: "gameStateDelta",
-                        gameStateDelta: GameStateDelta.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).gameStateDelta)
+                        gameStateDelta: GameStateDeltaMessage.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).gameStateDelta)
                     };
                     break;
                 case /* protocol.PlayerJoinMessage player_join */ 6:
@@ -1919,16 +1710,10 @@ class GameMessage$Type extends MessageType$<GameMessage> {
                         playerLeave: PlayerLeaveMessage.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).playerLeave)
                     };
                     break;
-                case /* protocol.PlayerHitMessage player_hit */ 8:
+                case /* protocol.PlayerRespawnMessage player_respawn */ 8:
                     message.payload = {
-                        oneofKind: "playerHit",
-                        playerHit: PlayerHitMessage.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).playerHit)
-                    };
-                    break;
-                case /* protocol.PlayerDeathMessage player_death */ 9:
-                    message.payload = {
-                        oneofKind: "playerDeath",
-                        playerDeath: PlayerDeathMessage.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).playerDeath)
+                        oneofKind: "playerRespawn",
+                        playerRespawn: PlayerRespawnMessage.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).playerRespawn)
                     };
                     break;
                 case /* protocol.ErrorMessage error */ 10:
@@ -1952,36 +1737,27 @@ class GameMessage$Type extends MessageType$<GameMessage> {
         /* protocol.MessageType type = 1; */
         if (message.type !== 0)
             writer.tag(1, WireType.Varint).int32(message.type);
-        /* protocol.ConnectMessage connect = 2; */
-        if (message.payload.oneofKind === "connect")
-            ConnectMessage.internalBinaryWrite(message.payload.connect, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         /* protocol.InputMessage input = 3; */
         if (message.payload.oneofKind === "input")
             InputMessage.internalBinaryWrite(message.payload.input, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
-        /* protocol.ShootMessage shoot = 4; */
-        if (message.payload.oneofKind === "shoot")
-            ShootMessage.internalBinaryWrite(message.payload.shoot, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
-        /* protocol.GameState game_state = 5; */
+        /* protocol.GameStateMessage game_state = 5; */
         if (message.payload.oneofKind === "gameState")
-            GameState.internalBinaryWrite(message.payload.gameState, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
+            GameStateMessage.internalBinaryWrite(message.payload.gameState, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
         /* protocol.PlayerJoinMessage player_join = 6; */
         if (message.payload.oneofKind === "playerJoin")
             PlayerJoinMessage.internalBinaryWrite(message.payload.playerJoin, writer.tag(6, WireType.LengthDelimited).fork(), options).join();
         /* protocol.PlayerLeaveMessage player_leave = 7; */
         if (message.payload.oneofKind === "playerLeave")
             PlayerLeaveMessage.internalBinaryWrite(message.payload.playerLeave, writer.tag(7, WireType.LengthDelimited).fork(), options).join();
-        /* protocol.PlayerHitMessage player_hit = 8; */
-        if (message.payload.oneofKind === "playerHit")
-            PlayerHitMessage.internalBinaryWrite(message.payload.playerHit, writer.tag(8, WireType.LengthDelimited).fork(), options).join();
-        /* protocol.PlayerDeathMessage player_death = 9; */
-        if (message.payload.oneofKind === "playerDeath")
-            PlayerDeathMessage.internalBinaryWrite(message.payload.playerDeath, writer.tag(9, WireType.LengthDelimited).fork(), options).join();
+        /* protocol.PlayerRespawnMessage player_respawn = 8; */
+        if (message.payload.oneofKind === "playerRespawn")
+            PlayerRespawnMessage.internalBinaryWrite(message.payload.playerRespawn, writer.tag(8, WireType.LengthDelimited).fork(), options).join();
         /* protocol.ErrorMessage error = 10; */
         if (message.payload.oneofKind === "error")
             ErrorMessage.internalBinaryWrite(message.payload.error, writer.tag(10, WireType.LengthDelimited).fork(), options).join();
-        /* protocol.GameStateDelta game_state_delta = 11; */
+        /* protocol.GameStateDeltaMessage game_state_delta = 11; */
         if (message.payload.oneofKind === "gameStateDelta")
-            GameStateDelta.internalBinaryWrite(message.payload.gameStateDelta, writer.tag(11, WireType.LengthDelimited).fork(), options).join();
+            GameStateDeltaMessage.internalBinaryWrite(message.payload.gameStateDelta, writer.tag(11, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

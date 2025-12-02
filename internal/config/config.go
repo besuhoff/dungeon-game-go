@@ -4,22 +4,23 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	MongoDBURL              string
-	SecretKey               string
-	GoogleClientID          string
-	GoogleClientSecret      string
-	APIBaseURL              string
-	FrontendURL             string
+	MongoDBURL               string
+	SecretKey                string
+	GoogleClientID           string
+	GoogleClientSecret       string
+	APIBaseURL               string
+	FrontendURL              string
 	AccessTokenExpireMinutes int
-	Port                    string
-	UseTLS                  bool
-	TLSCert                 string
-	TLSKey                  string
+	Port                     string
+	UseTLS                   bool
+	TLSCert                  string
+	TLSKey                   string
 }
 
 var AppConfig *Config
@@ -44,17 +45,17 @@ func LoadConfig() *Config {
 	}
 
 	config := &Config{
-		MongoDBURL:              getEnvOrDefault("MONGODB_URL", ""),
-		SecretKey:               getEnvOrDefault("SECRET_KEY", ""),
-		GoogleClientID:          getEnvOrDefault("GOOGLE_CLIENT_ID", ""),
-		GoogleClientSecret:      getEnvOrDefault("GOOGLE_CLIENT_SECRET", ""),
-		APIBaseURL:              getEnvOrDefault("API_BASE_URL", "http://localhost:8080"),
-		FrontendURL:             getEnvOrDefault("FRONTEND_URL", "http://localhost:9000"),
+		MongoDBURL:               getEnvOrDefault("MONGODB_URL", ""),
+		SecretKey:                getEnvOrDefault("SECRET_KEY", ""),
+		GoogleClientID:           getEnvOrDefault("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret:       getEnvOrDefault("GOOGLE_CLIENT_SECRET", ""),
+		APIBaseURL:               getEnvOrDefault("API_BASE_URL", "http://localhost:8080"),
+		FrontendURL:              getEnvOrDefault("FRONTEND_URL", "http://localhost:9000"),
 		AccessTokenExpireMinutes: expireMinutes,
-		Port:                    getEnvOrDefault("PORT", "8080"),
-		UseTLS:                  useTLS,
-		TLSCert:                 getEnvOrDefault("TLS_CERT", ""),
-		TLSKey:                  getEnvOrDefault("TLS_KEY", ""),
+		Port:                     getEnvOrDefault("PORT", "8080"),
+		UseTLS:                   useTLS,
+		TLSCert:                  getEnvOrDefault("TLS_CERT", ""),
+		TLSKey:                   getEnvOrDefault("TLS_KEY", ""),
 	}
 
 	// Validate required fields
@@ -81,3 +82,66 @@ func getEnvOrDefault(key, defaultValue string) string {
 	}
 	return defaultValue
 }
+
+// Constants
+const (
+	// Player constants
+	PlayerLives = 5
+	PlayerSpeed = 300.0 // Units per second
+
+	PlayerSize          = 24.0
+	PlayerRadius        = PlayerSize / 2
+	PlayerGunEndOffsetX = -10.0
+	PlayerGunEndOffsetY = 20.0
+	PlayerTorchOffsetX  = 7.0
+	PlayerTorchOffsetY  = 11.0
+
+	PlayerRotationSpeed            = 180.0 // Degrees per second
+	PlayerShootDelay               = 0.2   // Seconds
+	PlayerMaxBullets               = 6
+	PlayerBulletRechargeTime       = 1.0   // Seconds per bullet
+	PlayerBulletSpeed              = 420.0 // Units per second
+	PlayerInvulnerabilityTime      = 1.0   // Seconds
+	PlayerSpawnInvulnerabilityTime = 3.0   // Seconds after spawn
+	PlayerReward                   = 100.0 // Money for killing enemy
+
+	// Enemy constants
+	EnemySpeed = 120.0 // Units per second
+
+	EnemySize          = 24.0
+	EnemyRadius        = EnemySize / 2
+	EnemyGunEndOffsetX = -1.0
+	EnemyGunEndOffsetY = 26.0
+
+	EnemyLives          = 1
+	EnemyShootDelay     = 1.0   // Seconds
+	EnemyBulletSpeed    = 240.0 // Units per second
+	EnemyDeathTraceTime = 5.0   // Seconds
+	EnemyReward         = 10.0  // Money reward
+	EnemyDropChance     = 0.3   // 30% chance to drop bonus
+
+	// Bullet constants
+	BulletDamage   = 1
+	BulletSize     = 8.0
+	BulletRadius   = 4.0
+	BulletLifetime = 3 * time.Second
+
+	// Bonus constants
+	AidKitSize        = 32.0
+	AidKitHealAmount  = 1
+	GogglesSize       = 32.0
+	GogglesActiveTime = 20.0 // Seconds
+
+	// World constants
+	ChunkSize         = 2000.0
+	WallWidth         = 30.0
+	WallsPerKiloPixel = 7
+
+	// Vision constants
+	TorchRadius                = 200.0
+	NightVisionDetectionRadius = 100.0
+
+	// Session constants
+	SessionSaveInterval = 5 * time.Minute
+	BonusCacheTimeout   = 5 * time.Second
+)

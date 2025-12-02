@@ -2,7 +2,7 @@ package game
 
 import (
 	"fmt"
-	
+
 	"github.com/besuhoff/dungeon-game-go/internal/db"
 	"github.com/besuhoff/dungeon-game-go/internal/types"
 )
@@ -26,7 +26,7 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			if obj.Properties == nil {
 				continue
 			}
-			
+
 			wall := &types.Wall{
 				ID:       id,
 				Position: types.Vector2{X: obj.X, Y: obj.Y},
@@ -47,7 +47,7 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			if obj.Properties == nil {
 				continue
 			}
-			
+
 			enemy := &types.Enemy{
 				ID:       id,
 				Position: types.Vector2{X: obj.X, Y: obj.Y},
@@ -66,7 +66,7 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			if obj.Properties == nil {
 				continue
 			}
-			
+
 			bonus := &types.Bonus{
 				ID:       id,
 				Position: types.Vector2{X: obj.X, Y: obj.Y},
@@ -76,6 +76,26 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			}
 			e.bonuses[id] = bonus
 		}
+	}
+
+	// Load players from session
+	for playerID, playerState := range session.Players {
+		player := &types.Player{
+			ID:                playerState.PlayerID,
+			Username:          playerState.Name,
+			Position:          types.Vector2{X: playerState.Position.X, Y: playerState.Position.Y},
+			Rotation:          playerState.Position.Rotation,
+			Lives:             playerState.Lives,
+			Score:             playerState.Score,
+			Money:             playerState.Money,
+			BulletsLeft:       playerState.BulletsLeft,
+			InvulnerableTimer: playerState.InvulnerableTimer,
+			NightVisionTimer:  playerState.NightVisionTimer,
+			Kills:             playerState.Kills,
+			IsAlive:           playerState.IsAlive,
+		}
+
+		e.players[playerID] = player
 	}
 
 	// Load chunk hash from world map
@@ -88,6 +108,24 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 func (e *Engine) SaveToSession(session *db.GameSession) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
+
+	// Save players
+	session.Players = make(map[string]db.PlayerState)
+	for id, player := range e.players {
+		session.Players[id] = db.PlayerState{
+			PlayerID:          player.ID,
+			Name:              player.Username,
+			Position:          db.Position{X: player.Position.X, Y: player.Position.Y, Rotation: player.Rotation},
+			Lives:             player.Lives,
+			Score:             player.Score,
+			Money:             player.Money,
+			Kills:             player.Kills,
+			BulletsLeft:       player.BulletsLeft,
+			InvulnerableTimer: player.InvulnerableTimer,
+			NightVisionTimer:  player.NightVisionTimer,
+			IsAlive:           player.IsAlive,
+		}
+	}
 
 	// Clear existing shared objects
 	session.SharedObjects = make(map[string]db.WorldObject)
@@ -124,6 +162,10 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 
 	// Save bonuses
 	for id, bonus := range e.bonuses {
+		if bonus.PickedUpBy != "" {
+			continue // Skip picked up bonuses
+		}
+
 		session.SharedObjects[id] = db.WorldObject{
 			ObjectID: id,
 			Type:     "bonus",

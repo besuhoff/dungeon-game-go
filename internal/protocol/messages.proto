@@ -7,16 +7,12 @@ option go_package = "github.com/besuhoff/dungeon-game-go/internal/protocol";
 // Message types
 enum MessageType {
   UNKNOWN = 0;
-  CONNECT = 1;
   INPUT = 2;
-  SHOOT = 3;
-  DISCONNECT = 4;
   GAME_STATE = 5;
   GAME_STATE_DELTA = 11;
   PLAYER_JOIN = 6;
   PLAYER_LEAVE = 7;
-  PLAYER_HIT = 8;
-  PLAYER_DEATH = 9;
+  PLAYER_RESPAWN = 8;
   ERROR = 10;
 }
 
@@ -32,8 +28,9 @@ message Player {
   Vector2 position = 3;
   Vector2 velocity = 4;
   int32 lives = 5;
+  double invulnerable_timer = 13;
   int32 score = 6;
-  double money = 7;
+  int32 money = 7;
   int32 kills = 8;
   double rotation = 9;
   int32 bullets_left = 10;
@@ -47,6 +44,7 @@ message Bullet {
   Vector2 velocity = 3;
   string owner_id = 4;
   int32 damage = 5;
+  bool is_enemy = 6;
 }
 
 message Wall {
@@ -70,11 +68,7 @@ message Bonus {
   string id = 1;
   Vector2 position = 2;
   string type = 3;
-}
-
-// Client -> Server messages
-message ConnectMessage {
-  string username = 1;
+  string picked_up_by = 4;
 }
 
 message InputMessage {
@@ -82,14 +76,11 @@ message InputMessage {
   bool backward = 2;
   bool left = 3;
   bool right = 4;
-}
-
-message ShootMessage {
-  double direction = 1;
+  bool shoot = 5;
 }
 
 // Server -> Client messages
-message GameState {
+message GameStateMessage {
   map<string, Player> players = 1;
   map<string, Bullet> bullets = 2;
   map<string, Wall> walls = 3;
@@ -98,12 +89,12 @@ message GameState {
   int64 timestamp = 6;
 }
 
-message GameStateDelta {
+message GameStateDeltaMessage {
   map<string, Player> updated_players = 1;
   repeated string removed_players = 2;
   
   map<string, Bullet> updated_bullets = 3;
-  repeated string removed_bullets = 4;
+  map<string, Bullet> removed_bullets = 4;
   
   map<string, Wall> updated_walls = 5;
   repeated string removed_walls = 6;
@@ -112,7 +103,6 @@ message GameStateDelta {
   repeated string removed_enemies = 8;
   
   map<string, Bonus> updated_bonuses = 9;
-  repeated string removed_bonuses = 10;
   
   int64 timestamp = 11;
 }
@@ -125,16 +115,8 @@ message PlayerLeaveMessage {
   string player_id = 1;
 }
 
-message PlayerHitMessage {
+message PlayerRespawnMessage {
   string player_id = 1;
-  string attacker_id = 2;
-  int32 damage = 3;
-  int32 new_lives = 4;
-}
-
-message PlayerDeathMessage {
-  string player_id = 1;
-  string killer_id = 2;
 }
 
 message ErrorMessage {
@@ -145,15 +127,12 @@ message ErrorMessage {
 message GameMessage {
   MessageType type = 1;
   oneof payload {
-    ConnectMessage connect = 2;
     InputMessage input = 3;
-    ShootMessage shoot = 4;
-    GameState game_state = 5;
-    GameStateDelta game_state_delta = 11;
+    GameStateMessage game_state = 5;
+    GameStateDeltaMessage game_state_delta = 11;
     PlayerJoinMessage player_join = 6;
     PlayerLeaveMessage player_leave = 7;
-    PlayerHitMessage player_hit = 8;
-    PlayerDeathMessage player_death = 9;
+    PlayerRespawnMessage player_respawn = 8;
     ErrorMessage error = 10;
   }
 }

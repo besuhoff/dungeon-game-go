@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/besuhoff/dungeon-game-go/internal/config"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -22,16 +23,30 @@ type User struct {
 
 // PlayerState represents a player's state in a game session
 type PlayerState struct {
-	PlayerID     string                 `bson:"player_id" json:"player_id"`
-	Name         string                 `bson:"name" json:"name"`
-	Position     Position               `bson:"position" json:"position"`
-	Lives        int                    `bson:"lives" json:"lives"`
-	Score        int                    `bson:"score" json:"score"`
-	Money        int                    `bson:"money" json:"money"`
-	Kills        int                    `bson:"kills" json:"kills"`
-	IsAlive      bool                   `bson:"is_alive" json:"is_alive"`
-	IsConnected  bool                   `bson:"is_connected" json:"is_connected"`
-	LastUpdated  time.Time              `bson:"last_updated" json:"last_updated"`
+	PlayerID          string    `bson:"player_id" json:"player_id"`
+	Name              string    `bson:"name" json:"name"`
+	Position          Position  `bson:"position" json:"position"`
+	Lives             int       `bson:"lives" json:"lives"`
+	Score             int       `bson:"score" json:"score"`
+	Money             int       `bson:"money" json:"money"`
+	Kills             int       `bson:"kills" json:"kills"`
+	BulletsLeft       int       `bson:"bullets_left" json:"bullets_left"`
+	InvulnerableTimer float64   `bson:"invulnerable_timer" json:"invulnerable_timer"`
+	NightVisionTimer  float64   `bson:"night_vision_timer" json:"night_vision_timer"`
+	IsAlive           bool      `bson:"is_alive" json:"is_alive"`
+	IsConnected       bool      `bson:"is_connected" json:"is_connected"`
+	LastUpdated       time.Time `bson:"last_updated" json:"last_updated"`
+}
+
+func (ps *PlayerState) Respawn() {
+	ps.IsAlive = true
+	ps.Lives = config.PlayerLives
+	ps.BulletsLeft = config.PlayerMaxBullets
+	ps.InvulnerableTimer = config.PlayerSpawnInvulnerabilityTime
+	ps.NightVisionTimer = 0
+	ps.Kills = 0
+	ps.Money = 0
+	ps.Score = 0
 }
 
 // Position represents x, y coordinates and rotation
@@ -122,12 +137,12 @@ func (r *UserRepository) FindByID(ctx context.Context, id primitive.ObjectID) (*
 func (r *UserRepository) Create(ctx context.Context, user *User) error {
 	user.CreatedAt = time.Now()
 	user.IsActive = true
-	
+
 	result, err := r.collection.InsertOne(ctx, user)
 	if err != nil {
 		return err
 	}
-	
+
 	user.ID = result.InsertedID.(primitive.ObjectID)
 	return nil
 }
@@ -184,7 +199,7 @@ func (r *GameSessionRepository) Create(ctx context.Context, session *GameSession
 	session.CreatedAt = time.Now()
 	session.LastUpdated = time.Now()
 	session.IsActive = true
-	
+
 	if session.Players == nil {
 		session.Players = make(map[string]PlayerState)
 	}
@@ -197,12 +212,12 @@ func (r *GameSessionRepository) Create(ctx context.Context, session *GameSession
 	if session.GameState == nil {
 		session.GameState = make(map[string]interface{})
 	}
-	
+
 	result, err := r.collection.InsertOne(ctx, session)
 	if err != nil {
 		return err
 	}
-	
+
 	session.ID = result.InsertedID.(primitive.ObjectID)
 	return nil
 }
@@ -210,7 +225,7 @@ func (r *GameSessionRepository) Create(ctx context.Context, session *GameSession
 // Update updates a game session
 func (r *GameSessionRepository) Update(ctx context.Context, session *GameSession) error {
 	session.LastUpdated = time.Now()
-	
+
 	_, err := r.collection.UpdateOne(
 		ctx,
 		bson.M{"_id": session.ID},

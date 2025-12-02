@@ -338,6 +338,7 @@ PlayerMaxBullets          = 6        // Max bullets before reload
 PlayerBulletRechargeTime  = 1.0      // Seconds per bullet recharge
 PlayerBulletSpeed         = 420.0    // Bullet velocity
 PlayerInvulnerabilityTime = 1.0      // Seconds after hit
+PlayerSpawnInvulnerabilityTime = 3.0 // Seconds after spawn
 
 // Enemy constants
 EnemySpeed            = 120.0    // Patrol speed
@@ -353,8 +354,6 @@ AidKitHealAmount  = 2        // Lives restored
 GogglesActiveTime = 20.0     // Seconds of night vision
 
 // World constants
-MapWidth  = 10000.0    // World width
-MapHeight = 10000.0    // World height
 ChunkSize = 800.0      // Chunk generation size
 TorchRadius = 200.0    // Vision radius
 ```

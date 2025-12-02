@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/besuhoff/dungeon-game-go/internal/auth"
+	"github.com/besuhoff/dungeon-game-go/internal/config"
 	"github.com/besuhoff/dungeon-game-go/internal/db"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -28,7 +29,6 @@ func NewSessionHandler() *SessionHandler {
 // CreateSessionRequest represents the request body for creating a session
 type CreateSessionRequest struct {
 	Name       string `json:"name"`
-	Health     int    `json:"health"`
 	MaxPlayers int    `json:"max_players"`
 	IsPrivate  bool   `json:"is_private"`
 	Password   string `json:"password,omitempty"`
@@ -36,18 +36,18 @@ type CreateSessionRequest struct {
 
 // SessionResponse represents a game session response
 type SessionResponse struct {
-	ID            string                        `json:"id"`
-	Name          string                        `json:"name"`
-	Host          UserResponse                  `json:"host"`
-	MaxPlayers    int                           `json:"max_players"`
-	IsPrivate     bool                          `json:"is_private"`
-	WorldMap      map[string]db.Chunk           `json:"world_map"`
-	SharedObjects map[string]db.WorldObject     `json:"shared_objects"`
-	GameState     map[string]interface{}        `json:"game_state"`
-	PlayerRoles   map[string]string             `json:"player_roles"`
-	Players       map[string]db.PlayerState     `json:"players"`
-	CreatedAt     string                        `json:"created_at"`
-	IsActive      bool                          `json:"is_active"`
+	ID            string                    `json:"id"`
+	Name          string                    `json:"name"`
+	Host          UserResponse              `json:"host"`
+	MaxPlayers    int                       `json:"max_players"`
+	IsPrivate     bool                      `json:"is_private"`
+	WorldMap      map[string]db.Chunk       `json:"world_map"`
+	SharedObjects map[string]db.WorldObject `json:"shared_objects"`
+	GameState     map[string]interface{}    `json:"game_state"`
+	PlayerRoles   map[string]string         `json:"player_roles"`
+	Players       map[string]db.PlayerState `json:"players"`
+	CreatedAt     string                    `json:"created_at"`
+	IsActive      bool                      `json:"is_active"`
 }
 
 // UserResponse represents a user in responses
@@ -115,11 +115,13 @@ func (h *SessionHandler) HandleCreateSession(w http.ResponseWriter, r *http.Requ
 		Password:   req.Password,
 		Players: map[string]db.PlayerState{
 			user.ID.Hex(): {
-				PlayerID: user.ID.Hex(),
-				Name:     user.Username,
-				Position: db.Position{X: 0, Y: 0, Rotation: 0},
-				Lives:    req.Health,
-				IsAlive:  true,
+				PlayerID:          user.ID.Hex(),
+				Name:              user.Username,
+				Position:          db.Position{X: 0, Y: 0, Rotation: 0},
+				Lives:             config.PlayerLives,
+				IsAlive:           true,
+				BulletsLeft:       config.PlayerMaxBullets,
+				InvulnerableTimer: config.PlayerSpawnInvulnerabilityTime,
 			},
 		},
 	}
@@ -188,7 +190,7 @@ func (h *SessionHandler) HandleJoinSession(w http.ResponseWriter, r *http.Reques
 	// Extract session ID from URL path
 	path := strings.TrimPrefix(r.URL.Path, "/api/v1/sessions/")
 	sessionIDStr := strings.TrimSuffix(path, "/join")
-	
+
 	sessionID, err := primitive.ObjectIDFromHex(sessionIDStr)
 	if err != nil {
 		http.Error(w, "Invalid session ID", http.StatusBadRequest)
@@ -222,23 +224,34 @@ func (h *SessionHandler) HandleJoinSession(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Add player to session
-	position := db.Position{X: 0, Y: 0, Rotation: 0}
-	if existingPlayer, ok := session.Players[user.ID.Hex()]; ok {
-		position = existingPlayer.Position
-	}
+	if _, ok := session.Players[user.ID.Hex()]; !ok {
+		session.Players[user.ID.Hex()] = db.PlayerState{
+			PlayerID:          user.ID.Hex(),
+			Name:              user.Username,
+			Position:          db.Position{X: 0, Y: 0, Rotation: 0},
+			Lives:             config.PlayerLives,
+			IsAlive:           true,
+			IsConnected:       false,
+			BulletsLeft:       config.PlayerMaxBullets,
+			InvulnerableTimer: config.PlayerSpawnInvulnerabilityTime,
+		}
 
-	session.Players[user.ID.Hex()] = db.PlayerState{
-		PlayerID:    user.ID.Hex(),
-		Name:        user.Username,
-		Position:    position,
-		Lives:       5,
-		IsAlive:     true,
-		IsConnected: false,
-	}
+		if err := h.sessionRepo.Update(ctx, session); err != nil {
+			http.Error(w, "Failed to join session", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// Player re-joining, respawn if needed
+		playerState := session.Players[user.ID.Hex()]
 
-	if err := h.sessionRepo.Update(ctx, session); err != nil {
-		http.Error(w, "Failed to join session", http.StatusInternalServerError)
-		return
+		if !playerState.IsAlive {
+
+			session.Players[user.ID.Hex()] = playerState
+			if err := h.sessionRepo.Update(ctx, session); err != nil {
+				http.Error(w, "Failed to join session", http.StatusInternalServerError)
+				return
+			}
+		}
 	}
 
 	// Update user's current session
@@ -246,11 +259,10 @@ func (h *SessionHandler) HandleJoinSession(w http.ResponseWriter, r *http.Reques
 	h.userRepo.Update(ctx, user)
 
 	// Prepare environment for the player
-	
 
 	host, _ := h.userRepo.FindByID(ctx, session.HostID)
 	response := h.sessionToResponse(session, host)
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
@@ -271,7 +283,7 @@ func (h *SessionHandler) HandleLeaveSession(w http.ResponseWriter, r *http.Reque
 	// Extract session ID from URL path
 	path := strings.TrimPrefix(r.URL.Path, "/api/v1/sessions/")
 	sessionIDStr := strings.TrimSuffix(path, "/leave")
-	
+
 	sessionID, err := primitive.ObjectIDFromHex(sessionIDStr)
 	if err != nil {
 		http.Error(w, "Invalid session ID", http.StatusBadRequest)

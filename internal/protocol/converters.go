@@ -29,18 +29,18 @@ func ToProtoPlayer(p *types.Player) *Player {
 		return nil
 	}
 	return &Player{
-		Id:               p.ID,
-		Username:         p.Username,
-		Position:         ToProtoVector2(p.Position),
-		Velocity:         ToProtoVector2(p.Velocity),
-		Lives:            int32(p.Lives),
-		Score:            int32(p.Score),
-		Money:            p.Money,
-		Kills:            int32(p.Kills),
-		Rotation:         p.Rotation,
-		BulletsLeft:      int32(p.BulletsLeft),
-		NightVisionTimer: p.NightVisionTimer,
-		IsAlive:          p.IsAlive,
+		Id:                p.ID,
+		Username:          p.Username,
+		Position:          ToProtoVector2(p.Position),
+		Lives:             int32(p.Lives),
+		Score:             int32(p.Score),
+		Money:             int32(p.Money),
+		Kills:             int32(p.Kills),
+		Rotation:          p.Rotation,
+		BulletsLeft:       int32(p.BulletsLeft),
+		NightVisionTimer:  p.NightVisionTimer,
+		InvulnerableTimer: p.InvulnerableTimer,
+		IsAlive:           p.IsAlive,
 	}
 }
 
@@ -55,6 +55,7 @@ func ToProtoBullet(b *types.Bullet) *Bullet {
 		Velocity: ToProtoVector2(b.Velocity),
 		OwnerId:  b.OwnerID,
 		Damage:   int32(b.Damage),
+		IsEnemy:  b.IsEnemy,
 	}
 }
 
@@ -93,14 +94,15 @@ func ToProtoBonus(b *types.Bonus) *Bonus {
 		return nil
 	}
 	return &Bonus{
-		Id:       b.ID,
-		Position: ToProtoVector2(b.Position),
-		Type:     b.Type,
+		Id:         b.ID,
+		Position:   ToProtoVector2(b.Position),
+		Type:       b.Type,
+		PickedUpBy: b.PickedUpBy,
 	}
 }
 
 // ToProtoGameState converts types.GameState to proto GameState
-func ToProtoGameState(gs types.GameState) *GameState {
+func ToProtoGameState(gs types.GameState) *GameStateMessage {
 	protoPlayers := make(map[string]*Player)
 	for k, v := range gs.Players {
 		protoPlayers[k] = ToProtoPlayer(v)
@@ -126,7 +128,7 @@ func ToProtoGameState(gs types.GameState) *GameState {
 		protoBonuses[k] = ToProtoBonus(v)
 	}
 
-	return &GameState{
+	return &GameStateMessage{
 		Players:   protoPlayers,
 		Bullets:   protoBullets,
 		Walls:     protoWalls,
@@ -137,7 +139,7 @@ func ToProtoGameState(gs types.GameState) *GameState {
 }
 
 // ToProtoGameStateDelta converts types.GameStateDelta to proto GameStateDelta
-func ToProtoGameStateDelta(delta types.GameStateDelta) *GameStateDelta {
+func ToProtoGameStateDelta(delta types.GameStateDelta) *GameStateDeltaMessage {
 	protoUpdatedPlayers := make(map[string]*Player)
 	for k, v := range delta.UpdatedPlayers {
 		protoUpdatedPlayers[k] = ToProtoPlayer(v)
@@ -146,6 +148,11 @@ func ToProtoGameStateDelta(delta types.GameStateDelta) *GameStateDelta {
 	protoUpdatedBullets := make(map[string]*Bullet)
 	for k, v := range delta.UpdatedBullets {
 		protoUpdatedBullets[k] = ToProtoBullet(v)
+	}
+
+	protoRemovedBullets := make(map[string]*Bullet)
+	for k, v := range delta.RemovedBullets {
+		protoRemovedBullets[k] = ToProtoBullet(v)
 	}
 
 	protoUpdatedWalls := make(map[string]*Wall)
@@ -163,17 +170,16 @@ func ToProtoGameStateDelta(delta types.GameStateDelta) *GameStateDelta {
 		protoUpdatedBonuses[k] = ToProtoBonus(v)
 	}
 
-	return &GameStateDelta{
+	return &GameStateDeltaMessage{
 		UpdatedPlayers: protoUpdatedPlayers,
 		RemovedPlayers: delta.RemovedPlayers,
-		UpdatedBullets:   protoUpdatedBullets,
-		RemovedBullets: delta.RemovedBullets,
-		UpdatedWalls:     protoUpdatedWalls,
+		UpdatedBullets: protoUpdatedBullets,
+		RemovedBullets: protoRemovedBullets,
+		UpdatedWalls:   protoUpdatedWalls,
 		RemovedWalls:   delta.RemovedWalls,
-		UpdatedEnemies:   protoUpdatedEnemies,
+		UpdatedEnemies: protoUpdatedEnemies,
 		RemovedEnemies: delta.RemovedEnemies,
-		UpdatedBonuses:   protoUpdatedBonuses,
-		RemovedBonuses: delta.RemovedBonuses,
+		UpdatedBonuses: protoUpdatedBonuses,
 		Timestamp:      delta.Timestamp,
 	}
 }
@@ -184,29 +190,10 @@ func FromProtoInput(input *InputMessage) types.InputPayload {
 		return types.InputPayload{}
 	}
 	return types.InputPayload{
-		Forward:   input.Forward,
-		Backward:  input.Backward,
-		Left:      input.Left,
-		Right:     input.Right,
-	}
-}
-
-// FromProtoShoot converts proto ShootMessage to types.ShootPayload
-func FromProtoShoot(shoot *ShootMessage) types.ShootPayload {
-	if shoot == nil {
-		return types.ShootPayload{}
-	}
-	return types.ShootPayload{
-		Direction: shoot.Direction,
-	}
-}
-
-// FromProtoConnect converts proto ConnectMessage to types.ConnectPayload
-func FromProtoConnect(connect *ConnectMessage) types.ConnectPayload {
-	if connect == nil {
-		return types.ConnectPayload{}
-	}
-	return types.ConnectPayload{
-		Username: connect.Username,
+		Forward:  input.Forward,
+		Backward: input.Backward,
+		Left:     input.Left,
+		Right:    input.Right,
+		Shoot:    input.Shoot,
 	}
 }
