@@ -37,16 +37,23 @@ func getEnv(key, defaultValue string) string {
 // CORS middleware
 func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", config.AppConfig.FrontendURL)
+		// Parse frontend domain from config
+		frontendDomain := config.AppConfig.FrontendURL
+		if idx := strings.Index(frontendDomain, "://"); idx != -1 {
+			if pathIdx := strings.Index(frontendDomain[idx+3:], "/"); pathIdx != -1 {
+				frontendDomain = frontendDomain[:idx+3+pathIdx]
+			}
+		}
+		w.Header().Set("Access-Control-Allow-Origin", frontendDomain)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		
+
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		
+
 		next(w, r)
 	}
 }
@@ -56,18 +63,18 @@ func main() {
 
 	// Load configuration
 	cfg := config.LoadConfig()
-	
+
 	// Connect to MongoDB
 	if err := db.Connect(cfg.MongoDBURL); err != nil {
 		log.Fatal("Failed to connect to MongoDB: ", err)
 	}
 	defer db.Disconnect()
-	
+
 	log.Println("MongoDB connected successfully")
 
 	// Create game server
 	gameServer := server.NewGameServer()
-	
+
 	// Start game loop in background
 	go gameServer.Run()
 
@@ -75,15 +82,15 @@ func main() {
 	googleAuth := auth.NewGoogleAuthHandler()
 	sessionHandler := handlers.NewSessionHandler()
 	leaderboardHandler := handlers.NewLeaderboardHandler()
-	
+
 	// Setup HTTP routes
 	http.HandleFunc("/ws", gameServer.HandleWebSocket)
-	
+
 	// Auth endpoints
 	http.HandleFunc("/api/v1/auth/google/url", corsMiddleware(googleAuth.HandleGetAuthURL))
 	http.HandleFunc("/api/v1/auth/google/callback", googleAuth.HandleCallback)
 	http.HandleFunc("/api/v1/auth/user", corsMiddleware(googleAuth.HandleGetUser))
-	
+
 	// Session endpoints
 	http.HandleFunc("/api/v1/sessions", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
@@ -103,11 +110,11 @@ func main() {
 			http.Error(w, "Not found", http.StatusNotFound)
 		}
 	}))
-	
+
 	// Leaderboard endpoints
 	http.HandleFunc("/api/v1/leaderboard/global", corsMiddleware(leaderboardHandler.HandleGetGlobalLeaderboard))
 	http.HandleFunc("/api/v1/leaderboard/user/", corsMiddleware(leaderboardHandler.HandleGetUserStats))
-	
+
 	// Health check
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -116,7 +123,7 @@ func main() {
 
 	// Prepare address
 	addr := fmt.Sprintf("%s:%s", *host, *port)
-	
+
 	// Create HTTP server with proper configuration
 	httpServer := &http.Server{
 		Addr:         addr,
@@ -125,7 +132,7 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
-	
+
 	// Start HTTP/HTTPS server
 	go func() {
 		if *useTLS || *certFile != "" {
@@ -159,19 +166,19 @@ func main() {
 	<-sigChan
 
 	log.Println("Received shutdown signal, shutting down gracefully...")
-	
+
 	// Shutdown game server first (save sessions, close websockets)
 	gameServer.Shutdown()
-	
+
 	// Shutdown HTTP server with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
+
 	if err := httpServer.Shutdown(ctx); err != nil {
 		log.Printf("HTTP server shutdown error: %v", err)
 	} else {
 		log.Println("HTTP server shut down successfully")
 	}
-	
+
 	log.Println("Server stopped")
 }
