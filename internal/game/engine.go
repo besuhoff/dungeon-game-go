@@ -482,16 +482,7 @@ func (e *Engine) Update() {
 
 		for _, player := range e.players {
 			if player.IsAlive {
-				playerCenter := types.Vector2{X: player.Position.X, Y: player.Position.Y}
-				playerTorchPoint := types.Vector2{X: player.Position.X + config.PlayerTorchOffsetX, Y: player.Position.Y + config.PlayerTorchOffsetY}
-				playerTorchPoint.RotateAroundPoint(&playerCenter, player.Rotation)
-				detectionDistance := config.TorchRadius
-				detectionPoint := playerTorchPoint
-
-				if player.NightVisionTimer > 0 {
-					detectionDistance = config.NightVisionDetectionRadius
-					detectionPoint = player.Position
-				}
+				detectionPoint, detectionDistance := player.GetDetectionParams()
 
 				dist := math.Sqrt(math.Pow(detectionPoint.X-enemy.Position.X, 2) +
 					math.Pow(detectionPoint.Y-enemy.Position.Y, 2))
@@ -946,20 +937,10 @@ func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
 		}
 	}
 
-	// Calculate player's chunk and surrounding chunk range
-	playerChunkX, playerChunkY := chunkXYFromPosition(player.Position)
-
-	// Helper function to check if position is in visible chunks
-	isInVisibleChunks := func(position types.Vector2) bool {
-		entityChunkX, entityChunkY := chunkXYFromPosition(position)
-		return entityChunkX >= playerChunkX-1 && entityChunkX <= playerChunkX+1 &&
-			entityChunkY >= playerChunkY-1 && entityChunkY <= playerChunkY+1
-	}
-
 	// Deep copy with filtering
 	playersCopy := make(map[string]*types.Player)
 	for k, v := range e.players {
-		if isInVisibleChunks(v.Position) {
+		if isPointVisible(player, v.Position) {
 			p := *v
 			playersCopy[k] = &p
 		}
@@ -967,7 +948,7 @@ func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
 
 	bulletsCopy := make(map[string]*types.Bullet)
 	for k, v := range e.bullets {
-		if isInVisibleChunks(v.Position) {
+		if isPointVisible(player, v.Position) {
 			b := *v
 			bulletsCopy[k] = &b
 		}
@@ -975,7 +956,7 @@ func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
 
 	enemiesCopy := make(map[string]*types.Enemy)
 	for k, v := range e.enemies {
-		if isInVisibleChunks(v.Position) {
+		if isPointVisible(player, v.Position) {
 			e := *v
 			enemiesCopy[k] = &e
 		}
@@ -983,10 +964,10 @@ func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
 
 	wallsCopy := make(map[string]*types.Wall)
 	for k, v := range e.walls {
-		if isInVisibleChunks(v.Position) ||
-			isInVisibleChunks(types.Vector2{X: v.Position.X + v.Width, Y: v.Position.Y}) ||
-			isInVisibleChunks(types.Vector2{X: v.Position.X, Y: v.Position.Y + v.Height}) ||
-			isInVisibleChunks(types.Vector2{X: v.Position.X + v.Width, Y: v.Position.Y + v.Height}) ||
+		if isPointVisible(player, v.Position) ||
+			isPointVisible(player, types.Vector2{X: v.Position.X + v.Width, Y: v.Position.Y}) ||
+			isPointVisible(player, types.Vector2{X: v.Position.X, Y: v.Position.Y + v.Height}) ||
+			isPointVisible(player, types.Vector2{X: v.Position.X + v.Width, Y: v.Position.Y + v.Height}) ||
 			enemiesHaveWall(enemiesCopy, v.ID) {
 			w := *v
 			wallsCopy[k] = &w
@@ -995,7 +976,7 @@ func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
 
 	bonusesCopy := make(map[string]*types.Bonus)
 	for k, v := range e.bonuses {
-		if isInVisibleChunks(v.Position) {
+		if isPointVisible(player, v.Position) {
 			b := *v
 			bonusesCopy[k] = &b
 		}
@@ -1033,16 +1014,6 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 		}
 	}
 
-	// Calculate player's chunk and surrounding chunk range
-	playerChunkX, playerChunkY := chunkXYFromPosition(player.Position)
-
-	// Helper function to check if position is in visible chunks
-	isInVisibleChunks := func(position types.Vector2) bool {
-		entityChunkX, entityChunkY := chunkXYFromPosition(position)
-		return entityChunkX >= playerChunkX-1 && entityChunkX <= playerChunkX+1 &&
-			entityChunkY >= playerChunkY-1 && entityChunkY <= playerChunkY+1
-	}
-
 	delta := types.GameStateDelta{
 		UpdatedPlayers: make(map[string]*types.Player),
 		RemovedPlayers: make([]string, 0),
@@ -1058,7 +1029,7 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 
 	// Check for added/updated players in visible chunks
 	for id, p := range e.players {
-		if isInVisibleChunks(p.Position) {
+		if isPointVisible(player, p.Position) {
 			playerCopy := *p
 			prev := e.prevPlayers[id]
 			if !types.PlayersEqual(prev, p) {
@@ -1069,7 +1040,7 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 
 	// Check for removed players that were in visible chunks
 	for id, prev := range e.prevPlayers {
-		if isInVisibleChunks(prev.Position) {
+		if isPointVisible(player, prev.Position) {
 			if _, exists := e.players[id]; !exists {
 				delta.RemovedPlayers = append(delta.RemovedPlayers, id)
 			}
@@ -1078,7 +1049,7 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 
 	// Check for added bullets in visible chunks
 	for id, bullet := range e.bullets {
-		if isInVisibleChunks(bullet.Position) {
+		if isPointVisible(player, bullet.Position) {
 			bulletCopy := *bullet
 			prev := e.prevBullets[id]
 			if !bulletsEqual(prev, bullet) {
@@ -1089,7 +1060,7 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 
 	// Check for removed bullets that were in visible chunks
 	for id, prev := range e.prevBullets {
-		if isInVisibleChunks(prev.Position) {
+		if isPointVisible(player, prev.Position) {
 			if _, exists := e.bullets[id]; !exists {
 				delta.RemovedBullets[id] = prev
 			}
@@ -1097,9 +1068,17 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 	}
 
 	enemiesCopy := make(map[string]*types.Enemy)
+
+	detectionPoint, distanceOfSight := player.GetDetectionParams()
+
+	if player.NightVisionTimer > 0 {
+		distanceOfSight = math.Sqrt(2) * config.ChunkSize / 2
+	}
+
 	// Check for added/updated enemies in visible chunks
 	for id, enemy := range e.enemies {
-		if isInVisibleChunks(enemy.Position) {
+		dist := enemy.DistanceToPoint(detectionPoint)
+		if dist <= distanceOfSight {
 			enemyCopy := *enemy
 			prev := e.prevEnemies[id]
 			if !types.EnemiesEqual(prev, enemy) {
@@ -1111,7 +1090,8 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 
 	// Check for removed enemies that were in visible chunks
 	for id, prev := range e.prevEnemies {
-		if isInVisibleChunks(prev.Position) {
+		dist := prev.DistanceToPoint(detectionPoint)
+		if dist <= distanceOfSight {
 			if _, exists := e.enemies[id]; !exists {
 				delta.RemovedEnemies = append(delta.RemovedEnemies, id)
 			}
@@ -1122,10 +1102,10 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 	for id, wall := range e.walls {
 		topLeftX, topLeftY := getWallTopLeft(wall)
 
-		if isInVisibleChunks(types.Vector2{X: topLeftX, Y: topLeftY}) ||
-			isInVisibleChunks(types.Vector2{X: topLeftX + wall.Width, Y: topLeftY}) ||
-			isInVisibleChunks(types.Vector2{X: topLeftX, Y: topLeftY + wall.Height}) ||
-			isInVisibleChunks(types.Vector2{X: topLeftX + wall.Width, Y: topLeftY + wall.Height}) ||
+		if isPointVisible(player, types.Vector2{X: topLeftX, Y: topLeftY}) ||
+			isPointVisible(player, types.Vector2{X: topLeftX + wall.Width, Y: topLeftY}) ||
+			isPointVisible(player, types.Vector2{X: topLeftX, Y: topLeftY + wall.Height}) ||
+			isPointVisible(player, types.Vector2{X: topLeftX + wall.Width, Y: topLeftY + wall.Height}) ||
 			enemiesHaveWall(enemiesCopy, wall.ID) {
 			if _, exists := e.prevWalls[id]; !exists {
 				wallCopy := *wall
@@ -1137,10 +1117,10 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 	// Check for removed walls that were in visible chunks
 	for id, prev := range e.prevWalls {
 		topLeftX, topLeftY := getWallTopLeft(prev)
-		if isInVisibleChunks(types.Vector2{X: topLeftX, Y: topLeftY}) ||
-			isInVisibleChunks(types.Vector2{X: topLeftX + prev.Width, Y: topLeftY}) ||
-			isInVisibleChunks(types.Vector2{X: topLeftX, Y: topLeftY + prev.Height}) ||
-			isInVisibleChunks(types.Vector2{X: topLeftX + prev.Width, Y: topLeftY + prev.Height}) {
+		if isPointVisible(player, types.Vector2{X: topLeftX, Y: topLeftY}) ||
+			isPointVisible(player, types.Vector2{X: topLeftX + prev.Width, Y: topLeftY}) ||
+			isPointVisible(player, types.Vector2{X: topLeftX, Y: topLeftY + prev.Height}) ||
+			isPointVisible(player, types.Vector2{X: topLeftX + prev.Width, Y: topLeftY + prev.Height}) {
 			if _, exists := e.walls[id]; !exists {
 				delta.RemovedWalls = append(delta.RemovedWalls, id)
 			}
@@ -1149,7 +1129,7 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 
 	// Check for added bonuses in visible chunks
 	for id, bonus := range e.bonuses {
-		if isInVisibleChunks(bonus.Position) {
+		if isPointVisible(player, bonus.Position) {
 			prevBonuses, prevExists := e.prevBonuses[id]
 
 			if !prevExists || prevBonuses.PickedUpBy != bonus.PickedUpBy {
@@ -1174,4 +1154,13 @@ func chunkXYFromPosition(pos types.Vector2) (int, int) {
 	chunkX := int(math.Floor(pos.X / config.ChunkSize))
 	chunkY := int(math.Floor(pos.Y / config.ChunkSize))
 	return chunkX, chunkY
+}
+
+func isPointVisible(player *types.Player, objectPos types.Vector2) bool {
+	dx := objectPos.X - player.Position.X
+	dy := objectPos.Y - player.Position.Y
+	distance := math.Sqrt(dx*dx + dy*dy)
+	visibilityDistance := math.Sqrt(2) * config.ChunkSize / 2
+
+	return distance <= visibilityDistance
 }

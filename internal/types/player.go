@@ -1,6 +1,8 @@
 package types
 
-import "github.com/besuhoff/dungeon-game-go/internal/config"
+import (
+	"github.com/besuhoff/dungeon-game-go/internal/config"
+)
 
 func PlayersEqual(a, b *Player) bool {
 	if a != nil && b == nil || a == nil && b != nil {
@@ -41,4 +43,19 @@ func (p *Player) Respawn() bool {
 	p.Score = 0
 
 	return true
+}
+
+func (p *Player) GetDetectionParams() (Vector2, float64) {
+	playerCenter := Vector2{X: p.Position.X, Y: p.Position.Y}
+	playerTorchPoint := Vector2{X: p.Position.X + config.PlayerTorchOffsetX, Y: p.Position.Y + config.PlayerTorchOffsetY}
+	playerTorchPoint.RotateAroundPoint(&playerCenter, p.Rotation)
+	detectionDistance := config.TorchRadius
+	detectionPoint := playerTorchPoint
+
+	if p.NightVisionTimer > 0 {
+		detectionDistance = config.NightVisionDetectionRadius
+		detectionPoint = p.Position
+	}
+
+	return detectionPoint, detectionDistance
 }
