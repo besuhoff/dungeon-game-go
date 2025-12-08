@@ -110,6 +110,10 @@ export interface Bullet {
      * @generated from protobuf field: bool is_enemy = 6
      */
     isEnemy: boolean;
+    /**
+     * @generated from protobuf field: bool is_active = 7
+     */
+    isActive: boolean;
 }
 /**
  * @generated from protobuf message protocol.Wall
@@ -648,7 +652,8 @@ class Bullet$Type extends MessageType$<Bullet> {
             { no: 3, name: "velocity", kind: "message", T: () => Vector2 },
             { no: 4, name: "owner_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 5, name: "damage", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 6, name: "is_enemy", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
+            { no: 6, name: "is_enemy", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 7, name: "is_active", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
         ]);
     }
     create(value?: PartialMessage<Bullet>): Bullet {
@@ -657,6 +662,7 @@ class Bullet$Type extends MessageType$<Bullet> {
         message.ownerId = "";
         message.damage = 0;
         message.isEnemy = false;
+        message.isActive = false;
         if (value !== undefined)
             reflectionMergePartial<Bullet>(this, message, value);
         return message;
@@ -683,6 +689,9 @@ class Bullet$Type extends MessageType$<Bullet> {
                     break;
                 case /* bool is_enemy */ 6:
                     message.isEnemy = reader.bool();
+                    break;
+                case /* bool is_active */ 7:
+                    message.isActive = reader.bool();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -714,6 +723,9 @@ class Bullet$Type extends MessageType$<Bullet> {
         /* bool is_enemy = 6; */
         if (message.isEnemy !== false)
             writer.tag(6, WireType.Varint).bool(message.isEnemy);
+        /* bool is_active = 7; */
+        if (message.isActive !== false)
+            writer.tag(7, WireType.Varint).bool(message.isActive);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

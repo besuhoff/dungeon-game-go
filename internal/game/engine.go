@@ -13,23 +13,23 @@ import (
 )
 
 // Engine handles the game logic for a specific session
+type EngineGameState struct {
+	players map[string]*types.Player
+	bullets map[string]*types.Bullet
+	walls   map[string]*types.Wall
+	enemies map[string]*types.Enemy
+	bonuses map[string]*types.Bonus
+}
+
 type Engine struct {
 	mu           sync.RWMutex
 	sessionID    string // Session identifier
-	players      map[string]*types.Player
-	bullets      map[string]*types.Bullet
-	walls        map[string]*types.Wall
-	enemies      map[string]*types.Enemy
-	bonuses      map[string]*types.Bonus
+	state        *EngineGameState
 	chunkHash    map[string]bool // Track generated chunks
 	respawnQueue map[string]bool // Players to respawn
 
 	// Previous state for delta computation
-	prevPlayers      map[string]*types.Player
-	prevBullets      map[string]*types.Bullet
-	prevWalls        map[string]*types.Wall
-	prevEnemies      map[string]*types.Enemy
-	prevBonuses      map[string]*types.Bonus
+	prevState        map[string]*EngineGameState
 	lastUpdate       time.Time
 	playerInputState types.InputPayload
 }
@@ -37,55 +37,55 @@ type Engine struct {
 // NewEngine creates a new game engine for a session
 func NewEngine(sessionID string) *Engine {
 	return &Engine{
-		sessionID:    sessionID,
-		players:      make(map[string]*types.Player),
-		bullets:      make(map[string]*types.Bullet),
-		walls:        make(map[string]*types.Wall),
-		enemies:      make(map[string]*types.Enemy),
-		bonuses:      make(map[string]*types.Bonus),
+		sessionID: sessionID,
+		state: &EngineGameState{
+			players: make(map[string]*types.Player),
+			bullets: make(map[string]*types.Bullet),
+			walls:   make(map[string]*types.Wall),
+			enemies: make(map[string]*types.Enemy),
+			bonuses: make(map[string]*types.Bonus),
+		},
 		chunkHash:    make(map[string]bool),
 		respawnQueue: make(map[string]bool),
-		prevPlayers:  make(map[string]*types.Player),
-		prevBullets:  make(map[string]*types.Bullet),
-		prevWalls:    make(map[string]*types.Wall),
-		prevEnemies:  make(map[string]*types.Enemy),
-		prevBonuses:  make(map[string]*types.Bonus),
+		prevState:    make(map[string]*EngineGameState),
 		lastUpdate:   time.Now(),
 	}
 }
 
 // AddPlayer adds a new player to the game
 func (e *Engine) AddPlayer(id, username string) *types.Player {
-	if player, exists := e.players[id]; exists {
-		e.generateInitialWorld(player.Position)
-		return player
-	}
-
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	// Spawn position near center with some randomization
-	spawnX := float64((len(e.players)*50)%400 - 200)
-	spawnY := float64((len(e.players)*50)%400 - 200)
+	player, exists := e.state.players[id]
+	if !exists {
+		// Spawn position near center with some randomization
+		spawnX := float64((len(e.state.players)*50)%400 - 200)
+		spawnY := float64((len(e.state.players)*50)%400 - 200)
 
-	player := &types.Player{
-		ID:                  id,
-		Username:            username,
-		Position:            types.Vector2{X: spawnX, Y: spawnY},
-		Lives:               config.PlayerLives,
-		Score:               0,
-		Money:               0,
-		Kills:               0,
-		Rotation:            0, // facing up
-		BulletsLeft:         config.PlayerMaxBullets,
-		RechargeAccumulator: 0,
-		InvulnerableTimer:   0,
-		NightVisionTimer:    0,
-		IsAlive:             true,
+		player = &types.Player{
+			ScreenObject: types.ScreenObject{
+				ID:       id,
+				Position: types.Vector2{X: spawnX, Y: spawnY},
+			},
+
+			Username:            username,
+			Lives:               config.PlayerLives,
+			Score:               0,
+			Money:               0,
+			Kills:               0,
+			Rotation:            0, // facing up
+			BulletsLeft:         config.PlayerMaxBullets,
+			RechargeAccumulator: 0,
+			InvulnerableTimer:   0,
+			NightVisionTimer:    0,
+			IsAlive:             true,
+		}
+
+		e.state.players[id] = player
 	}
 
-	e.players[id] = player
-
+	e.prevState[id] = &EngineGameState{}
 	// Generate initial walls and enemies around player
 	e.generateInitialWorld(player.Position)
 
@@ -148,7 +148,7 @@ func (e *Engine) generateChunk(chunkX, chunkY int, playerPos types.Vector2) {
 
 		// Check overlap with existing walls
 		overlaps := false
-		for _, wall := range e.walls {
+		for _, wall := range e.state.walls {
 			if e.checkWallOverlap(x, y, width, height, wall) {
 				overlaps = true
 				break
@@ -158,17 +158,19 @@ func (e *Engine) generateChunk(chunkX, chunkY int, playerPos types.Vector2) {
 		if !overlaps {
 			wallID := uuid.New().String()
 			wall := &types.Wall{
-				ID:          wallID,
-				Position:    types.Vector2{X: x, Y: y},
+				ScreenObject: types.ScreenObject{
+					ID:       wallID,
+					Position: types.Vector2{X: x, Y: y},
+				},
 				Width:       width,
 				Height:      height,
 				Orientation: orientation,
 			}
-			e.walls[wallID] = wall
+			e.state.walls[wallID] = wall
 
 			// Create enemy for this wall
 			enemy := e.createEnemyForWall(wall)
-			e.enemies[enemy.ID] = enemy
+			e.state.enemies[enemy.ID] = enemy
 		}
 	}
 }
@@ -207,8 +209,10 @@ func (e *Engine) createEnemyForWall(wall *types.Wall) *types.Enemy {
 	}
 
 	return &types.Enemy{
-		ID:         enemyID,
-		Position:   types.Vector2{X: x, Y: y},
+		ScreenObject: types.ScreenObject{
+			ID:       enemyID,
+			Position: types.Vector2{X: x, Y: y},
+		},
 		Rotation:   rotation,
 		Lives:      config.EnemyLives,
 		WallID:     wall.ID,
@@ -222,7 +226,7 @@ func (e *Engine) createEnemyForWall(wall *types.Wall) *types.Enemy {
 func (e *Engine) RespawnPlayer(id string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if _, exists := e.players[id]; exists {
+	if _, exists := e.state.players[id]; exists {
 		e.respawnQueue[id] = true
 	}
 }
@@ -231,7 +235,8 @@ func (e *Engine) RespawnPlayer(id string) {
 func (e *Engine) RemovePlayer(id string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	delete(e.players, id)
+	delete(e.state.players, id)
+	delete(e.prevState, id)
 }
 
 // UpdatePlayerInput updates player movement and rotation based on input
@@ -242,36 +247,66 @@ func (e *Engine) UpdatePlayerInput(playerID string, input types.InputPayload) {
 	e.playerInputState = input
 }
 
-func (e *Engine) updatePreviousState() {
+func (e *Engine) updatePreviousState(playerID string) {
+	player, exists := e.state.players[playerID]
+	if !exists {
+		return
+	}
+
+	if e.prevState[playerID] == nil {
+		e.prevState[playerID] = &EngineGameState{}
+	}
+
+	prevState := e.prevState[playerID]
+
 	// Save objects to previous state for delta computation
-	e.prevPlayers = make(map[string]*types.Player)
-	for id, p := range e.players {
+	prevState.players = make(map[string]*types.Player)
+	for id, p := range e.state.players {
+		if !isPointVisible(player, p.Position) {
+			continue
+		}
 		playerCopy := *p
-		e.prevPlayers[id] = &playerCopy
+		prevState.players[id] = &playerCopy
 	}
 
-	e.prevWalls = make(map[string]*types.Wall)
-	for id, w := range e.walls {
+	prevState.walls = make(map[string]*types.Wall)
+	for id, w := range e.state.walls {
+		wallTopLeftX, wallTopLeftY := getWallTopLeft(w)
+		if !isPointVisible(player, types.Vector2{X: wallTopLeftX, Y: wallTopLeftY}) &&
+			!isPointVisible(player, types.Vector2{X: wallTopLeftX + w.Width, Y: wallTopLeftY}) &&
+			!isPointVisible(player, types.Vector2{X: wallTopLeftX, Y: wallTopLeftY + w.Height}) &&
+			!isPointVisible(player, types.Vector2{X: wallTopLeftX + w.Width, Y: wallTopLeftY + w.Height}) {
+			continue
+		}
 		wallCopy := *w
-		e.prevWalls[id] = &wallCopy
+		prevState.walls[id] = &wallCopy
 	}
 
-	e.prevEnemies = make(map[string]*types.Enemy)
-	for id, enemy := range e.enemies {
+	prevState.enemies = make(map[string]*types.Enemy)
+	for id, enemy := range e.state.enemies {
+		if !isPointVisible(player, enemy.Position) {
+			continue
+		}
 		enemyCopy := *enemy
-		e.prevEnemies[id] = &enemyCopy
+		prevState.enemies[id] = &enemyCopy
 	}
 
-	e.prevBullets = make(map[string]*types.Bullet)
-	for id, bullet := range e.bullets {
+	prevState.bullets = make(map[string]*types.Bullet)
+	for id, bullet := range e.state.bullets {
+		if !isPointVisible(player, bullet.Position) {
+			continue
+		}
 		bulletCopy := *bullet
-		e.prevBullets[id] = &bulletCopy
+		prevState.bullets[id] = &bulletCopy
 	}
 
-	e.prevBonuses = make(map[string]*types.Bonus)
-	for id, bonus := range e.bonuses {
+	prevState.bonuses = make(map[string]*types.Bonus)
+	for id, bonus := range e.state.bonuses {
+		if !isPointVisible(player, bonus.Position) {
+			continue
+		}
 		bonusCopy := *bonus
-		e.prevBonuses[id] = &bonusCopy
+		prevState.bonuses[id] = &bonusCopy
 	}
 }
 
@@ -284,10 +319,8 @@ func (e *Engine) Update() {
 	deltaTime := now.Sub(e.lastUpdate).Seconds()
 	e.lastUpdate = now
 
-	e.updatePreviousState()
-
 	// Update players
-	for _, player := range e.players {
+	for _, player := range e.state.players {
 		if _, exists := e.respawnQueue[player.ID]; exists {
 			// Respawn player
 			player.Respawn()
@@ -354,9 +387,10 @@ func (e *Engine) Update() {
 				OwnerID:   player.ID,
 				SpawnTime: time.Now(),
 				Damage:    config.BulletDamage,
+				IsActive:  true,
 			}
 
-			e.bullets[bullet.ID] = bullet
+			e.state.bullets[bullet.ID] = bullet
 		}
 
 		if e.playerInputState.Forward || e.playerInputState.Backward {
@@ -378,7 +412,7 @@ func (e *Engine) Update() {
 			collisionY := false
 
 			// Check wall collisions
-			for _, wall := range e.walls {
+			for _, wall := range e.state.walls {
 				wallTopLeftX, wallTopLeftY := getWallTopLeft(wall)
 
 				if e.checkRectCollision(
@@ -411,7 +445,7 @@ func (e *Engine) Update() {
 			}
 
 			// Check enemy collisions
-			for _, enemy := range e.enemies {
+			for _, enemy := range e.state.enemies {
 				if !enemy.IsDead {
 					if e.checkCircleCollision(
 						player.Position.X+dx, player.Position.Y+dy, config.PlayerRadius,
@@ -460,12 +494,12 @@ func (e *Engine) Update() {
 	}
 
 	// Update enemies
-	for _, enemy := range e.enemies {
+	for _, enemy := range e.state.enemies {
 		if enemy.IsDead {
 			enemy.DeadTimer -= deltaTime
 			if enemy.DeadTimer <= 0 {
 				// Remove completely dead enemies
-				delete(e.enemies, enemy.ID)
+				delete(e.state.enemies, enemy.ID)
 			}
 			continue
 		}
@@ -480,20 +514,17 @@ func (e *Engine) Update() {
 		canSee := false
 		minDist := math.MaxFloat64
 
-		for _, player := range e.players {
+		for _, player := range e.state.players {
 			if player.IsAlive {
 				detectionPoint, detectionDistance := player.GetDetectionParams()
 
-				dist := math.Sqrt(math.Pow(detectionPoint.X-enemy.Position.X, 2) +
-					math.Pow(detectionPoint.Y-enemy.Position.Y, 2))
+				dist := enemy.DistanceToPoint(detectionPoint)
 				if dist < detectionDistance {
 					// Add line-of-sight check with walls
 					lineClear := true
-					for _, wall := range e.walls {
+					for _, wall := range e.state.walls {
 						wallTopLeftX, wallTopLeftY := getWallTopLeft(wall)
-						distanceToWall := math.Sqrt(
-							math.Pow(wall.Position.X-enemy.Position.X, 2) +
-								math.Pow(wall.Position.Y-enemy.Position.Y, 2))
+						distanceToWall := wall.DistanceToPoint(enemy.Position)
 						if distanceToWall > dist+detectionDistance {
 							continue // Wall is beyond player
 						}
@@ -530,7 +561,7 @@ func (e *Engine) Update() {
 			}
 		} else {
 			// Patrol logic
-			wall, wallExists := e.walls[enemy.WallID]
+			wall, wallExists := e.state.walls[enemy.WallID]
 			if wallExists {
 				var dx, dy float64
 				if wall.Orientation == "vertical" {
@@ -543,7 +574,7 @@ func (e *Engine) Update() {
 
 				// Check collisions with walls
 				collision := false
-				for _, w := range e.walls {
+				for _, w := range e.state.walls {
 					if e.checkCircleRectCollision(
 						enemy.Position.X+dx, enemy.Position.Y+dy, config.EnemyRadius,
 						w.Position.X-w.Width/2, w.Position.Y-w.Height/2, w.Width, w.Height) {
@@ -553,7 +584,7 @@ func (e *Engine) Update() {
 				}
 
 				// Check collisions with other enemies
-				for _, other := range e.enemies {
+				for _, other := range e.state.enemies {
 					if other.ID != enemy.ID && !other.IsDead {
 						if e.checkCircleCollision(
 							enemy.Position.X+dx, enemy.Position.Y+dy, config.EnemyRadius,
@@ -589,7 +620,15 @@ func (e *Engine) Update() {
 
 	// Update bullets
 	bulletsToRemove := make([]string, 0)
-	for id, bullet := range e.bullets {
+	for id, bullet := range e.state.bullets {
+		// Check if bonus was picked up and needs cleanup
+		if !bullet.DeletedAt.IsZero() {
+			if time.Since(bullet.DeletedAt) > config.DeadEntitiesCacheTimeout {
+				delete(e.state.bullets, bullet.ID)
+			}
+			continue
+		}
+
 		// Check lifetime
 		if time.Since(bullet.SpawnTime) > config.BulletLifetime {
 			bulletsToRemove = append(bulletsToRemove, id)
@@ -605,15 +644,12 @@ func (e *Engine) Update() {
 		hitFound := false
 
 		// Check collision with players
-		for _, player := range e.players {
+		for _, player := range e.state.players {
 			if !player.IsAlive || player.ID == bullet.OwnerID || player.InvulnerableTimer > 0 {
 				continue
 			}
 
-			distance := math.Sqrt(
-				math.Pow(player.Position.X-bullet.Position.X, 2) +
-					math.Pow(player.Position.Y-bullet.Position.Y, 2),
-			)
+			distance := player.DistanceToPoint(bullet.Position)
 
 			if distance < config.PlayerRadius+config.BulletRadius {
 				// Hit!
@@ -626,7 +662,7 @@ func (e *Engine) Update() {
 				}
 
 				// Award money to shooter
-				if shooter, exists := e.players[bullet.OwnerID]; exists {
+				if shooter, exists := e.state.players[bullet.OwnerID]; exists {
 					shooter.Money += config.PlayerReward
 					shooter.Kills++
 					shooter.Score++
@@ -644,15 +680,12 @@ func (e *Engine) Update() {
 
 		if !bullet.IsEnemy {
 			// Check collision with enemies
-			for _, enemy := range e.enemies {
+			for _, enemy := range e.state.enemies {
 				if enemy.IsDead {
 					continue
 				}
 
-				distance := math.Sqrt(
-					math.Pow(enemy.Position.X-bullet.Position.X, 2) +
-						math.Pow(enemy.Position.Y-bullet.Position.Y, 2),
-				)
+				distance := enemy.DistanceToPoint(bullet.Position)
 
 				if distance < config.EnemyRadius+config.BulletRadius {
 					// Hit!
@@ -662,7 +695,7 @@ func (e *Engine) Update() {
 						enemy.DeadTimer = config.EnemyDeathTraceTime
 
 						// Award money to shooter
-						if shooter, exists := e.players[bullet.OwnerID]; exists {
+						if shooter, exists := e.state.players[bullet.OwnerID]; exists {
 							shooter.Money += config.EnemyReward
 							shooter.Kills++
 							shooter.Score++
@@ -685,7 +718,7 @@ func (e *Engine) Update() {
 		}
 
 		// Check collision with walls
-		for _, wall := range e.walls {
+		for _, wall := range e.state.walls {
 			topLeftX, topLeftY := getWallTopLeft(wall)
 			if e.checkCircleRectCollision(
 				bullet.Position.X, bullet.Position.Y, config.BulletRadius,
@@ -703,23 +736,22 @@ func (e *Engine) Update() {
 
 	// Remove dead bullets
 	for _, id := range bulletsToRemove {
-		if _, exists := e.prevBullets[id]; !exists {
-			e.prevBullets[id] = e.bullets[id] // Ensure removed bullets are tracked
-		}
-		delete(e.bullets, id)
+		bullet := e.state.bullets[id]
+		bullet.IsActive = false
+		bullet.DeletedAt = time.Now()
 	}
 
 	// Update bonuses - check pickup
-	for _, bonus := range e.bonuses {
+	for _, bonus := range e.state.bonuses {
 		// Check if bonus was picked up and needs cleanup
 		if !bonus.PickedUpAt.IsZero() {
-			if time.Since(bonus.PickedUpAt) > config.BonusCacheTimeout {
-				delete(e.bonuses, bonus.ID)
+			if time.Since(bonus.PickedUpAt) > config.DeadEntitiesCacheTimeout {
+				delete(e.state.bonuses, bonus.ID)
 			}
 			continue
 		}
 
-		for _, player := range e.players {
+		for _, player := range e.state.players {
 			if !player.IsAlive {
 				continue
 			}
@@ -729,10 +761,7 @@ func (e *Engine) Update() {
 				bonusRadius = config.GogglesSize / 2
 			}
 
-			distance := math.Sqrt(
-				math.Pow(player.Position.X-bonus.Position.X, 2) +
-					math.Pow(player.Position.Y-bonus.Position.Y, 2),
-			)
+			distance := player.DistanceToPoint(bonus.Position)
 
 			if distance < config.PlayerRadius+bonusRadius {
 				// Pickup!
@@ -768,9 +797,10 @@ func (e *Engine) enemyShoot(enemy *types.Enemy) {
 		IsEnemy:   true,
 		SpawnTime: time.Now(),
 		Damage:    config.BulletDamage,
+		IsActive:  true,
 	}
 
-	e.bullets[bullet.ID] = bullet
+	e.state.bullets[bullet.ID] = bullet
 }
 
 // spawnBonus creates a bonus at the given position
@@ -781,12 +811,14 @@ func (e *Engine) spawnBonus(pos types.Vector2) {
 	}
 
 	bonus := &types.Bonus{
-		ID:       uuid.New().String(),
-		Position: pos,
-		Type:     bonusType,
+		ScreenObject: types.ScreenObject{
+			ID:       uuid.New().String(),
+			Position: pos,
+		},
+		Type: bonusType,
 	}
 
-	e.bonuses[bonus.ID] = bonus
+	e.state.bonuses[bonus.ID] = bonus
 }
 
 // Collision detection helpers
@@ -858,31 +890,31 @@ func (e *Engine) GetGameState() types.GameState {
 
 	// Deep copy to avoid race conditions
 	playersCopy := make(map[string]*types.Player)
-	for k, v := range e.players {
+	for k, v := range e.state.players {
 		p := *v
 		playersCopy[k] = &p
 	}
 
 	bulletsCopy := make(map[string]*types.Bullet)
-	for k, v := range e.bullets {
+	for k, v := range e.state.bullets {
 		b := *v
 		bulletsCopy[k] = &b
 	}
 
 	wallsCopy := make(map[string]*types.Wall)
-	for k, v := range e.walls {
+	for k, v := range e.state.walls {
 		w := *v
 		wallsCopy[k] = &w
 	}
 
 	enemiesCopy := make(map[string]*types.Enemy)
-	for k, v := range e.enemies {
+	for k, v := range e.state.enemies {
 		e := *v
 		enemiesCopy[k] = &e
 	}
 
 	bonusesCopy := make(map[string]*types.Bonus)
-	for k, v := range e.bonuses {
+	for k, v := range e.state.bonuses {
 		b := *v
 		bonusesCopy[k] = &b
 	}
@@ -924,7 +956,7 @@ func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
-	player, exists := e.players[playerID]
+	player, exists := e.state.players[playerID]
 	if !exists {
 		// Return empty state if player doesn't exist
 		return types.GameState{
@@ -939,7 +971,7 @@ func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
 
 	// Deep copy with filtering
 	playersCopy := make(map[string]*types.Player)
-	for k, v := range e.players {
+	for k, v := range e.state.players {
 		if isPointVisible(player, v.Position) {
 			p := *v
 			playersCopy[k] = &p
@@ -947,7 +979,7 @@ func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
 	}
 
 	bulletsCopy := make(map[string]*types.Bullet)
-	for k, v := range e.bullets {
+	for k, v := range e.state.bullets {
 		if isPointVisible(player, v.Position) {
 			b := *v
 			bulletsCopy[k] = &b
@@ -955,7 +987,7 @@ func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
 	}
 
 	enemiesCopy := make(map[string]*types.Enemy)
-	for k, v := range e.enemies {
+	for k, v := range e.state.enemies {
 		if isPointVisible(player, v.Position) {
 			e := *v
 			enemiesCopy[k] = &e
@@ -963,7 +995,7 @@ func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
 	}
 
 	wallsCopy := make(map[string]*types.Wall)
-	for k, v := range e.walls {
+	for k, v := range e.state.walls {
 		if isPointVisible(player, v.Position) ||
 			isPointVisible(player, types.Vector2{X: v.Position.X + v.Width, Y: v.Position.Y}) ||
 			isPointVisible(player, types.Vector2{X: v.Position.X, Y: v.Position.Y + v.Height}) ||
@@ -975,7 +1007,7 @@ func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
 	}
 
 	bonusesCopy := make(map[string]*types.Bonus)
-	for k, v := range e.bonuses {
+	for k, v := range e.state.bonuses {
 		if isPointVisible(player, v.Position) {
 			b := *v
 			bonusesCopy[k] = &b
@@ -997,7 +1029,9 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
-	player, exists := e.players[playerID]
+	prevState := e.prevState[playerID]
+
+	player, exists := e.state.players[playerID]
 	if !exists {
 		// Return empty delta if player doesn't exist
 		return types.GameStateDelta{
@@ -1028,10 +1062,10 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 	}
 
 	// Check for added/updated players in visible chunks
-	for id, p := range e.players {
+	for id, p := range e.state.players {
 		if isPointVisible(player, p.Position) {
 			playerCopy := *p
-			prev := e.prevPlayers[id]
+			prev := prevState.players[id]
 			if !types.PlayersEqual(prev, p) {
 				delta.UpdatedPlayers[id] = &playerCopy
 			}
@@ -1039,30 +1073,25 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 	}
 
 	// Check for removed players that were in visible chunks
-	for id, prev := range e.prevPlayers {
+	for id, prev := range prevState.players {
 		if isPointVisible(player, prev.Position) {
-			if _, exists := e.players[id]; !exists {
+			if _, exists := e.state.players[id]; !exists {
 				delta.RemovedPlayers = append(delta.RemovedPlayers, id)
 			}
 		}
 	}
 
 	// Check for added bullets in visible chunks
-	for id, bullet := range e.bullets {
+	for id, bullet := range e.state.bullets {
 		if isPointVisible(player, bullet.Position) {
 			bulletCopy := *bullet
-			prev := e.prevBullets[id]
+			prev := prevState.bullets[id]
 			if !bulletsEqual(prev, bullet) {
+				if !bullet.IsActive {
+					delta.RemovedBullets[id] = &bulletCopy
+					continue
+				}
 				delta.UpdatedBullets[id] = &bulletCopy
-			}
-		}
-	}
-
-	// Check for removed bullets that were in visible chunks
-	for id, prev := range e.prevBullets {
-		if isPointVisible(player, prev.Position) {
-			if _, exists := e.bullets[id]; !exists {
-				delta.RemovedBullets[id] = prev
 			}
 		}
 	}
@@ -1072,15 +1101,15 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 	detectionPoint, distanceOfSight := player.GetDetectionParams()
 
 	if player.NightVisionTimer > 0 {
-		distanceOfSight = math.Sqrt(2) * config.ChunkSize / 2
+		distanceOfSight = config.SightRadius
 	}
 
 	// Check for added/updated enemies in visible chunks
-	for id, enemy := range e.enemies {
+	for id, enemy := range e.state.enemies {
 		dist := enemy.DistanceToPoint(detectionPoint)
 		if dist <= distanceOfSight {
 			enemyCopy := *enemy
-			prev := e.prevEnemies[id]
+			prev := prevState.enemies[id]
 			if !types.EnemiesEqual(prev, enemy) {
 				delta.UpdatedEnemies[id] = &enemyCopy
 				enemiesCopy[id] = &enemyCopy
@@ -1089,17 +1118,17 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 	}
 
 	// Check for removed enemies that were in visible chunks
-	for id, prev := range e.prevEnemies {
+	for id, prev := range prevState.enemies {
 		dist := prev.DistanceToPoint(detectionPoint)
 		if dist <= distanceOfSight {
-			if _, exists := e.enemies[id]; !exists {
+			if _, exists := e.state.enemies[id]; !exists {
 				delta.RemovedEnemies = append(delta.RemovedEnemies, id)
 			}
 		}
 	}
 
 	// Check for added walls in visible chunks
-	for id, wall := range e.walls {
+	for id, wall := range e.state.walls {
 		topLeftX, topLeftY := getWallTopLeft(wall)
 
 		if isPointVisible(player, types.Vector2{X: topLeftX, Y: topLeftY}) ||
@@ -1107,7 +1136,7 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 			isPointVisible(player, types.Vector2{X: topLeftX, Y: topLeftY + wall.Height}) ||
 			isPointVisible(player, types.Vector2{X: topLeftX + wall.Width, Y: topLeftY + wall.Height}) ||
 			enemiesHaveWall(enemiesCopy, wall.ID) {
-			if _, exists := e.prevWalls[id]; !exists {
+			if _, exists := prevState.walls[id]; !exists {
 				wallCopy := *wall
 				delta.UpdatedWalls[id] = &wallCopy
 			}
@@ -1115,22 +1144,22 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 	}
 
 	// Check for removed walls that were in visible chunks
-	for id, prev := range e.prevWalls {
+	for id, prev := range prevState.walls {
 		topLeftX, topLeftY := getWallTopLeft(prev)
 		if isPointVisible(player, types.Vector2{X: topLeftX, Y: topLeftY}) ||
 			isPointVisible(player, types.Vector2{X: topLeftX + prev.Width, Y: topLeftY}) ||
 			isPointVisible(player, types.Vector2{X: topLeftX, Y: topLeftY + prev.Height}) ||
 			isPointVisible(player, types.Vector2{X: topLeftX + prev.Width, Y: topLeftY + prev.Height}) {
-			if _, exists := e.walls[id]; !exists {
+			if _, exists := e.state.walls[id]; !exists {
 				delta.RemovedWalls = append(delta.RemovedWalls, id)
 			}
 		}
 	}
 
 	// Check for added bonuses in visible chunks
-	for id, bonus := range e.bonuses {
+	for id, bonus := range e.state.bonuses {
 		if isPointVisible(player, bonus.Position) {
-			prevBonuses, prevExists := e.prevBonuses[id]
+			prevBonuses, prevExists := prevState.bonuses[id]
 
 			if !prevExists || prevBonuses.PickedUpBy != bonus.PickedUpBy {
 				bonusCopy := *bonus
@@ -1138,6 +1167,8 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 			}
 		}
 	}
+
+	e.updatePreviousState(playerID)
 
 	return delta
 }
@@ -1147,7 +1178,7 @@ func bulletsEqual(a, b *types.Bullet) bool {
 		return false
 	}
 
-	return a.Position.X == b.Position.X && a.Position.Y == b.Position.Y
+	return a.Position.X == b.Position.X && a.Position.Y == b.Position.Y && a.IsActive == b.IsActive
 }
 
 func chunkXYFromPosition(pos types.Vector2) (int, int) {
@@ -1157,10 +1188,8 @@ func chunkXYFromPosition(pos types.Vector2) (int, int) {
 }
 
 func isPointVisible(player *types.Player, objectPos types.Vector2) bool {
-	dx := objectPos.X - player.Position.X
-	dy := objectPos.Y - player.Position.Y
-	distance := math.Sqrt(dx*dx + dy*dy)
-	visibilityDistance := math.Sqrt(2) * config.ChunkSize / 2
+	distance := player.DistanceToPoint(objectPos)
+	visibilityDistance := config.SightRadius
 
 	return distance <= visibilityDistance
 }

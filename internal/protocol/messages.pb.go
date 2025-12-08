@@ -287,6 +287,7 @@ type Bullet struct {
 	OwnerId       string                 `protobuf:"bytes,4,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
 	Damage        int32                  `protobuf:"varint,5,opt,name=damage,proto3" json:"damage,omitempty"`
 	IsEnemy       bool                   `protobuf:"varint,6,opt,name=is_enemy,json=isEnemy,proto3" json:"is_enemy,omitempty"`
+	IsActive      bool                   `protobuf:"varint,7,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -359,6 +360,13 @@ func (x *Bullet) GetDamage() int32 {
 func (x *Bullet) GetIsEnemy() bool {
 	if x != nil {
 		return x.IsEnemy
+	}
+	return false
+}
+
+func (x *Bullet) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
 	}
 	return false
 }
@@ -1237,14 +1245,15 @@ const file_messages_proto_rawDesc = "" +
 	"\fbullets_left\x18\n" +
 	" \x01(\x05R\vbulletsLeft\x12,\n" +
 	"\x12night_vision_timer\x18\v \x01(\x01R\x10nightVisionTimer\x12\x19\n" +
-	"\bis_alive\x18\f \x01(\bR\aisAlive\"\xc4\x01\n" +
+	"\bis_alive\x18\f \x01(\bR\aisAlive\"\xe1\x01\n" +
 	"\x06Bullet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12-\n" +
 	"\bposition\x18\x02 \x01(\v2\x11.protocol.Vector2R\bposition\x12-\n" +
 	"\bvelocity\x18\x03 \x01(\v2\x11.protocol.Vector2R\bvelocity\x12\x19\n" +
 	"\bowner_id\x18\x04 \x01(\tR\aownerId\x12\x16\n" +
 	"\x06damage\x18\x05 \x01(\x05R\x06damage\x12\x19\n" +
-	"\bis_enemy\x18\x06 \x01(\bR\aisEnemy\"\x95\x01\n" +
+	"\bis_enemy\x18\x06 \x01(\bR\aisEnemy\x12\x1b\n" +
+	"\tis_active\x18\a \x01(\bR\bisActive\"\x95\x01\n" +
 	"\x04Wall\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12-\n" +
 	"\bposition\x18\x02 \x01(\v2\x11.protocol.Vector2R\bposition\x12\x14\n" +

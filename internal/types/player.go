@@ -1,8 +1,27 @@
 package types
 
 import (
+	"time"
+
 	"github.com/besuhoff/dungeon-game-go/internal/config"
 )
+
+// Player represents a player in the game
+type Player struct {
+	ScreenObject
+	Username            string    `json:"username"`
+	Lives               int       `json:"lives"`
+	Score               int       `json:"score"`
+	Money               int       `json:"money"`
+	Kills               int       `json:"kills"`
+	Rotation            float64   `json:"rotation"` // rotation in degrees
+	LastShot            time.Time `json:"-"`
+	BulletsLeft         int       `json:"bulletsLeft"`
+	RechargeAccumulator float64   `json:"-"`
+	InvulnerableTimer   float64   `json:"invulnerableTimer"`
+	NightVisionTimer    float64   `json:"nightVisionTimer"`
+	IsAlive             bool      `json:"isAlive"`
+}
 
 func PlayersEqual(a, b *Player) bool {
 	if a != nil && b == nil || a == nil && b != nil {

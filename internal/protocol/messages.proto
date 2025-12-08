@@ -45,6 +45,7 @@ message Bullet {
   string owner_id = 4;
   int32 damage = 5;
   bool is_enemy = 6;
+  bool is_active = 7;
 }
 
 message Wall {

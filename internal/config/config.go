@@ -134,6 +134,7 @@ const (
 
 	// World constants
 	ChunkSize         = 2000.0
+	SightRadius       = 1500.0
 	WallWidth         = 30.0
 	WallsPerKiloPixel = 7
 
@@ -142,6 +143,6 @@ const (
 	NightVisionDetectionRadius = 100.0
 
 	// Session constants
-	SessionSaveInterval = 5 * time.Minute
-	BonusCacheTimeout   = 5 * time.Second
+	SessionSaveInterval      = 5 * time.Minute
+	DeadEntitiesCacheTimeout = 5 * time.Second
 )

@@ -1,6 +1,22 @@
 package types
 
-import "math"
+import (
+	"math"
+	"time"
+)
+
+// Enemy represents an enemy in the game
+type Enemy struct {
+	ScreenObject
+	Rotation   float64   `json:"rotation"` // rotation in degrees
+	Lives      int       `json:"lives"`
+	WallID     string    `json:"wallId"`
+	Direction  float64   `json:"-"` // patrol direction: 1 or -1
+	ShootDelay float64   `json:"-"`
+	LastShot   time.Time `json:"-"`
+	IsDead     bool      `json:"isDead"`
+	DeadTimer  float64   `json:"-"`
+}
 
 func EnemiesEqual(a, b *Enemy) bool {
 	if a != nil && b == nil || a == nil && b != nil {

@@ -28,8 +28,10 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			}
 
 			wall := &types.Wall{
-				ID:       id,
-				Position: types.Vector2{X: obj.X, Y: obj.Y},
+				ScreenObject: types.ScreenObject{
+					ID:       id,
+					Position: types.Vector2{X: obj.X, Y: obj.Y},
+				},
 			}
 			if width, ok := obj.Properties["width"].(float64); ok {
 				wall.Width = width
@@ -40,7 +42,7 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			if orientation, ok := obj.Properties["orientation"].(string); ok {
 				wall.Orientation = orientation
 			}
-			e.walls[id] = wall
+			e.state.walls[id] = wall
 		} else if obj.Type == "enemy" {
 			// Enemies will be regenerated based on walls
 			// Just track that they existed
@@ -49,8 +51,10 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			}
 
 			enemy := &types.Enemy{
-				ID:       id,
-				Position: types.Vector2{X: obj.X, Y: obj.Y},
+				ScreenObject: types.ScreenObject{
+					ID:       id,
+					Position: types.Vector2{X: obj.X, Y: obj.Y},
+				},
 			}
 			if wallID, ok := obj.Properties["wall_id"].(string); ok {
 				enemy.WallID = wallID
@@ -61,29 +65,33 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			if direction, ok := obj.Properties["direction"].(float64); ok {
 				enemy.Direction = direction
 			}
-			e.enemies[id] = enemy
+			e.state.enemies[id] = enemy
 		} else if obj.Type == "bonus" {
 			if obj.Properties == nil {
 				continue
 			}
 
 			bonus := &types.Bonus{
-				ID:       id,
-				Position: types.Vector2{X: obj.X, Y: obj.Y},
+				ScreenObject: types.ScreenObject{
+					ID:       id,
+					Position: types.Vector2{X: obj.X, Y: obj.Y},
+				},
 			}
 			if bonusType, ok := obj.Properties["bonus_type"].(string); ok {
 				bonus.Type = bonusType
 			}
-			e.bonuses[id] = bonus
+			e.state.bonuses[id] = bonus
 		}
 	}
 
 	// Load players from session
 	for playerID, playerState := range session.Players {
 		player := &types.Player{
-			ID:                playerState.PlayerID,
+			ScreenObject: types.ScreenObject{
+				ID:       playerState.PlayerID,
+				Position: types.Vector2{X: playerState.Position.X, Y: playerState.Position.Y},
+			},
 			Username:          playerState.Name,
-			Position:          types.Vector2{X: playerState.Position.X, Y: playerState.Position.Y},
 			Rotation:          playerState.Position.Rotation,
 			Lives:             playerState.Lives,
 			Score:             playerState.Score,
@@ -95,7 +103,7 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			IsAlive:           playerState.IsAlive,
 		}
 
-		e.players[playerID] = player
+		e.state.players[playerID] = player
 	}
 
 	// Load chunk hash from world map
@@ -111,7 +119,7 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 
 	// Save players
 	session.Players = make(map[string]db.PlayerState)
-	for id, player := range e.players {
+	for id, player := range e.state.players {
 		session.Players[id] = db.PlayerState{
 			PlayerID:          player.ID,
 			Name:              player.Username,
@@ -131,7 +139,7 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 	session.SharedObjects = make(map[string]db.WorldObject)
 
 	// Save walls
-	for id, wall := range e.walls {
+	for id, wall := range e.state.walls {
 		session.SharedObjects[id] = db.WorldObject{
 			ObjectID: id,
 			Type:     "wall",
@@ -146,7 +154,7 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 	}
 
 	// Save enemies
-	for id, enemy := range e.enemies {
+	for id, enemy := range e.state.enemies {
 		session.SharedObjects[id] = db.WorldObject{
 			ObjectID: id,
 			Type:     "enemy",
@@ -161,7 +169,7 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 	}
 
 	// Save bonuses
-	for id, bonus := range e.bonuses {
+	for id, bonus := range e.state.bonuses {
 		if bonus.PickedUpBy != "" {
 			continue // Skip picked up bonuses
 		}
@@ -197,17 +205,18 @@ func (e *Engine) Clear() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	e.players = make(map[string]*types.Player)
-	e.bullets = make(map[string]*types.Bullet)
-	e.walls = make(map[string]*types.Wall)
-	e.enemies = make(map[string]*types.Enemy)
-	e.bonuses = make(map[string]*types.Bonus)
+	e.state.players = make(map[string]*types.Player)
+	e.state.bullets = make(map[string]*types.Bullet)
+	e.state.walls = make(map[string]*types.Wall)
+	e.state.enemies = make(map[string]*types.Enemy)
+	e.state.bonuses = make(map[string]*types.Bonus)
 	e.chunkHash = make(map[string]bool)
+	e.prevState = make(map[string]*EngineGameState)
 }
 
 // GetPlayerCount returns the number of connected players
 func (e *Engine) GetPlayerCount() int {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	return len(e.players)
+	return len(e.state.players)
 }
