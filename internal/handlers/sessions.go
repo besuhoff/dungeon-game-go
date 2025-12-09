@@ -245,6 +245,7 @@ func (h *SessionHandler) HandleJoinSession(w http.ResponseWriter, r *http.Reques
 		playerState := session.Players[user.ID.Hex()]
 
 		if !playerState.IsAlive {
+			playerState.Respawn()
 
 			session.Players[user.ID.Hex()] = playerState
 			if err := h.sessionRepo.Update(ctx, session); err != nil {

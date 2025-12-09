@@ -1102,16 +1102,9 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 
 	enemiesCopy := make(map[string]*types.Enemy)
 
-	detectionPoint, distanceOfSight := player.GetDetectionParams()
-
-	if player.NightVisionTimer > 0 {
-		distanceOfSight = config.SightRadius
-	}
-
 	// Check for added/updated enemies in visible chunks
 	for id, enemy := range e.state.enemies {
-		dist := enemy.DistanceToPoint(detectionPoint)
-		if dist <= distanceOfSight {
+		if isPointVisible(player, enemy.Position) {
 			enemyCopy := *enemy
 			prev := prevState.enemies[id]
 			if !types.EnemiesEqual(prev, enemy) {
@@ -1122,12 +1115,11 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 	}
 
 	// Check for removed enemies that were in visible chunks
-	for id, prev := range prevState.enemies {
-		dist := prev.DistanceToPoint(detectionPoint)
-		if dist <= distanceOfSight {
-			if _, exists := e.state.enemies[id]; !exists {
-				delta.RemovedEnemies = append(delta.RemovedEnemies, id)
-			}
+	for id := range prevState.enemies {
+		_, exists := e.state.enemies[id]
+
+		if !exists {
+			delta.RemovedEnemies = append(delta.RemovedEnemies, id)
 		}
 	}
 
