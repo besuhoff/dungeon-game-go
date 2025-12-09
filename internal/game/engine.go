@@ -638,6 +638,8 @@ func (e *Engine) Update() {
 		// Update position
 		dx := bullet.Velocity.X * deltaTime
 		dy := bullet.Velocity.Y * deltaTime
+
+		previousPosition := bullet.Position
 		bullet.Position.X += dx
 		bullet.Position.Y += dy
 
@@ -649,7 +651,8 @@ func (e *Engine) Update() {
 				continue
 			}
 
-			distance := player.DistanceToPoint(bullet.Position)
+			closestPoint := closestPointOnLineSegment(previousPosition, bullet.Position, player.Position)
+			distance := player.DistanceToPoint(closestPoint)
 
 			if distance < config.PlayerRadius+config.BulletRadius {
 				// Hit!
@@ -685,7 +688,8 @@ func (e *Engine) Update() {
 					continue
 				}
 
-				distance := enemy.DistanceToPoint(bullet.Position)
+				closestPoint := closestPointOnLineSegment(previousPosition, bullet.Position, enemy.Position)
+				distance := enemy.DistanceToPoint(closestPoint)
 
 				if distance < config.EnemyRadius+config.BulletRadius {
 					// Hit!
@@ -720,8 +724,8 @@ func (e *Engine) Update() {
 		// Check collision with walls
 		for _, wall := range e.state.walls {
 			topLeftX, topLeftY := getWallTopLeft(wall)
-			if e.checkCircleRectCollision(
-				bullet.Position.X, bullet.Position.Y, config.BulletRadius,
+			if e.checkLineRectCollision(
+				previousPosition.X, previousPosition.Y, bullet.Position.X, bullet.Position.Y,
 				topLeftX, topLeftY,
 				wall.Width, wall.Height) {
 				hitFound = true
@@ -1192,4 +1196,26 @@ func isPointVisible(player *types.Player, objectPos types.Vector2) bool {
 	visibilityDistance := config.SightRadius
 
 	return distance <= visibilityDistance
+}
+
+// Returns the closest point on the line segment AB to point P
+func closestPointOnLineSegment(a, b, p types.Vector2) types.Vector2 {
+	ap := types.Vector2{X: p.X - a.X, Y: p.Y - a.Y}
+	ab := types.Vector2{X: b.X - a.X, Y: b.Y - a.Y}
+
+	ab2 := ab.X*ab.X + ab.Y*ab.Y
+	if ab2 == 0 {
+		return a // a and b are the same point
+	}
+
+	ap_ab := ap.X*ab.X + ap.Y*ab.Y
+	t := ap_ab / ab2
+
+	if t < 0 {
+		return a
+	} else if t > 1 {
+		return b
+	}
+
+	return types.Vector2{X: a.X + ab.X*t, Y: a.Y + ab.Y*t}
 }
