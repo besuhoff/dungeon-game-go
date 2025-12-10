@@ -31,7 +31,7 @@ type Engine struct {
 	// Previous state for delta computation
 	prevState        map[string]*EngineGameState
 	lastUpdate       time.Time
-	playerInputState types.InputPayload
+	playerInputState map[string]*types.InputPayload
 }
 
 // NewEngine creates a new game engine for a session
@@ -45,10 +45,11 @@ func NewEngine(sessionID string) *Engine {
 			enemies: make(map[string]*types.Enemy),
 			bonuses: make(map[string]*types.Bonus),
 		},
-		chunkHash:    make(map[string]bool),
-		respawnQueue: make(map[string]bool),
-		prevState:    make(map[string]*EngineGameState),
-		lastUpdate:   time.Now(),
+		playerInputState: map[string]*types.InputPayload{},
+		chunkHash:        make(map[string]bool),
+		respawnQueue:     make(map[string]bool),
+		prevState:        make(map[string]*EngineGameState),
+		lastUpdate:       time.Now(),
 	}
 }
 
@@ -237,6 +238,7 @@ func (e *Engine) RemovePlayer(id string) {
 	defer e.mu.Unlock()
 	delete(e.state.players, id)
 	delete(e.prevState, id)
+	delete(e.playerInputState, id)
 }
 
 // UpdatePlayerInput updates player movement and rotation based on input
@@ -244,7 +246,7 @@ func (e *Engine) UpdatePlayerInput(playerID string, input types.InputPayload) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	e.playerInputState = input
+	e.playerInputState[playerID] = &input
 }
 
 func (e *Engine) updatePreviousState(playerID string) {
@@ -331,6 +333,7 @@ func (e *Engine) Update() {
 		if !player.IsAlive {
 			continue
 		}
+
 		// Update timers
 		if player.InvulnerableTimer > 0 {
 			player.InvulnerableTimer = math.Max(0, player.InvulnerableTimer-deltaTime)
@@ -349,12 +352,17 @@ func (e *Engine) Update() {
 			}
 		}
 
+		input, inputExists := e.playerInputState[player.ID]
+		if !inputExists {
+			continue
+		}
+
 		// Process movement input
-		if e.playerInputState.Left || e.playerInputState.Right {
-			if e.playerInputState.Left {
+		if input.Left || input.Right {
+			if input.Left {
 				player.Rotation -= config.PlayerRotationSpeed * deltaTime
 			}
-			if e.playerInputState.Right {
+			if input.Right {
 				player.Rotation += config.PlayerRotationSpeed * deltaTime
 			}
 
@@ -369,7 +377,7 @@ func (e *Engine) Update() {
 
 		rotationRad := player.Rotation * math.Pi / 180.0
 
-		if e.playerInputState.Shoot && player.BulletsLeft > 0 && time.Since(player.LastShot).Seconds() >= config.PlayerShootDelay {
+		if input.Shoot && player.BulletsLeft > 0 && time.Since(player.LastShot).Seconds() >= config.PlayerShootDelay {
 			player.LastShot = time.Now()
 			player.BulletsLeft--
 			playerCenter := types.Vector2{X: player.Position.X, Y: player.Position.Y}
@@ -393,12 +401,12 @@ func (e *Engine) Update() {
 			e.state.bullets[bullet.ID] = bullet
 		}
 
-		if e.playerInputState.Forward || e.playerInputState.Backward {
+		if input.Forward || input.Backward {
 			forward := 0.0
-			if e.playerInputState.Forward {
+			if e.playerInputState[player.ID].Forward {
 				forward = 1.0
 			}
-			if e.playerInputState.Backward {
+			if e.playerInputState[player.ID].Backward {
 				forward = -1.0
 			}
 
