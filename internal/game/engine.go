@@ -718,15 +718,15 @@ func (e *Engine) Update() {
 				if player.Lives <= 0 {
 					player.Lives = 0
 					player.IsAlive = false
+
+					// Award money to shooter
+					if shooter, exists := e.state.players[bullet.OwnerID]; exists {
+						shooter.Money += config.PlayerReward
+						shooter.Kills++
+						shooter.Score++
+					}
 				} else {
 					player.InvulnerableTimer = config.PlayerInvulnerabilityTime
-				}
-
-				// Award money to shooter
-				if shooter, exists := e.state.players[bullet.OwnerID]; exists {
-					shooter.Money += config.PlayerReward
-					shooter.Kills++
-					shooter.Score++
 				}
 
 				hitFound = true
