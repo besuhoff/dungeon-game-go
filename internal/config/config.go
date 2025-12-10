@@ -86,7 +86,7 @@ func getEnvOrDefault(key, defaultValue string) string {
 // Constants
 const (
 	// Player constants
-	PlayerLives = 5
+	PlayerLives = 6
 	PlayerSpeed = 300.0 // Units per second
 
 	PlayerSize          = 24.0
@@ -145,4 +145,5 @@ const (
 	// Session constants
 	SessionSaveInterval      = 5 * time.Minute
 	DeadEntitiesCacheTimeout = 5 * time.Second
+	GameLoopInterval         = time.Second / 30
 )

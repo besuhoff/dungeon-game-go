@@ -403,75 +403,99 @@ func (e *Engine) Update() {
 			}
 
 			// Calculate movement
-			dx := -math.Sin(rotationRad) * config.PlayerSpeed * deltaTime * forward
-			dy := math.Cos(rotationRad) * config.PlayerSpeed * deltaTime * forward
+			intendedDx := -math.Sin(rotationRad) * config.PlayerSpeed * deltaTime * forward
+			intendedDy := math.Cos(rotationRad) * config.PlayerSpeed * deltaTime * forward
 
-			// Check collisions with walls, enemies, and other players
-			collision := false
-			collisionX := false
-			collisionY := false
+			dx := intendedDx
+			dy := intendedDy
+			dx0 := dx
+			dy0 := dy
 
-			// Check wall collisions
+			objectsToCheck := []*types.CollisionObject{}
+
+			// Form collision boxes adding player radius as padding on top
 			for _, wall := range e.state.walls {
 				wallTopLeftX, wallTopLeftY := getWallTopLeft(wall)
 
-				if e.checkRectCollision(
-					player.Position.X+dx-config.PlayerRadius,
-					player.Position.Y+dy-config.PlayerRadius,
-					config.PlayerSize, config.PlayerSize,
-					wallTopLeftX,
-					wallTopLeftY,
-					wall.Width, wall.Height) {
-					collision = true
-				}
-				if e.checkRectCollision(
-					player.Position.X+dx-config.PlayerRadius,
-					player.Position.Y-config.PlayerRadius,
-					config.PlayerSize, config.PlayerSize,
-					wallTopLeftX,
-					wallTopLeftY,
-					wall.Width, wall.Height) {
-					collisionX = true
-				}
-				if e.checkRectCollision(
-					player.Position.X-config.PlayerRadius,
-					player.Position.Y+dy-config.PlayerRadius,
-					config.PlayerSize, config.PlayerSize,
-					wallTopLeftX,
-					wallTopLeftY,
-					wall.Width, wall.Height) {
-					collisionY = true
+				objectsToCheck = append(objectsToCheck, &types.CollisionObject{
+					LeftTopPos: types.Vector2{X: wallTopLeftX - config.PlayerRadius, Y: wallTopLeftY - config.PlayerRadius},
+					Width:      wall.Width + config.PlayerRadius*2,
+					Height:     wall.Height + config.PlayerRadius*2,
+				})
+			}
+
+			for _, enemy := range e.state.enemies {
+				if !enemy.IsDead {
+					objectsToCheck = append(objectsToCheck, &types.CollisionObject{
+						LeftTopPos: types.Vector2{X: enemy.Position.X - config.EnemyRadius - config.PlayerRadius, Y: enemy.Position.Y - config.EnemyRadius - config.PlayerRadius},
+						Width:      config.EnemyRadius*2 + config.PlayerRadius*2,
+						Height:     config.EnemyRadius*2 + config.PlayerRadius*2,
+					})
 				}
 			}
 
-			// Check enemy collisions
-			for _, enemy := range e.state.enemies {
-				if !enemy.IsDead {
-					if e.checkCircleCollision(
-						player.Position.X+dx, player.Position.Y+dy, config.PlayerRadius,
-						enemy.Position.X, enemy.Position.Y, config.EnemyRadius) {
-						collision = true
-					}
-					if e.checkCircleCollision(
-						player.Position.X+dx, player.Position.Y, config.PlayerRadius,
-						enemy.Position.X, enemy.Position.Y, config.EnemyRadius) {
-						collisionX = true
-					}
-					if e.checkCircleCollision(
-						player.Position.X, player.Position.Y+dy, config.PlayerRadius,
-						enemy.Position.X, enemy.Position.Y, config.EnemyRadius) {
-						collisionY = true
-					}
+			for _, otherPlayer := range e.state.players {
+				if otherPlayer.ID != player.ID && otherPlayer.IsAlive {
+					objectsToCheck = append(objectsToCheck, &types.CollisionObject{
+						LeftTopPos: types.Vector2{X: otherPlayer.Position.X - config.PlayerRadius*2, Y: otherPlayer.Position.Y - config.PlayerRadius*2},
+						Width:      config.PlayerRadius * 4,
+						Height:     config.PlayerRadius * 4,
+					})
+				}
+			}
+
+			for _, obj := range objectsToCheck {
+				if dx != 0 || dy != 0 {
+					ix, iy := e.cutLineSegmentBeforeRect(
+						player.Position.X,
+						player.Position.Y,
+						player.Position.X+dx,
+						player.Position.Y+dy,
+						obj.LeftTopPos.X,
+						obj.LeftTopPos.Y,
+						obj.Width, obj.Height,
+					)
+
+					dx = ix - player.Position.X
+					dy = iy - player.Position.Y
+				}
+
+				if dx0 != 0 {
+					ix, _ := e.cutLineSegmentBeforeRect(
+						player.Position.X,
+						player.Position.Y,
+						player.Position.X+dx0,
+						player.Position.Y,
+						obj.LeftTopPos.X,
+						obj.LeftTopPos.Y,
+						obj.Width, obj.Height,
+					)
+
+					dx0 = ix - player.Position.X
+				}
+
+				if dy0 != 0 {
+					_, iy := e.cutLineSegmentBeforeRect(
+						player.Position.X,
+						player.Position.Y,
+						player.Position.X,
+						player.Position.Y+dy0,
+						obj.LeftTopPos.X,
+						obj.LeftTopPos.Y,
+						obj.Width, obj.Height,
+					)
+
+					dy0 = iy - player.Position.Y
 				}
 			}
 
 			// Apply movement with sliding collision
-			if collision {
-				if collisionX {
-					dx = 0
+			if dx == 0 && dy == 0 {
+				if dx0 != 0 {
+					dx = dx0
 				}
-				if collisionY {
-					dy = 0
+				if dy0 != 0 {
+					dy = dy0
 				}
 			}
 
@@ -511,6 +535,7 @@ func (e *Engine) Update() {
 
 		// Find closest player to track
 		var closestVisiblePlayer *types.Player
+		hasPlayersInSight := false
 		canSee := false
 		minDist := math.MaxFloat64
 
@@ -519,6 +544,9 @@ func (e *Engine) Update() {
 				detectionPoint, detectionDistance := player.GetDetectionParams()
 
 				dist := enemy.DistanceToPoint(detectionPoint)
+				if dist < config.SightRadius {
+					hasPlayersInSight = true
+				}
 				if dist < detectionDistance {
 					// Add line-of-sight check with walls
 					lineClear := true
@@ -528,7 +556,7 @@ func (e *Engine) Update() {
 						if distanceToWall > dist+detectionDistance {
 							continue // Wall is beyond player
 						}
-						if e.checkLineRectCollision(
+						if e.CheckLineRectCollision(
 							enemy.Position.X, enemy.Position.Y,
 							detectionPoint.X, detectionPoint.Y,
 							wallTopLeftX, wallTopLeftY,
@@ -548,6 +576,10 @@ func (e *Engine) Update() {
 			}
 		}
 
+		if !hasPlayersInSight {
+			continue // No players nearby
+		}
+
 		if canSee && closestVisiblePlayer != nil {
 			// Aim at player
 			dx := closestVisiblePlayer.Position.X - enemy.Position.X
@@ -556,7 +588,8 @@ func (e *Engine) Update() {
 
 			// Shoot at player
 			if enemy.ShootDelay <= 0 {
-				e.enemyShoot(enemy)
+				bullet := enemy.Shoot()
+				e.state.bullets[bullet.ID] = bullet
 				enemy.ShootDelay = config.EnemyShootDelay
 			}
 		} else {
@@ -575,9 +608,10 @@ func (e *Engine) Update() {
 				// Check collisions with walls
 				collision := false
 				for _, w := range e.state.walls {
+					wallTopLeftX, wallTopLeftY := getWallTopLeft(w)
 					if e.checkCircleRectCollision(
 						enemy.Position.X+dx, enemy.Position.Y+dy, config.EnemyRadius,
-						w.Position.X-w.Width/2, w.Position.Y-w.Height/2, w.Width, w.Height) {
+						wallTopLeftX, wallTopLeftY, w.Width, w.Height) {
 						collision = true
 						break
 					}
@@ -640,10 +674,26 @@ func (e *Engine) Update() {
 		dy := bullet.Velocity.Y * deltaTime
 
 		previousPosition := bullet.Position
-		bullet.Position.X += dx
-		bullet.Position.Y += dy
 
 		hitFound := false
+
+		// Check collision with walls
+		for _, wall := range e.state.walls {
+			topLeftX, topLeftY := getWallTopLeft(wall)
+			ix, iy := e.cutLineSegmentBeforeRect(
+				previousPosition.X, previousPosition.Y, previousPosition.X+dx, previousPosition.Y+dy,
+				topLeftX, topLeftY,
+				wall.Width, wall.Height)
+
+			if !(ix == previousPosition.X+dx && iy == previousPosition.Y+dy) {
+				hitFound = true
+				dx = ix - previousPosition.X
+				dy = iy - previousPosition.Y
+			}
+		}
+
+		bullet.Position.X += dx
+		bullet.Position.Y += dy
 
 		// Check collision with players
 		for _, player := range e.state.players {
@@ -672,13 +722,7 @@ func (e *Engine) Update() {
 				}
 
 				hitFound = true
-				break
 			}
-		}
-
-		if hitFound {
-			bulletsToRemove = append(bulletsToRemove, id)
-			continue
 		}
 
 		if !bullet.IsEnemy {
@@ -711,25 +755,7 @@ func (e *Engine) Update() {
 						}
 					}
 					hitFound = true
-					break
 				}
-			}
-		}
-
-		if hitFound {
-			bulletsToRemove = append(bulletsToRemove, id)
-			continue
-		}
-
-		// Check collision with walls
-		for _, wall := range e.state.walls {
-			topLeftX, topLeftY := getWallTopLeft(wall)
-			if e.checkLineRectCollision(
-				previousPosition.X, previousPosition.Y, bullet.Position.X, bullet.Position.Y,
-				topLeftX, topLeftY,
-				wall.Width, wall.Height) {
-				hitFound = true
-				break
 			}
 		}
 
@@ -783,30 +809,6 @@ func (e *Engine) Update() {
 	}
 }
 
-// enemyShoot creates a bullet from an enemy
-func (e *Engine) enemyShoot(enemy *types.Enemy) {
-	rotationRad := enemy.Rotation * math.Pi / 180.0
-	enemyCenter := types.Vector2{X: enemy.Position.X, Y: enemy.Position.Y}
-	enemyGunPoint := types.Vector2{X: enemy.Position.X + config.EnemyGunEndOffsetX, Y: enemy.Position.Y + config.EnemyGunEndOffsetY}
-	enemyGunPoint.RotateAroundPoint(&enemyCenter, enemy.Rotation)
-
-	bullet := &types.Bullet{
-		ID:       uuid.New().String(),
-		Position: enemyGunPoint,
-		Velocity: types.Vector2{
-			X: -math.Sin(rotationRad) * config.EnemyBulletSpeed,
-			Y: math.Cos(rotationRad) * config.EnemyBulletSpeed,
-		},
-		OwnerID:   enemy.ID,
-		IsEnemy:   true,
-		SpawnTime: time.Now(),
-		Damage:    config.BulletDamage,
-		IsActive:  true,
-	}
-
-	e.state.bullets[bullet.ID] = bullet
-}
-
 // spawnBonus creates a bonus at the given position
 func (e *Engine) spawnBonus(pos types.Vector2) {
 	bonusType := "aid_kit"
@@ -823,68 +825,6 @@ func (e *Engine) spawnBonus(pos types.Vector2) {
 	}
 
 	e.state.bonuses[bonus.ID] = bonus
-}
-
-// Collision detection helpers
-func (e *Engine) checkRectCollision(x1, y1, w1, h1, x2, y2, w2, h2 float64) bool {
-	return x1 < x2+w2 && x1+w1 > x2 && y1 < y2+h2 && y1+h1 > y2
-}
-
-func (e *Engine) checkLineRectCollision(x1, y1, x2, y2, rx, ry, rw, rh float64) bool {
-	// Liang-Barsky algorithm
-	dx := x2 - x1
-	dy := y2 - y1
-
-	p := []float64{-dx, dx, -dy, dy}
-	q := []float64{x1 - rx, rx + rw - x1, y1 - ry, ry + rh - y1}
-
-	u1, u2 := 0.0, 1.0
-
-	for i := 0; i < 4; i++ {
-		if p[i] == 0 {
-			if q[i] < 0 {
-				return false
-			}
-		} else {
-			t := q[i] / p[i]
-			if p[i] < 0 {
-				if t > u2 {
-					return false
-				}
-				if t > u1 {
-					u1 = t
-				}
-			} else {
-				if t < u1 {
-					return false
-				}
-				if t < u2 {
-					u2 = t
-				}
-			}
-		}
-	}
-
-	return true
-}
-
-func (e *Engine) checkCircleCollision(x1, y1, r1, x2, y2, r2 float64) bool {
-	dx := x1 - x2
-	dy := y1 - y2
-	distance := math.Sqrt(dx*dx + dy*dy)
-	return distance < r1+r2
-}
-
-func (e *Engine) checkCircleRectCollision(cx, cy, r, rx, ry, rw, rh float64) bool {
-	// Find closest point on rectangle to circle
-	closestX := math.Max(rx, math.Min(cx, rx+rw))
-	closestY := math.Max(ry, math.Min(cy, ry+rh))
-
-	// Calculate distance between circle center and closest point
-	dx := cx - closestX
-	dy := cy - closestY
-
-	return (dx*dx + dy*dy) < (r * r)
 }
 
 // GetGameState returns current game state
@@ -931,15 +871,6 @@ func (e *Engine) GetGameState() types.GameState {
 		Bonuses:   bonusesCopy,
 		Timestamp: time.Now().UnixMilli(),
 	}
-}
-
-func enemiesHaveWall(enemies map[string]*types.Enemy, wallID string) bool {
-	for _, enemy := range enemies {
-		if enemy.WallID == wallID {
-			return true
-		}
-	}
-	return false
 }
 
 func getWallTopLeft(wall *types.Wall) (float64, float64) {
@@ -1090,7 +1021,7 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 		if isPointVisible(player, bullet.Position) {
 			bulletCopy := *bullet
 			prev := prevState.bullets[id]
-			if !bulletsEqual(prev, bullet) {
+			if !types.BulletsEqual(prev, bullet) {
 				if !bullet.IsActive {
 					delta.RemovedBullets[id] = &bulletCopy
 					continue
@@ -1169,12 +1100,13 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 	return delta
 }
 
-func bulletsEqual(a, b *types.Bullet) bool {
-	if a != nil && b == nil || a == nil && b != nil {
-		return false
+func enemiesHaveWall(enemies map[string]*types.Enemy, wallID string) bool {
+	for _, enemy := range enemies {
+		if enemy.WallID == wallID {
+			return true
+		}
 	}
-
-	return a.Position.X == b.Position.X && a.Position.Y == b.Position.Y && a.IsActive == b.IsActive
+	return false
 }
 
 func chunkXYFromPosition(pos types.Vector2) (int, int) {
@@ -1188,6 +1120,78 @@ func isPointVisible(player *types.Player, objectPos types.Vector2) bool {
 	visibilityDistance := config.SightRadius
 
 	return distance <= visibilityDistance
+}
+
+// Collision detection helpers
+func (e *Engine) checkRectCollision(x1, y1, w1, h1, x2, y2, w2, h2 float64) bool {
+	return x1 < x2+w2 && x1+w1 > x2 && y1 < y2+h2 && y1+h1 > y2
+}
+
+func (e *Engine) cutLineSegmentBeforeRect(x1, y1, x2, y2, rx, ry, rw, rh float64) (float64, float64) {
+	// Liang-Barsky algorithm to find intersection point
+	dx := x2 - x1
+	dy := y2 - y1
+
+	p := []float64{-dx, dx, -dy, dy}
+	q := []float64{x1 - rx, rx + rw - x1, y1 - ry, ry + rh - y1}
+
+	u1, u2 := 0.0, 1.0
+
+	for i := range 4 {
+		if p[i] == 0 {
+			// Line is parallel to this edge
+			if q[i] <= 0 {
+				return x2, y2 // No intersection (touching border counts as collision)
+			}
+		} else {
+			t := q[i] / p[i]
+			if p[i] < 0 {
+				if t >= u2 {
+					return x2, y2 // No intersection
+				}
+				if t >= u1 {
+					u1 = t
+				}
+			} else {
+				// Leaving the rectangle
+				if t <= u1 {
+					return x2, y2 // No intersection
+				}
+				if t <= u2 {
+					u2 = t
+				}
+			}
+		}
+	}
+
+	// Return intersection point
+	ix := x1 + u1*dx
+	iy := y1 + u1*dy
+	return ix, iy
+}
+
+func (e *Engine) CheckLineRectCollision(x1, y1, x2, y2, rx, ry, rw, rh float64) bool {
+	ix, iy := e.cutLineSegmentBeforeRect(x1, y1, x2, y2, rx, ry, rw, rh)
+	return !(ix == x2 && iy == y2)
+}
+
+func (e *Engine) checkCircleCollision(x1, y1, r1, x2, y2, r2 float64) bool {
+	dx := x1 - x2
+	dy := y1 - y2
+	distance := math.Sqrt(dx*dx + dy*dy)
+	return distance < r1+r2
+}
+
+func (e *Engine) checkCircleRectCollision(cx, cy, r, rx, ry, rw, rh float64) bool {
+	// Find closest point on rectangle to circle
+	closestX := math.Max(rx, math.Min(cx, rx+rw))
+	closestY := math.Max(ry, math.Min(cy, ry+rh))
+
+	// Calculate distance between circle center and closest point
+	dx := cx - closestX
+	dy := cy - closestY
+
+	return (dx*dx + dy*dy) < (r * r)
 }
 
 // Returns the closest point on the line segment AB to point P

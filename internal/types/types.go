@@ -66,3 +66,9 @@ type Bonus struct {
 	PickedUpBy string    `json:"picked_up_by,omitempty"`
 	PickedUpAt time.Time `json:"-"`
 }
+
+type CollisionObject struct {
+	LeftTopPos Vector2
+	Width      float64
+	Height     float64
+}

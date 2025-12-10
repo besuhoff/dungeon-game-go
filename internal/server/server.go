@@ -63,7 +63,7 @@ func NewGameServer() *GameServer {
 // Run starts the game server loop
 func (gs *GameServer) Run() {
 	gs.running = true
-	ticker := time.NewTicker(50 * time.Millisecond) // ~20 FPS
+	ticker := time.NewTicker(config.GameLoopInterval)
 	defer ticker.Stop()
 
 	for {

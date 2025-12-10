@@ -3,6 +3,9 @@ package types
 import (
 	"math"
 	"time"
+
+	"github.com/besuhoff/dungeon-game-go/internal/config"
+	"github.com/google/uuid"
 )
 
 // Enemy represents an enemy in the game
@@ -39,4 +42,29 @@ func (e *Enemy) DistanceToPoint(point Vector2) float64 {
 	dx := e.Position.X - point.X
 	dy := e.Position.Y - point.Y
 	return math.Sqrt(dx*dx + dy*dy)
+}
+
+func (e *Enemy) getGunPoint() Vector2 {
+	enemyGunPoint := Vector2{X: e.Position.X + config.EnemyGunEndOffsetX, Y: e.Position.Y + config.EnemyGunEndOffsetY}
+	enemyGunPoint.RotateAroundPoint(&e.Position, e.Rotation)
+	return enemyGunPoint
+}
+
+func (e *Enemy) Shoot() *Bullet {
+	enemyGunPoint := e.getGunPoint()
+	rotationRad := e.Rotation * math.Pi / 180.0
+
+	return &Bullet{
+		ID:       uuid.New().String(),
+		Position: enemyGunPoint,
+		Velocity: Vector2{
+			X: -math.Sin(rotationRad) * config.EnemyBulletSpeed,
+			Y: math.Cos(rotationRad) * config.EnemyBulletSpeed,
+		},
+		OwnerID:   e.ID,
+		IsEnemy:   true,
+		SpawnTime: time.Now(),
+		Damage:    config.BulletDamage,
+		IsActive:  true,
+	}
 }
