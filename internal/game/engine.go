@@ -60,14 +60,12 @@ func (e *Engine) AddPlayer(id, username string) *types.Player {
 
 	player, exists := e.state.players[id]
 	if !exists {
-		// Spawn position near center with some randomization
-		spawnX := float64((len(e.state.players)*50)%400 - 200)
-		spawnY := float64((len(e.state.players)*50)%400 - 200)
+		spawnPoint := e.pickSpawnPoint()
 
 		player = &types.Player{
 			ScreenObject: types.ScreenObject{
 				ID:       id,
-				Position: types.Vector2{X: spawnX, Y: spawnY},
+				Position: spawnPoint,
 			},
 
 			Username:            username,
@@ -183,6 +181,71 @@ func (e *Engine) checkWallOverlap(x, y, w, h float64, wall *types.Wall) bool {
 		x+w/2+padding > wall.Position.X-wall.Width/2 &&
 		y-h/2 < wall.Position.Y+wall.Height/2+padding &&
 		y+h/2+padding > wall.Position.Y-wall.Height/2
+}
+
+func (e *Engine) pickSpawnPoint() types.Vector2 {
+	// Spawn position near center with some randomization
+	spawnLeft := float64((len(e.state.players)*50)%400-200) - config.PlayerRadius
+	spawnTop := float64((len(e.state.players)*50)%400-200) - config.PlayerRadius
+	playerSize := config.PlayerRadius * 2
+
+	// Check collision with walls, enemies, or players
+	objectsToCheck := []*types.CollisionObject{}
+
+	// Form collision boxes adding player radius as padding on top
+	for _, wall := range e.state.walls {
+		wallTopLeftX, wallTopLeftY := getWallTopLeft(wall)
+
+		objectsToCheck = append(objectsToCheck, &types.CollisionObject{
+			LeftTopPos: types.Vector2{X: wallTopLeftX, Y: wallTopLeftY},
+			Width:      wall.Width,
+			Height:     wall.Height,
+		})
+	}
+
+	for _, enemy := range e.state.enemies {
+		if !enemy.IsDead {
+			objectsToCheck = append(objectsToCheck, &types.CollisionObject{
+				LeftTopPos: types.Vector2{X: enemy.Position.X - config.EnemyRadius, Y: enemy.Position.Y - config.EnemyRadius},
+				Width:      config.EnemyRadius * 2,
+				Height:     config.EnemyRadius * 2,
+			})
+		}
+	}
+
+	for _, otherPlayer := range e.state.players {
+		objectsToCheck = append(objectsToCheck, &types.CollisionObject{
+			LeftTopPos: types.Vector2{X: otherPlayer.Position.X - config.PlayerRadius, Y: otherPlayer.Position.Y - config.PlayerRadius},
+			Width:      config.PlayerRadius * 2,
+			Height:     config.PlayerRadius * 2,
+		})
+	}
+
+	hasCollision := true
+
+	for hasCollision {
+		hasCollision = false
+
+		for _, object := range objectsToCheck {
+			if e.checkRectCollision(
+				spawnLeft,
+				spawnTop,
+				playerSize,
+				playerSize,
+				object.LeftTopPos.X,
+				object.LeftTopPos.Y,
+				object.Width,
+				object.Height,
+			) {
+				hasCollision = true
+				spawnLeft += playerSize
+				spawnTop += playerSize
+				break
+			}
+		}
+	}
+
+	return types.Vector2{X: spawnLeft - config.PlayerRadius, Y: spawnTop - config.PlayerRadius}
 }
 
 // createEnemyForWall creates an enemy that patrols along a wall
