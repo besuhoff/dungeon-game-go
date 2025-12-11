@@ -104,8 +104,8 @@ func main() {
 	http.HandleFunc("/api/v1/sessions/", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/join") {
 			sessionHandler.HandleJoinSession(w, r)
-		} else if strings.HasSuffix(r.URL.Path, "/leave") {
-			sessionHandler.HandleLeaveSession(w, r)
+		} else if r.Method == http.MethodDelete {
+			sessionHandler.HandleDeleteSession(w, r)
 		} else {
 			http.Error(w, "Not found", http.StatusNotFound)
 		}

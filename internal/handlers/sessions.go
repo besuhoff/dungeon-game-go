@@ -268,9 +268,9 @@ func (h *SessionHandler) HandleJoinSession(w http.ResponseWriter, r *http.Reques
 	json.NewEncoder(w).Encode(response)
 }
 
-// HandleLeaveSession leaves a session
-func (h *SessionHandler) HandleLeaveSession(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+// HandleDeleteSession leaves a session
+func (h *SessionHandler) HandleDeleteSession(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -282,8 +282,7 @@ func (h *SessionHandler) HandleLeaveSession(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Extract session ID from URL path
-	path := strings.TrimPrefix(r.URL.Path, "/api/v1/sessions/")
-	sessionIDStr := strings.TrimSuffix(path, "/leave")
+	sessionIDStr := strings.TrimPrefix(r.URL.Path, "/api/v1/sessions/")
 
 	sessionID, err := primitive.ObjectIDFromHex(sessionIDStr)
 	if err != nil {
@@ -298,31 +297,15 @@ func (h *SessionHandler) HandleLeaveSession(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Remove player from session
-	delete(session.Players, user.ID.Hex())
-
-	// If host leaves, assign new host or deactivate session
-	if session.HostID == user.ID {
-		if len(session.Players) > 0 {
-			// Assign new host (first remaining player)
-			for playerID := range session.Players {
-				newHostID, _ := primitive.ObjectIDFromHex(playerID)
-				session.HostID = newHostID
-				break
-			}
-		} else {
-			session.IsActive = false
-		}
+	if session.HostID != user.ID {
+		http.Error(w, "Only the host can delete the session", http.StatusForbidden)
+		return
 	}
 
-	h.sessionRepo.Update(ctx, session)
-
-	// Clear user's current session
-	user.CurrentSession = ""
-	h.userRepo.Update(ctx, user)
+	h.sessionRepo.Delete(ctx, session.ID)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Successfully left session"})
+	json.NewEncoder(w).Encode(map[string]string{"message": "Successfully deleted session"})
 }
 
 // sessionToResponse converts a session to a response object

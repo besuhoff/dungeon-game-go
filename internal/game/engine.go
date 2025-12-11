@@ -245,7 +245,7 @@ func (e *Engine) pickSpawnPoint() types.Vector2 {
 		}
 	}
 
-	return types.Vector2{X: spawnLeft - config.PlayerRadius, Y: spawnTop - config.PlayerRadius}
+	return types.Vector2{X: spawnLeft + config.PlayerRadius, Y: spawnTop + config.PlayerRadius}
 }
 
 // createEnemyForWall creates an enemy that patrols along a wall
