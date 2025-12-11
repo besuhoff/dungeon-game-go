@@ -51,14 +51,6 @@ type InputPayload struct {
 	Shoot    bool `json:"shoot"`
 }
 
-// Wall represents a wall obstacle
-type Wall struct {
-	ScreenObject
-	Width       float64 `json:"width"`
-	Height      float64 `json:"height"`
-	Orientation string  `json:"orientation"` // "vertical" or "horizontal"
-}
-
 // Bonus represents a pickup item
 type Bonus struct {
 	ScreenObject

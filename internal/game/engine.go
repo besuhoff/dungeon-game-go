@@ -194,10 +194,10 @@ func (e *Engine) pickSpawnPoint() types.Vector2 {
 
 	// Form collision boxes adding player radius as padding on top
 	for _, wall := range e.state.walls {
-		wallTopLeftX, wallTopLeftY := getWallTopLeft(wall)
+		wallTopLeft := wall.GetTopLeft()
 
 		objectsToCheck = append(objectsToCheck, &types.CollisionObject{
-			LeftTopPos: types.Vector2{X: wallTopLeftX, Y: wallTopLeftY},
+			LeftTopPos: wallTopLeft,
 			Width:      wall.Width,
 			Height:     wall.Height,
 		})
@@ -336,11 +336,11 @@ func (e *Engine) updatePreviousState(playerID string) {
 
 	prevState.walls = make(map[string]*types.Wall)
 	for id, w := range e.state.walls {
-		wallTopLeftX, wallTopLeftY := getWallTopLeft(w)
-		if !isPointVisible(player, types.Vector2{X: wallTopLeftX, Y: wallTopLeftY}) &&
-			!isPointVisible(player, types.Vector2{X: wallTopLeftX + w.Width, Y: wallTopLeftY}) &&
-			!isPointVisible(player, types.Vector2{X: wallTopLeftX, Y: wallTopLeftY + w.Height}) &&
-			!isPointVisible(player, types.Vector2{X: wallTopLeftX + w.Width, Y: wallTopLeftY + w.Height}) {
+		wallTopLeft := w.GetTopLeft()
+		if !isPointVisible(player, wallTopLeft) &&
+			!isPointVisible(player, types.Vector2{X: wallTopLeft.X + w.Width, Y: wallTopLeft.Y}) &&
+			!isPointVisible(player, types.Vector2{X: wallTopLeft.X, Y: wallTopLeft.Y + w.Height}) &&
+			!isPointVisible(player, types.Vector2{X: wallTopLeft.X + w.Width, Y: wallTopLeft.Y + w.Height}) {
 			continue
 		}
 		wallCopy := *w
@@ -486,10 +486,10 @@ func (e *Engine) Update() {
 
 			// Form collision boxes adding player radius as padding on top
 			for _, wall := range e.state.walls {
-				wallTopLeftX, wallTopLeftY := getWallTopLeft(wall)
+				wallTopLeft := wall.GetTopLeft()
 
 				objectsToCheck = append(objectsToCheck, &types.CollisionObject{
-					LeftTopPos: types.Vector2{X: wallTopLeftX - config.PlayerRadius, Y: wallTopLeftY - config.PlayerRadius},
+					LeftTopPos: types.Vector2{X: wallTopLeft.X - config.PlayerRadius, Y: wallTopLeft.Y - config.PlayerRadius},
 					Width:      wall.Width + config.PlayerRadius*2,
 					Height:     wall.Height + config.PlayerRadius*2,
 				})
@@ -622,15 +622,16 @@ func (e *Engine) Update() {
 					// Add line-of-sight check with walls
 					lineClear := true
 					for _, wall := range e.state.walls {
-						wallTopLeftX, wallTopLeftY := getWallTopLeft(wall)
-						distanceToWall := wall.DistanceToPoint(enemy.Position)
-						if distanceToWall > dist+detectionDistance {
+						distanceToWall := enemy.DistanceToPoint(wall.GetCenter())
+						if distanceToWall > 2*wall.GetRadius()+detectionDistance {
 							continue // Wall is beyond player
 						}
+
+						wallTopLeft := wall.GetTopLeft()
 						if e.CheckLineRectCollision(
 							enemy.Position.X, enemy.Position.Y,
 							detectionPoint.X, detectionPoint.Y,
-							wallTopLeftX, wallTopLeftY,
+							wallTopLeft.X, wallTopLeft.Y,
 							wall.Width, wall.Height) {
 							lineClear = false
 							break
@@ -679,10 +680,10 @@ func (e *Engine) Update() {
 				// Check collisions with walls
 				collision := false
 				for _, w := range e.state.walls {
-					wallTopLeftX, wallTopLeftY := getWallTopLeft(w)
+					wallTopLeft := w.GetTopLeft()
 					if e.checkCircleRectCollision(
 						enemy.Position.X+dx, enemy.Position.Y+dy, config.EnemyRadius,
-						wallTopLeftX, wallTopLeftY, w.Width, w.Height) {
+						wallTopLeft.X, wallTopLeft.Y, w.Width, w.Height) {
 						collision = true
 						break
 					}
@@ -750,10 +751,10 @@ func (e *Engine) Update() {
 
 		// Check collision with walls
 		for _, wall := range e.state.walls {
-			topLeftX, topLeftY := getWallTopLeft(wall)
+			topLeft := wall.GetTopLeft()
 			ix, iy := e.cutLineSegmentBeforeRect(
 				previousPosition.X, previousPosition.Y, previousPosition.X+dx, previousPosition.Y+dy,
-				topLeftX, topLeftY,
+				topLeft.X, topLeft.Y,
 				wall.Width, wall.Height)
 
 			if !(ix == previousPosition.X+dx && iy == previousPosition.Y+dy) {
@@ -785,8 +786,8 @@ func (e *Engine) Update() {
 					// Award money to shooter
 					if shooter, exists := e.state.players[bullet.OwnerID]; exists {
 						shooter.Money += config.PlayerReward
+						shooter.Score += config.PlayerReward
 						shooter.Kills++
-						shooter.Score++
 					}
 				} else {
 					player.InvulnerableTimer = config.PlayerInvulnerabilityTime
@@ -816,8 +817,8 @@ func (e *Engine) Update() {
 						// Award money to shooter
 						if shooter, exists := e.state.players[bullet.OwnerID]; exists {
 							shooter.Money += config.EnemyReward
+							shooter.Score += config.EnemyReward
 							shooter.Kills++
-							shooter.Score++
 						}
 
 						// Maybe spawn bonus
@@ -944,17 +945,18 @@ func (e *Engine) GetGameState() types.GameState {
 	}
 }
 
-func getWallTopLeft(wall *types.Wall) (float64, float64) {
-	correctionW := 0.0
-	correctionH := 0.0
+func (e *Engine) GetAllPlayers() []*types.Player {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
 
-	if wall.Orientation == "vertical" {
-		correctionW = wall.Width / 2
-	} else {
-		correctionH = wall.Height / 2
+	// Deep copy to avoid race conditions
+	playersCopy := make([]*types.Player, 0, len(e.state.players))
+	for _, v := range e.state.players {
+		p := *v
+		playersCopy = append(playersCopy, &p)
 	}
 
-	return wall.Position.X - correctionW, wall.Position.Y - correctionH
+	return playersCopy
 }
 
 // GetGameStateForPlayer returns game state filtered to player's surrounding chunks (-1 to 1)
@@ -1127,12 +1129,12 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 
 	// Check for added walls in visible chunks
 	for id, wall := range e.state.walls {
-		topLeftX, topLeftY := getWallTopLeft(wall)
+		topLeft := wall.GetTopLeft()
 
-		if isPointVisible(player, types.Vector2{X: topLeftX, Y: topLeftY}) ||
-			isPointVisible(player, types.Vector2{X: topLeftX + wall.Width, Y: topLeftY}) ||
-			isPointVisible(player, types.Vector2{X: topLeftX, Y: topLeftY + wall.Height}) ||
-			isPointVisible(player, types.Vector2{X: topLeftX + wall.Width, Y: topLeftY + wall.Height}) ||
+		if isPointVisible(player, topLeft) ||
+			isPointVisible(player, types.Vector2{X: topLeft.X + wall.Width, Y: topLeft.Y}) ||
+			isPointVisible(player, types.Vector2{X: topLeft.X, Y: topLeft.Y + wall.Height}) ||
+			isPointVisible(player, types.Vector2{X: topLeft.X + wall.Width, Y: topLeft.Y + wall.Height}) ||
 			enemiesHaveWall(enemiesCopy, wall.ID) {
 			if _, exists := prevState.walls[id]; !exists {
 				wallCopy := *wall
@@ -1143,11 +1145,11 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 
 	// Check for removed walls that were in visible chunks
 	for id, prev := range prevState.walls {
-		topLeftX, topLeftY := getWallTopLeft(prev)
-		if isPointVisible(player, types.Vector2{X: topLeftX, Y: topLeftY}) ||
-			isPointVisible(player, types.Vector2{X: topLeftX + prev.Width, Y: topLeftY}) ||
-			isPointVisible(player, types.Vector2{X: topLeftX, Y: topLeftY + prev.Height}) ||
-			isPointVisible(player, types.Vector2{X: topLeftX + prev.Width, Y: topLeftY + prev.Height}) {
+		topLeft := prev.GetTopLeft()
+		if isPointVisible(player, topLeft) ||
+			isPointVisible(player, types.Vector2{X: topLeft.X + prev.Width, Y: topLeft.Y}) ||
+			isPointVisible(player, types.Vector2{X: topLeft.X, Y: topLeft.Y + prev.Height}) ||
+			isPointVisible(player, types.Vector2{X: topLeft.X + prev.Width, Y: topLeft.Y + prev.Height}) {
 			if _, exists := e.state.walls[id]; !exists {
 				delta.RemovedWalls = append(delta.RemovedWalls, id)
 			}

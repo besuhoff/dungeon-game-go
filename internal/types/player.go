@@ -65,9 +65,8 @@ func (p *Player) Respawn() bool {
 }
 
 func (p *Player) GetDetectionParams() (Vector2, float64) {
-	playerCenter := Vector2{X: p.Position.X, Y: p.Position.Y}
 	playerTorchPoint := Vector2{X: p.Position.X + config.PlayerTorchOffsetX, Y: p.Position.Y + config.PlayerTorchOffsetY}
-	playerTorchPoint.RotateAroundPoint(&playerCenter, p.Rotation)
+	playerTorchPoint.RotateAroundPoint(&p.Position, p.Rotation)
 	detectionDistance := config.TorchRadius
 	detectionPoint := playerTorchPoint
 

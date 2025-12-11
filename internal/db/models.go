@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // User represents a user in the database
@@ -238,4 +239,117 @@ func (r *GameSessionRepository) Update(ctx context.Context, session *GameSession
 func (r *GameSessionRepository) Delete(ctx context.Context, id primitive.ObjectID) error {
 	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": id})
 	return err
+}
+
+// Leaderboard
+type LeaderboardEntry struct {
+	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	UserID      primitive.ObjectID `bson:"user_id" json:"user_id"`
+	Username    string             `bson:"username" json:"username"`
+	SessionID   string             `bson:"session_id" json:"session_id"`
+	SessionName string             `bson:"session_name" json:"session_name"`
+	Score       int                `bson:"score" json:"score"`
+	Kills       int                `bson:"kills" json:"kills"`
+	Deaths      int                `bson:"deaths" json:"deaths"`
+	CreatedAt   time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt   time.Time          `bson:"updated_at" json:"updated_at"`
+}
+
+type LeaderboardRepository struct {
+	collection *mongo.Collection
+}
+
+// UpsertEntry creates or updates a leaderboard entry for a user in a session
+func (r *LeaderboardRepository) UpsertEntry(ctx context.Context, entry *LeaderboardEntry) error {
+	filter := bson.M{
+		"user_id":    entry.UserID,
+		"session_id": entry.SessionID,
+	}
+
+	update := bson.M{
+		"$max": bson.M{
+			"score": entry.Score, // Only update if new score is higher
+			"kills": entry.Kills, // Only update if new kills is higher
+		},
+		"$set": bson.M{
+			"username":     entry.Username,
+			"session_name": entry.SessionName,
+			"updated_at":   time.Now(),
+		},
+		"$inc": bson.M{
+			"deaths": 1,
+		},
+		"$setOnInsert": bson.M{
+			"created_at": time.Now(),
+		},
+	}
+
+	opts := options.Update().SetUpsert(true)
+	_, err := r.collection.UpdateOne(ctx, filter, update, opts)
+	return err
+}
+
+// GetTopScores returns the top N scores globally
+func (r *LeaderboardRepository) GetTopScores(ctx context.Context, limit int) ([]LeaderboardEntry, error) {
+	opts := options.Find().SetSort(bson.D{{Key: "score", Value: -1}}).SetLimit(int64(limit))
+	cursor, err := r.collection.Find(ctx, bson.M{}, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var entries []LeaderboardEntry
+	if err := cursor.All(ctx, &entries); err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
+
+// GetTopScoresBySession returns the top N scores for a specific session
+func (r *LeaderboardRepository) GetTopScoresBySession(ctx context.Context, sessionID string, limit int) ([]LeaderboardEntry, error) {
+	filter := bson.M{"session_id": sessionID}
+	opts := options.Find().SetSort(bson.D{{Key: "score", Value: -1}}).SetLimit(int64(limit))
+	cursor, err := r.collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var entries []LeaderboardEntry
+	if err := cursor.All(ctx, &entries); err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
+
+// GetUserStats returns statistics for a specific user
+func (r *LeaderboardRepository) GetUserStats(ctx context.Context, userID primitive.ObjectID) (*LeaderboardEntry, error) {
+	// Get the user's best score across all sessions
+	opts := options.FindOne().SetSort(bson.D{{Key: "score", Value: -1}})
+	var entry LeaderboardEntry
+	err := r.collection.FindOne(ctx, bson.M{"user_id": userID}, opts).Decode(&entry)
+	if err != nil {
+		return nil, err
+	}
+	return &entry, nil
+}
+
+// GetUserSessionEntry returns a user's entry for a specific session
+func (r *LeaderboardRepository) GetUserSessionEntry(ctx context.Context, userID primitive.ObjectID, sessionID string) (*LeaderboardEntry, error) {
+	var entry LeaderboardEntry
+	err := r.collection.FindOne(ctx, bson.M{
+		"user_id":    userID,
+		"session_id": sessionID,
+	}).Decode(&entry)
+	if err != nil {
+		return nil, err
+	}
+	return &entry, nil
+}
+
+// NewLeaderboardRepository creates a new leaderboard repository
+func NewLeaderboardRepository() *LeaderboardRepository {
+	return &LeaderboardRepository{
+		collection: Database.Collection("leaderboard"),
+	}
 }

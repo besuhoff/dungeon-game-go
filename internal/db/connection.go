@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -30,14 +31,14 @@ func Connect(mongoURL string) error {
 
 	Client = client
 	Database = client.Database("dungeon_game")
-	
+
 	log.Println("Connected to MongoDB successfully")
-	
+
 	// Create indexes
 	if err := createIndexes(ctx); err != nil {
 		log.Printf("Warning: Failed to create indexes: %v", err)
 	}
-	
+
 	return nil
 }
 
@@ -47,11 +48,11 @@ func createIndexes(ctx context.Context) error {
 	userCollection := Database.Collection("users")
 	_, err := userCollection.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
-			Keys:    map[string]interface{}{"email": 1},
+			Keys:    bson.D{{Key: "email", Value: 1}},
 			Options: options.Index().SetUnique(true),
 		},
 		{
-			Keys:    map[string]interface{}{"google_id": 1},
+			Keys:    bson.D{{Key: "google_id", Value: 1}},
 			Options: options.Index().SetUnique(true).SetSparse(true),
 		},
 	})
@@ -63,13 +64,34 @@ func createIndexes(ctx context.Context) error {
 	sessionCollection := Database.Collection("game_sessions")
 	_, err = sessionCollection.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
-			Keys: map[string]interface{}{"host_id": 1},
+			Keys: bson.D{{Key: "host_id", Value: 1}},
 		},
 		{
-			Keys: map[string]interface{}{"is_active": 1},
+			Keys: bson.D{{Key: "is_active", Value: 1}},
 		},
 	})
-	
+	if err != nil {
+		return err
+	}
+
+	// Leaderboard indexes
+	leaderboardCollection := Database.Collection("leaderboard")
+	_, err = leaderboardCollection.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "user_id", Value: 1}, {Key: "session_id", Value: 1}},
+			Options: options.Index().SetUnique(true), // Unique per user per session
+		},
+		{
+			Keys: bson.D{{Key: "score", Value: -1}}, // For sorting by score descending
+		},
+		{
+			Keys: bson.D{{Key: "session_id", Value: 1}, {Key: "score", Value: -1}}, // For per-session leaderboards
+		},
+		{
+			Keys: bson.D{{Key: "user_id", Value: 1}, {Key: "updated_at", Value: -1}}, // For user history
+		},
+	})
+
 	return err
 }
 

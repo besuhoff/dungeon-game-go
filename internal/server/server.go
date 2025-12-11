@@ -28,11 +28,13 @@ var upgrader = websocket.Upgrader{
 
 // Session represents a game session with its engine
 type Session struct {
-	ID           string
-	Engine       *game.Engine
-	PlayerCount  int
-	mu           sync.Mutex
-	lastSaveTime time.Time
+	ID                string
+	Name              string
+	Engine            *game.Engine
+	PlayerCount       int
+	mu                sync.Mutex
+	lastSaveTime      time.Time
+	deadPlayerTracked map[string]bool // Track which player deaths have been recorded
 }
 
 // GameServer manages the game and all clients
@@ -90,6 +92,54 @@ func (gs *GameServer) Run() {
 					gs.mu.RUnlock()
 					gs.saveSessionToDatabase(session)
 					gs.mu.RLock()
+				}
+
+				// Check for player deaths and update leaderboard
+				for _, player := range session.Engine.GetAllPlayers() {
+					session.mu.Lock()
+					isTracked := session.deadPlayerTracked[player.ID]
+					session.mu.Unlock()
+
+					if !player.IsAlive && !isTracked {
+						log.Printf("Player %s (ID: %s) died! Score: %d, Kills: %d", player.Username, player.ID, player.Score, player.Kills)
+
+						// Mark this death as tracked to avoid duplicate entries
+						session.mu.Lock()
+						session.deadPlayerTracked[player.ID] = true
+						session.mu.Unlock()
+
+						// Update player score in leaderboard
+						go func(p *types.Player, sessID, sessName string) {
+							ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+							defer cancel()
+
+							userID, err := primitive.ObjectIDFromHex(p.ID)
+							if err != nil {
+								log.Printf("Updating leaderboard: invalid player ID %s: %v", p.ID, err)
+								return
+							}
+
+							leaderboardRepo := db.NewLeaderboardRepository()
+							entry := &db.LeaderboardEntry{
+								UserID:      userID,
+								Username:    p.Username,
+								SessionID:   sessID,
+								SessionName: sessName,
+								Score:       p.Score,
+								Kills:       p.Kills,
+							}
+							if err := leaderboardRepo.UpsertEntry(ctx, entry); err != nil {
+								log.Printf("Failed to update leaderboard entry for player %s: %v", p.Username, err)
+							} else {
+								log.Printf("Leaderboard updated for player %s: score=%d, kills=%d", p.Username, p.Score, p.Kills)
+							}
+						}(player, session.ID, session.Name)
+					} else if player.IsAlive {
+						// Reset tracking when player respawns
+						session.mu.Lock()
+						delete(session.deadPlayerTracked, player.ID)
+						session.mu.Unlock()
+					}
 				}
 			}
 			gs.mu.RUnlock()
@@ -152,9 +202,11 @@ func (gs *GameServer) registerClient(client *WebsocketClient) {
 	if !exists {
 		// Create new session
 		session = &Session{
-			ID:          client.SessionID,
-			Engine:      game.NewEngine(client.SessionID),
-			PlayerCount: 0,
+			ID:                client.SessionID,
+			Name:              client.SessionName,
+			Engine:            game.NewEngine(client.SessionID),
+			PlayerCount:       0,
+			deadPlayerTracked: make(map[string]bool),
 		}
 		gs.sessions[client.SessionID] = session
 
@@ -398,28 +450,18 @@ func (gs *GameServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get session ID from query parameter or use user's current session
 	sessionID := r.URL.Query().Get("sessionId")
-	if sessionID == "" {
-		// Try to use user's current session
-		if user.CurrentSession != "" {
-			sessionID = user.CurrentSession
-		} else {
-			// Create a new session
-			sessionRepo := db.NewGameSessionRepository()
-			newSession := &db.GameSession{
-				Name:       user.Username + "'s Game",
-				HostID:     user.ID,
-				MaxPlayers: 10,
-				IsActive:   true,
-			}
-			if err := sessionRepo.Create(ctx, newSession); err != nil {
-				http.Error(w, "Failed to create session", http.StatusInternalServerError)
-				return
-			}
-			sessionID = newSession.ID.Hex()
-			log.Printf("Created new session %s for user %s", sessionID, user.Username)
-		}
+	sessionRepo := db.NewGameSessionRepository()
+	sessionObjID, err := primitive.ObjectIDFromHex(sessionID)
+	if err != nil {
+		http.Error(w, "Invalid session ID", http.StatusBadRequest)
+		return
+	}
+
+	session, err := sessionRepo.FindByID(ctx, sessionObjID)
+	if err != nil {
+		http.Error(w, "Session not found", http.StatusNotFound)
+		return
 	}
 
 	// Upgrade to WebSocket
@@ -433,14 +475,15 @@ func (gs *GameServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	useBinary := r.URL.Query().Get("protocol") == "binary"
 
 	client := &WebsocketClient{
-		ID:        uuid.New().String(),
-		UserID:    user.ID,
-		Username:  user.Username,
-		SessionID: sessionID,
-		Conn:      conn,
-		Send:      make(chan []byte, 256),
-		Server:    gs,
-		UseBinary: useBinary,
+		ID:          uuid.New().String(),
+		UserID:      user.ID,
+		Username:    user.Username,
+		SessionID:   sessionID,
+		SessionName: session.Name,
+		Conn:        conn,
+		Send:        make(chan []byte, 256),
+		Server:      gs,
+		UseBinary:   useBinary,
 	}
 
 	log.Printf("New client connected (ID: %s, User: %s, Session: %s, Binary: %v)",

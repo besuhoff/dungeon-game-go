@@ -113,7 +113,6 @@ func main() {
 
 	// Leaderboard endpoints
 	http.HandleFunc("/api/v1/leaderboard/global", corsMiddleware(leaderboardHandler.HandleGetGlobalLeaderboard))
-	http.HandleFunc("/api/v1/leaderboard/user/", corsMiddleware(leaderboardHandler.HandleGetUserStats))
 
 	// Health check
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

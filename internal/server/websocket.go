@@ -15,14 +15,15 @@ import (
 
 // WebsocketClient represents a connected client
 type WebsocketClient struct {
-	ID        string
-	UserID    primitive.ObjectID // MongoDB User ID
-	Username  string
-	SessionID string // Game session ID
-	Conn      *websocket.Conn
-	Send      chan []byte
-	Server    *GameServer
-	UseBinary bool // Whether client prefers binary protocol
+	ID          string
+	UserID      primitive.ObjectID // MongoDB User ID
+	Username    string
+	SessionID   string // Game session ID
+	SessionName string
+	Conn        *websocket.Conn
+	Send        chan []byte
+	Server      *GameServer
+	UseBinary   bool // Whether client prefers binary protocol
 }
 
 // Client methods
