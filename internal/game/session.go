@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 
+	"github.com/besuhoff/dungeon-game-go/internal/config"
 	"github.com/besuhoff/dungeon-game-go/internal/db"
 	"github.com/besuhoff/dungeon-game-go/internal/types"
 )
@@ -12,6 +13,7 @@ type SessionState struct {
 	Walls     map[string]*types.Wall
 	Enemies   map[string]*types.Enemy
 	Bonuses   map[string]*types.Bonus
+	Shops     map[string]*types.Shop
 	ChunkHash map[string]bool
 }
 
@@ -59,8 +61,11 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			if wallID, ok := obj.Properties["wall_id"].(string); ok {
 				enemy.WallID = wallID
 			}
+			// Handle both float32 and float64 since JSON unmarshaling uses float64
 			if lives, ok := obj.Properties["lives"].(float64); ok {
-				enemy.Lives = int(lives)
+				enemy.Lives = float32(lives)
+			} else if lives, ok := obj.Properties["lives"].(float32); ok {
+				enemy.Lives = lives
 			}
 			if direction, ok := obj.Properties["direction"].(float64); ok {
 				enemy.Direction = direction
@@ -81,26 +86,63 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 				bonus.Type = bonusType
 			}
 			e.state.bonuses[id] = bonus
+		} else if obj.Type == "shop" {
+			shop := &types.Shop{
+				ScreenObject: types.ScreenObject{
+					ID:       id,
+					Position: types.Vector2{X: obj.X, Y: obj.Y},
+				},
+			}
+			e.state.shops[id] = shop
 		}
 	}
 
 	// Load players from session
 	for playerID, playerState := range session.Players {
+		var inventory []types.InventoryItem
+
+		if playerState.BulletsLeftByWeaponType == nil {
+			playerState.BulletsLeftByWeaponType = map[string]int32{
+				types.WeaponTypeBlaster: config.BlasterMaxBullets,
+			}
+		}
+
+		if len(playerState.Inventory) == 0 {
+			inventory = []types.InventoryItem{
+				{Type: types.InventoryItemBlaster, Quantity: 1},
+			}
+		} else {
+			inventory = make([]types.InventoryItem, len(playerState.Inventory))
+			for i, item := range playerState.Inventory {
+				inventory[i] = types.InventoryItem{
+					Type:     types.InventoryItemID(item.Type),
+					Quantity: item.Quantity,
+				}
+			}
+		}
+
+		gunType := types.WeaponTypeBlaster
+		if playerState.SelectedGunType != "" {
+			gunType = playerState.SelectedGunType
+		}
+
 		player := &types.Player{
 			ScreenObject: types.ScreenObject{
 				ID:       playerState.PlayerID,
 				Position: types.Vector2{X: playerState.Position.X, Y: playerState.Position.Y},
 			},
-			Username:          playerState.Name,
-			Rotation:          playerState.Position.Rotation,
-			Lives:             playerState.Lives,
-			Score:             playerState.Score,
-			Money:             playerState.Money,
-			BulletsLeft:       playerState.BulletsLeft,
-			InvulnerableTimer: playerState.InvulnerableTimer,
-			NightVisionTimer:  playerState.NightVisionTimer,
-			Kills:             playerState.Kills,
-			IsAlive:           playerState.IsAlive,
+			Username:                playerState.Name,
+			Rotation:                playerState.Position.Rotation,
+			Lives:                   playerState.Lives,
+			Score:                   playerState.Score,
+			Money:                   playerState.Money,
+			BulletsLeftByWeaponType: playerState.BulletsLeftByWeaponType,
+			InvulnerableTimer:       playerState.InvulnerableTimer,
+			NightVisionTimer:        playerState.NightVisionTimer,
+			Kills:                   playerState.Kills,
+			IsAlive:                 playerState.IsAlive,
+			Inventory:               inventory,
+			SelectedGunType:         gunType,
 		}
 
 		e.state.players[playerID] = player
@@ -120,18 +162,28 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 	// Save players
 	session.Players = make(map[string]db.PlayerState)
 	for id, player := range e.state.players {
+		inventory := make([]db.InventoryItem, len(player.Inventory))
+		for i, item := range player.Inventory {
+			inventory[i] = db.InventoryItem{
+				Type:     int32(item.Type),
+				Quantity: int32(item.Quantity),
+			}
+		}
+
 		session.Players[id] = db.PlayerState{
-			PlayerID:          player.ID,
-			Name:              player.Username,
-			Position:          db.Position{X: player.Position.X, Y: player.Position.Y, Rotation: player.Rotation},
-			Lives:             player.Lives,
-			Score:             player.Score,
-			Money:             player.Money,
-			Kills:             player.Kills,
-			BulletsLeft:       player.BulletsLeft,
-			InvulnerableTimer: player.InvulnerableTimer,
-			NightVisionTimer:  player.NightVisionTimer,
-			IsAlive:           player.IsAlive,
+			PlayerID:                player.ID,
+			Name:                    player.Username,
+			Position:                db.Position{X: player.Position.X, Y: player.Position.Y, Rotation: player.Rotation},
+			Lives:                   player.Lives,
+			Score:                   player.Score,
+			Money:                   player.Money,
+			Kills:                   player.Kills,
+			BulletsLeftByWeaponType: player.BulletsLeftByWeaponType,
+			InvulnerableTimer:       player.InvulnerableTimer,
+			NightVisionTimer:        player.NightVisionTimer,
+			IsAlive:                 player.IsAlive,
+			SelectedGunType:         player.SelectedGunType,
+			Inventory:               inventory,
 		}
 	}
 
@@ -185,6 +237,16 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 		}
 	}
 
+	// Save shops
+	for id, shop := range e.state.shops {
+		session.SharedObjects[id] = db.WorldObject{
+			ObjectID: id,
+			Type:     "shop",
+			X:        shop.Position.X,
+			Y:        shop.Position.Y,
+		}
+	}
+
 	// Save chunk hash to world map
 	session.WorldMap = make(map[string]db.Chunk)
 	for chunkID := range e.chunkHash {
@@ -210,13 +272,7 @@ func (e *Engine) Clear() {
 	e.state.walls = make(map[string]*types.Wall)
 	e.state.enemies = make(map[string]*types.Enemy)
 	e.state.bonuses = make(map[string]*types.Bonus)
+	e.state.shops = make(map[string]*types.Shop)
 	e.chunkHash = make(map[string]bool)
 	e.prevState = make(map[string]*EngineGameState)
-}
-
-// GetPlayerCount returns the number of connected players
-func (e *Engine) GetPlayerCount() int {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-	return len(e.state.players)
 }

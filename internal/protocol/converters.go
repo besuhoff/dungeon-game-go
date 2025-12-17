@@ -28,19 +28,30 @@ func ToProtoPlayer(p *types.Player) *Player {
 	if p == nil {
 		return nil
 	}
+
+	inventory := make([]*InventoryItem, len(p.Inventory))
+	for i, item := range p.Inventory {
+		inventory[i] = &InventoryItem{
+			Type:     int32(item.Type),
+			Quantity: int32(item.Quantity),
+		}
+	}
+
 	return &Player{
-		Id:                p.ID,
-		Username:          p.Username,
-		Position:          ToProtoVector2(p.Position),
-		Lives:             int32(p.Lives),
-		Score:             int32(p.Score),
-		Money:             int32(p.Money),
-		Kills:             int32(p.Kills),
-		Rotation:          p.Rotation,
-		BulletsLeft:       int32(p.BulletsLeft),
-		NightVisionTimer:  p.NightVisionTimer,
-		InvulnerableTimer: p.InvulnerableTimer,
-		IsAlive:           p.IsAlive,
+		Id:                      p.ID,
+		Username:                p.Username,
+		Position:                ToProtoVector2(p.Position),
+		Lives:                   p.Lives,
+		Score:                   int32(p.Score),
+		Money:                   int32(p.Money),
+		Kills:                   int32(p.Kills),
+		Rotation:                p.Rotation,
+		BulletsLeftByWeaponType: p.BulletsLeftByWeaponType,
+		NightVisionTimer:        p.NightVisionTimer,
+		InvulnerableTimer:       p.InvulnerableTimer,
+		IsAlive:                 p.IsAlive,
+		Inventory:               inventory,
+		SelectedGunType:         p.SelectedGunType,
 	}
 }
 
@@ -50,12 +61,14 @@ func ToProtoBullet(b *types.Bullet) *Bullet {
 		return nil
 	}
 	return &Bullet{
-		Id:       b.ID,
-		Position: ToProtoVector2(b.Position),
-		Velocity: ToProtoVector2(b.Velocity),
-		OwnerId:  b.OwnerID,
-		Damage:   int32(b.Damage),
-		IsEnemy:  b.IsEnemy,
+		Id:         b.ID,
+		Position:   ToProtoVector2(b.Position),
+		Velocity:   ToProtoVector2(b.Velocity),
+		OwnerId:    b.OwnerID,
+		Damage:     b.Damage,
+		IsEnemy:    b.IsEnemy,
+		IsActive:   b.IsActive,
+		WeaponType: b.WeaponType,
 	}
 }
 
@@ -82,7 +95,7 @@ func ToProtoEnemy(e *types.Enemy) *Enemy {
 		Id:       e.ID,
 		Position: ToProtoVector2(e.Position),
 		Rotation: e.Rotation,
-		Lives:    int32(e.Lives),
+		Lives:    e.Lives,
 		WallId:   e.WallID,
 		IsDead:   e.IsDead,
 	}
@@ -98,6 +111,17 @@ func ToProtoBonus(b *types.Bonus) *Bonus {
 		Position:   ToProtoVector2(b.Position),
 		Type:       b.Type,
 		PickedUpBy: b.PickedUpBy,
+	}
+}
+
+// ToProtoShop converts types.Shop to proto Shop
+func ToProtoShop(s *types.Shop) *Shop {
+	if s == nil {
+		return nil
+	}
+	return &Shop{
+		Id:       s.ID,
+		Position: ToProtoVector2(s.Position),
 	}
 }
 
@@ -128,12 +152,18 @@ func ToProtoGameState(gs types.GameState) *GameStateMessage {
 		protoBonuses[k] = ToProtoBonus(v)
 	}
 
+	protoShops := make(map[string]*Shop)
+	for k, v := range gs.Shops {
+		protoShops[k] = ToProtoShop(v)
+	}
+
 	return &GameStateMessage{
 		Players:   protoPlayers,
 		Bullets:   protoBullets,
 		Walls:     protoWalls,
 		Enemies:   protoEnemies,
 		Bonuses:   protoBonuses,
+		Shops:     protoShops,
 		Timestamp: gs.Timestamp,
 	}
 }
@@ -170,6 +200,11 @@ func ToProtoGameStateDelta(delta types.GameStateDelta) *GameStateDeltaMessage {
 		protoUpdatedBonuses[k] = ToProtoBonus(v)
 	}
 
+	protoUpdatedShops := make(map[string]*Shop)
+	for k, v := range delta.UpdatedShops {
+		protoUpdatedShops[k] = ToProtoShop(v)
+	}
+
 	return &GameStateDeltaMessage{
 		UpdatedPlayers: protoUpdatedPlayers,
 		RemovedPlayers: delta.RemovedPlayers,
@@ -180,6 +215,9 @@ func ToProtoGameStateDelta(delta types.GameStateDelta) *GameStateDeltaMessage {
 		UpdatedEnemies: protoUpdatedEnemies,
 		RemovedEnemies: delta.RemovedEnemies,
 		UpdatedBonuses: protoUpdatedBonuses,
+		RemovedBonuses: delta.RemovedBonuses,
+		UpdatedShops:   protoUpdatedShops,
+		RemovedShops:   delta.RemovedShops,
 		Timestamp:      delta.Timestamp,
 	}
 }
@@ -195,5 +233,6 @@ func FromProtoInput(input *InputMessage) types.InputPayload {
 		Left:     input.Left,
 		Right:    input.Right,
 		Shoot:    input.Shoot,
+		ItemKey:  input.ItemKey,
 	}
 }

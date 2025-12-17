@@ -12,7 +12,7 @@ import (
 type Enemy struct {
 	ScreenObject
 	Rotation   float64   `json:"rotation"` // rotation in degrees
-	Lives      int       `json:"lives"`
+	Lives      float32   `json:"lives"`
 	WallID     string    `json:"wallId"`
 	Direction  float64   `json:"-"` // patrol direction: 1 or -1
 	ShootDelay float64   `json:"-"`
@@ -55,8 +55,10 @@ func (e *Enemy) Shoot() *Bullet {
 	rotationRad := e.Rotation * math.Pi / 180.0
 
 	return &Bullet{
-		ID:       uuid.New().String(),
-		Position: enemyGunPoint,
+		ScreenObject: ScreenObject{
+			ID:       uuid.New().String(),
+			Position: enemyGunPoint,
+		},
 		Velocity: Vector2{
 			X: -math.Sin(rotationRad) * config.EnemyBulletSpeed,
 			Y: math.Cos(rotationRad) * config.EnemyBulletSpeed,
@@ -64,7 +66,17 @@ func (e *Enemy) Shoot() *Bullet {
 		OwnerID:   e.ID,
 		IsEnemy:   true,
 		SpawnTime: time.Now(),
-		Damage:    config.BulletDamage,
+		Damage:    config.BlasterBulletDamage,
 		IsActive:  true,
 	}
+}
+
+func (e *Enemy) IsVisibleToPlayer(player *Player) bool {
+	if player.NightVisionTimer > 0 {
+		return e.DistanceToPoint(player.Position) <= config.SightRadius
+	}
+
+	detectionPoint, detectionDistance := player.DetectionParams()
+	distance := e.DistanceToPoint(detectionPoint)
+	return distance <= detectionDistance+config.EnemyRadius*2
 }

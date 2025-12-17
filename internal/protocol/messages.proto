@@ -22,20 +22,27 @@ message Vector2 {
   double y = 2;
 }
 
+message InventoryItem {
+  int32 type = 1;
+  int32 quantity = 2;
+}
+
 message Player {
   string id = 1;
   string username = 2;
   Vector2 position = 3;
   Vector2 velocity = 4;
-  int32 lives = 5;
+  float lives = 5;
   double invulnerable_timer = 13;
   int32 score = 6;
   int32 money = 7;
   int32 kills = 8;
   double rotation = 9;
-  int32 bullets_left = 10;
+  map<string, int32> bullets_left_by_weapon_type = 10;
   double night_vision_timer = 11;
   bool is_alive = 12;
+  repeated InventoryItem inventory = 14;
+  string selected_gun_type = 15;
 }
 
 message Bullet {
@@ -43,9 +50,10 @@ message Bullet {
   Vector2 position = 2;
   Vector2 velocity = 3;
   string owner_id = 4;
-  int32 damage = 5;
+  float damage = 5;
   bool is_enemy = 6;
   bool is_active = 7;
+  string weapon_type = 8;
 }
 
 message Wall {
@@ -60,7 +68,7 @@ message Enemy {
   string id = 1;
   Vector2 position = 2;
   double rotation = 3;
-  int32 lives = 4;
+  float lives = 4;
   string wall_id = 5;
   bool is_dead = 6;
 }
@@ -72,12 +80,18 @@ message Bonus {
   string picked_up_by = 4;
 }
 
+message Shop {
+  string id = 1;
+  Vector2 position = 2;
+}
+
 message InputMessage {
   bool forward = 1;
   bool backward = 2;
   bool left = 3;
   bool right = 4;
   bool shoot = 5;
+  map<int32, bool> item_key = 6;
 }
 
 // Server -> Client messages
@@ -87,6 +101,7 @@ message GameStateMessage {
   map<string, Wall> walls = 3;
   map<string, Enemy> enemies = 4;
   map<string, Bonus> bonuses = 5;
+  map<string, Shop> shops = 7;
   int64 timestamp = 6;
 }
 
@@ -104,6 +119,10 @@ message GameStateDeltaMessage {
   repeated string removed_enemies = 8;
   
   map<string, Bonus> updated_bonuses = 9;
+  repeated string removed_bonuses = 10;
+
+  map<string, Shop> updated_shops = 12;
+  repeated string removed_shops = 13;
   
   int64 timestamp = 11;
 }

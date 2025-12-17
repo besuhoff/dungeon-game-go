@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/besuhoff/dungeon-game-go/internal/config"
+	"github.com/besuhoff/dungeon-game-go/internal/types"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -22,32 +23,43 @@ type User struct {
 	CurrentSession string             `bson:"current_session,omitempty" json:"current_session,omitempty"`
 }
 
+type InventoryItem struct {
+	Type     int32 `bson:"type" json:"type"`
+	Quantity int32 `bson:"quantity" json:"quantity"`
+}
+
 // PlayerState represents a player's state in a game session
 type PlayerState struct {
-	PlayerID          string    `bson:"player_id" json:"player_id"`
-	Name              string    `bson:"name" json:"name"`
-	Position          Position  `bson:"position" json:"position"`
-	Lives             int       `bson:"lives" json:"lives"`
-	Score             int       `bson:"score" json:"score"`
-	Money             int       `bson:"money" json:"money"`
-	Kills             int       `bson:"kills" json:"kills"`
-	BulletsLeft       int       `bson:"bullets_left" json:"bullets_left"`
-	InvulnerableTimer float64   `bson:"invulnerable_timer" json:"invulnerable_timer"`
-	NightVisionTimer  float64   `bson:"night_vision_timer" json:"night_vision_timer"`
-	IsAlive           bool      `bson:"is_alive" json:"is_alive"`
-	IsConnected       bool      `bson:"is_connected" json:"is_connected"`
-	LastUpdated       time.Time `bson:"last_updated" json:"last_updated"`
+	PlayerID                string           `bson:"player_id" json:"player_id"`
+	Name                    string           `bson:"name" json:"name"`
+	Position                Position         `bson:"position" json:"position"`
+	Lives                   float32          `bson:"lives" json:"lives"`
+	Score                   int              `bson:"score" json:"score"`
+	Money                   int              `bson:"money" json:"money"`
+	Kills                   int              `bson:"kills" json:"kills"`
+	BulletsLeftByWeaponType map[string]int32 `bson:"bullets_left_by_weapon_type" json:"bullets_left_by_weapon_type"`
+	InvulnerableTimer       float64          `bson:"invulnerable_timer" json:"invulnerable_timer"`
+	NightVisionTimer        float64          `bson:"night_vision_timer" json:"night_vision_timer"`
+	IsAlive                 bool             `bson:"is_alive" json:"is_alive"`
+	IsConnected             bool             `bson:"is_connected" json:"is_connected"`
+	LastUpdated             time.Time        `bson:"last_updated" json:"last_updated"`
+	Inventory               []InventoryItem  `bson:"inventory" json:"inventory"`
+	SelectedGunType         string           `bson:"selected_gun_type" json:"selected_gun_type"`
 }
 
 func (ps *PlayerState) Respawn() {
 	ps.IsAlive = true
 	ps.Lives = config.PlayerLives
-	ps.BulletsLeft = config.PlayerMaxBullets
+	ps.BulletsLeftByWeaponType = map[string]int32{
+		types.WeaponTypeBlaster: config.BlasterMaxBullets,
+	}
 	ps.InvulnerableTimer = config.PlayerSpawnInvulnerabilityTime
 	ps.NightVisionTimer = 0
 	ps.Kills = 0
 	ps.Money = 0
 	ps.Score = 0
+	ps.Inventory = []InventoryItem{{Type: int32(types.InventoryItemBlaster), Quantity: 1}}
+	ps.SelectedGunType = types.WeaponTypeBlaster
 }
 
 // Position represents x, y coordinates and rotation
@@ -86,7 +98,6 @@ type GameSession struct {
 	Password      string                 `bson:"password,omitempty" json:"-"`
 	WorldMap      map[string]Chunk       `bson:"world_map" json:"world_map"`
 	SharedObjects map[string]WorldObject `bson:"shared_objects" json:"shared_objects"`
-	GameState     map[string]interface{} `bson:"game_state" json:"game_state"`
 	CreatedAt     time.Time              `bson:"created_at" json:"created_at"`
 	LastUpdated   time.Time              `bson:"last_updated" json:"last_updated"`
 	IsActive      bool                   `bson:"is_active" json:"is_active"`
@@ -209,9 +220,6 @@ func (r *GameSessionRepository) Create(ctx context.Context, session *GameSession
 	}
 	if session.SharedObjects == nil {
 		session.SharedObjects = make(map[string]WorldObject)
-	}
-	if session.GameState == nil {
-		session.GameState = make(map[string]interface{})
 	}
 
 	result, err := r.collection.InsertOne(ctx, session)

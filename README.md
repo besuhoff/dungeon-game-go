@@ -475,19 +475,19 @@ function shoot(angle) {
 
 ### Performance
 
-- 60 FPS game loop (16ms tick rate)
+- 30 FPS game loop (33ms tick rate)
 - Efficient collision detection with spatial checks
 - Delta-time based physics for consistent movement
 
 ## Future Enhancements
 
 - [ ] Client-side prediction and interpolation
-- [ ] Lag compensation
-- [ ] Multiple game rooms/lobbies
+- [x] Lag compensation
+- [x] Multiple game rooms/lobbies
 - [ ] Spectator mode
-- [ ] Power-ups and different weapon types
-- [ ] Respawn system
-- [ ] Persistent player stats
+- [x] Power-ups and different weapon types
+- [x] Respawn system
+- [x] Persistent player stats
 - [ ] Anti-cheat measures
 - [ ] Match-making system
 

@@ -9,6 +9,7 @@ import (
 	"github.com/besuhoff/dungeon-game-go/internal/auth"
 	"github.com/besuhoff/dungeon-game-go/internal/config"
 	"github.com/besuhoff/dungeon-game-go/internal/db"
+	"github.com/besuhoff/dungeon-game-go/internal/types"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -115,12 +116,14 @@ func (h *SessionHandler) HandleCreateSession(w http.ResponseWriter, r *http.Requ
 		Password:   req.Password,
 		Players: map[string]db.PlayerState{
 			user.ID.Hex(): {
-				PlayerID:          user.ID.Hex(),
-				Name:              user.Username,
-				Position:          db.Position{X: 0, Y: 0, Rotation: 0},
-				Lives:             config.PlayerLives,
-				IsAlive:           true,
-				BulletsLeft:       config.PlayerMaxBullets,
+				PlayerID: user.ID.Hex(),
+				Name:     user.Username,
+				Position: db.Position{X: 0, Y: 0, Rotation: 0},
+				Lives:    config.PlayerLives,
+				IsAlive:  true,
+				BulletsLeftByWeaponType: map[string]int32{
+					types.WeaponTypeBlaster: config.BlasterMaxBullets,
+				},
 				InvulnerableTimer: config.PlayerSpawnInvulnerabilityTime,
 			},
 		},
@@ -226,13 +229,15 @@ func (h *SessionHandler) HandleJoinSession(w http.ResponseWriter, r *http.Reques
 	// Add player to session
 	if _, ok := session.Players[user.ID.Hex()]; !ok {
 		session.Players[user.ID.Hex()] = db.PlayerState{
-			PlayerID:          user.ID.Hex(),
-			Name:              user.Username,
-			Position:          db.Position{X: 0, Y: 0, Rotation: 0},
-			Lives:             config.PlayerLives,
-			IsAlive:           true,
-			IsConnected:       false,
-			BulletsLeft:       config.PlayerMaxBullets,
+			PlayerID:    user.ID.Hex(),
+			Name:        user.Username,
+			Position:    db.Position{X: 0, Y: 0, Rotation: 0},
+			Lives:       config.PlayerLives,
+			IsAlive:     true,
+			IsConnected: false,
+			BulletsLeftByWeaponType: map[string]int32{
+				types.WeaponTypeBlaster: config.BlasterMaxBullets,
+			},
 			InvulnerableTimer: config.PlayerSpawnInvulnerabilityTime,
 		}
 
@@ -326,7 +331,6 @@ func (h *SessionHandler) sessionToResponse(session *db.GameSession, host *db.Use
 		IsPrivate:     session.IsPrivate,
 		WorldMap:      session.WorldMap,
 		SharedObjects: session.SharedObjects,
-		GameState:     session.GameState,
 		Players:       session.Players,
 		CreatedAt:     session.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		IsActive:      session.IsActive,
