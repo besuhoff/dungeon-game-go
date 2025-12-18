@@ -465,6 +465,14 @@ func (e *Engine) Update() {
 			if exists {
 				player.SelectGunType(itemID)
 			}
+
+			if itemID == types.InventoryItemAidKit {
+				player.UseAidKit()
+			}
+
+			if itemID == types.InventoryItemGoggles {
+				player.UseGoggles()
+			}
 		}
 		e.itemsToUseByPlayer[player.ID] = []types.InventoryItemID{}
 
@@ -798,7 +806,13 @@ func (e *Engine) Update() {
 
 		newPosition := types.Vector2{X: bullet.Position.X + dx, Y: bullet.Position.Y + dy}
 
-		hitFound = hitFound || e.applyBulletDamage(bullet, newPosition)
+		hitCharacter, hitObjectIds := e.applyBulletDamage(bullet, newPosition)
+		hitFound = hitFound || hitCharacter
+
+		if bullet.WeaponType == types.WeaponTypeRocketLauncher && hitFound {
+			// Rocket explosion - apply area damage
+			e.applyRocketExplosionDamage(newPosition, hitObjectIds)
+		}
 
 		bullet.Position.X += dx
 		bullet.Position.Y += dy
@@ -835,9 +849,9 @@ func (e *Engine) Update() {
 				// Pickup!
 				switch bonus.Type {
 				case "aid_kit":
-					player.Lives = float32(math.Min(float64(player.Lives+config.AidKitHealAmount), float64(config.PlayerLives)))
+					player.AddInventoryItem(types.InventoryItemAidKit, 1)
 				case "goggles":
-					player.NightVisionTimer += config.GogglesActiveTime
+					player.AddInventoryItem(types.InventoryItemGoggles, 1)
 				}
 				bonus.PickedUpBy = player.ID
 				bonus.PickedUpAt = time.Now()
@@ -847,16 +861,17 @@ func (e *Engine) Update() {
 	}
 }
 
-func (e *Engine) applyBulletDamage(bullet *types.Bullet, newPosition types.Vector2) bool {
-	hitFound := false
+func (e *Engine) applyBulletDamage(bullet *types.Bullet, newPosition types.Vector2) (hitFound bool, hitObjectIDs map[string]bool) {
+	hitObjectIDs = make(map[string]bool)
+	hitFound = false
 	// Check collision with players
 	for _, player := range e.state.players {
 		if !player.IsAlive || player.ID == bullet.OwnerID || player.InvulnerableTimer > 0 {
 			continue
 		}
 
-		closestPoint := utils.ClosestPointOnLineSegment(bullet.Position, newPosition, player.Position)
-		distance := player.DistanceToPoint(closestPoint)
+		closestPointX, closestPointY := utils.ClosestPointOnLineSegment(bullet.Position.X, bullet.Position.Y, newPosition.X, newPosition.Y, player.Position.X, player.Position.Y)
+		distance := player.DistanceToPoint(types.Vector2{X: closestPointX, Y: closestPointY})
 
 		if distance < config.PlayerRadius+config.BlasterBulletRadius {
 			// Hit!
@@ -875,6 +890,7 @@ func (e *Engine) applyBulletDamage(bullet *types.Bullet, newPosition types.Vecto
 				player.InvulnerableTimer = config.PlayerInvulnerabilityTime
 			}
 
+			hitObjectIDs[player.ID] = true
 			hitFound = true
 		}
 	}
@@ -886,8 +902,8 @@ func (e *Engine) applyBulletDamage(bullet *types.Bullet, newPosition types.Vecto
 				continue
 			}
 
-			closestPoint := utils.ClosestPointOnLineSegment(bullet.Position, newPosition, enemy.Position)
-			distance := enemy.DistanceToPoint(closestPoint)
+			closestPointX, closestPointY := utils.ClosestPointOnLineSegment(bullet.Position.X, bullet.Position.Y, newPosition.X, newPosition.Y, enemy.Position.X, enemy.Position.Y)
+			distance := enemy.DistanceToPoint(types.Vector2{X: closestPointX, Y: closestPointY})
 
 			if distance < config.EnemyRadius+config.BlasterBulletRadius {
 				// Hit!
@@ -906,10 +922,11 @@ func (e *Engine) applyBulletDamage(bullet *types.Bullet, newPosition types.Vecto
 					e.spawnBonus(enemy.Position)
 				}
 				hitFound = true
+				hitObjectIDs[enemy.ID] = true
 			}
 		}
 	}
-	return hitFound
+	return hitFound, hitObjectIDs
 }
 
 func (e *Engine) handlePlayerShooting(player *types.Player) {
@@ -1035,6 +1052,44 @@ func (e *Engine) handlePlayerShooting(player *types.Player) {
 		}
 	}
 
+}
+
+func (e *Engine) applyRocketExplosionDamage(explosionCenter types.Vector2, hitObjectIDs map[string]bool) {
+	for _, enemy := range e.state.enemies {
+		if enemy.IsDead || hitObjectIDs[enemy.ID] {
+			continue
+		}
+
+		distance := enemy.DistanceToPoint(explosionCenter)
+		if distance < config.RocketLauncherDamageRadius {
+			// Apply damage falloff
+			damage := config.RocketLauncherDamage * (1 - distance/config.RocketLauncherDamageRadius)
+			enemy.Lives -= float32(damage)
+			if enemy.Lives <= 0 {
+				enemy.IsDead = true
+				enemy.DeadTimer = config.EnemyDeathTraceTime
+			}
+		}
+	}
+
+	for _, player := range e.state.players {
+		if !player.IsAlive || hitObjectIDs[player.ID] {
+			continue
+		}
+
+		distance := player.DistanceToPoint(explosionCenter)
+		if distance < config.RocketLauncherDamageRadius {
+			// Apply damage falloff
+			damage := config.RocketLauncherDamage * (1 - distance/config.RocketLauncherDamageRadius)
+			player.Lives -= float32(damage)
+			if player.Lives <= 0 {
+				player.Lives = 0
+				player.IsAlive = false
+			} else {
+				player.InvulnerableTimer = config.PlayerInvulnerabilityTime
+			}
+		}
+	}
 }
 
 // spawnBonus creates a bonus at the given position

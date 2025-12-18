@@ -124,7 +124,7 @@ const (
 	RocketLauncherShootDelay     = 1.5   // Seconds
 	RocketLauncherBulletSpeed    = 300.0 // Units per second
 	RocketLauncherDamage         = 2
-	RocketLauncherDamageRadius   = 100.0
+	RocketLauncherDamageRadius   = 150.0
 	RocketLauncherBulletLifetime = 5 * time.Second
 
 	// Railgun constants

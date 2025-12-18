@@ -2,8 +2,6 @@ package utils
 
 import (
 	"math"
-
-	"github.com/besuhoff/dungeon-game-go/internal/types"
 )
 
 // Collision detection helpers
@@ -79,23 +77,25 @@ func CheckCircleRectCollision(cx, cy, r, rx, ry, rw, rh float64) bool {
 }
 
 // Returns the closest point on the line segment AB to point P
-func ClosestPointOnLineSegment(a, b, p types.Vector2) types.Vector2 {
-	ap := types.Vector2{X: p.X - a.X, Y: p.Y - a.Y}
-	ab := types.Vector2{X: b.X - a.X, Y: b.Y - a.Y}
+func ClosestPointOnLineSegment(ax, ay, bx, by, px, py float64) (float64, float64) {
+	apx := px - ax
+	apy := py - ay
+	abx := bx - ax
+	aby := by - ay
 
-	ab2 := ab.X*ab.X + ab.Y*ab.Y
+	ab2 := abx*abx + aby*aby
 	if ab2 == 0 {
-		return a // a and b are the same point
+		return ax, ay // a and b are the same point
 	}
 
-	ap_ab := ap.X*ab.X + ap.Y*ab.Y
+	ap_ab := apx*abx + apy*aby
 	t := ap_ab / ab2
 
 	if t < 0 {
-		return a
+		return ax, ay
 	} else if t > 1 {
-		return b
+		return bx, by
 	}
 
-	return types.Vector2{X: a.X + ab.X*t, Y: a.Y + ab.Y*t}
+	return ax + abx*t, ay + aby*t
 }

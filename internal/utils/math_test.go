@@ -3,8 +3,6 @@ package utils
 import (
 	"math"
 	"testing"
-
-	"github.com/besuhoff/dungeon-game-go/internal/types"
 )
 
 func TestCheckRectCollision(t *testing.T) {
@@ -230,48 +228,49 @@ func TestCheckLineRectCollision(t *testing.T) {
 
 func TestClosestPointOnLineSegment(t *testing.T) {
 	tests := []struct {
-		name     string
-		a        types.Vector2
-		b        types.Vector2
-		p        types.Vector2
-		expected types.Vector2
+		name      string
+		ax, ay    float64
+		bx, by    float64
+		px, py    float64
+		expectedX float64
+		expectedY float64
 	}{
 		{
-			name:     "point projects onto segment",
-			a:        types.Vector2{X: 0, Y: 0},
-			b:        types.Vector2{X: 10, Y: 0},
-			p:        types.Vector2{X: 5, Y: 5},
-			expected: types.Vector2{X: 5, Y: 0},
+			name: "point projects onto segment",
+			ax:   0, ay: 0,
+			bx: 10, by: 0,
+			px: 5, py: 5,
+			expectedX: 5, expectedY: 0,
 		},
 		{
-			name:     "point closest to endpoint a",
-			a:        types.Vector2{X: 0, Y: 0},
-			b:        types.Vector2{X: 10, Y: 0},
-			p:        types.Vector2{X: -5, Y: 5},
-			expected: types.Vector2{X: 0, Y: 0},
+			name: "point closest to endpoint a",
+			ax:   0, ay: 0,
+			bx: 10, by: 0,
+			px: -5, py: 5,
+			expectedX: 0, expectedY: 0,
 		},
 		{
-			name:     "point closest to endpoint b",
-			a:        types.Vector2{X: 0, Y: 0},
-			b:        types.Vector2{X: 10, Y: 0},
-			p:        types.Vector2{X: 15, Y: 5},
-			expected: types.Vector2{X: 10, Y: 0},
+			name: "point closest to endpoint b",
+			ax:   0, ay: 0,
+			bx: 10, by: 0,
+			px: 15, py: 5,
+			expectedX: 10, expectedY: 0,
 		},
 		{
-			name:     "a and b are same point",
-			a:        types.Vector2{X: 5, Y: 5},
-			b:        types.Vector2{X: 5, Y: 5},
-			p:        types.Vector2{X: 10, Y: 10},
-			expected: types.Vector2{X: 5, Y: 5},
+			name: "a and b are same point",
+			ax:   5, ay: 5,
+			bx: 5, by: 5,
+			px: 10, py: 10,
+			expectedX: 5, expectedY: 5,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ClosestPointOnLineSegment(tt.a, tt.b, tt.p)
+			resultX, resultY := ClosestPointOnLineSegment(tt.ax, tt.ay, tt.bx, tt.by, tt.px, tt.py)
 			epsilon := 1e-9
-			if math.Abs(result.X-tt.expected.X) > epsilon || math.Abs(result.Y-tt.expected.Y) > epsilon {
-				t.Errorf("ClosestPointOnLineSegment() = %+v, want %+v", result, tt.expected)
+			if math.Abs(resultX-tt.expectedX) > epsilon || math.Abs(resultY-tt.expectedY) > epsilon {
+				t.Errorf("ClosestPointOnLineSegment() = (%v, %v), want (%v, %v)", resultX, resultY, tt.expectedX, tt.expectedY)
 			}
 		})
 	}

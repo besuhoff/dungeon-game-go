@@ -2,6 +2,7 @@ package types
 
 import (
 	"maps"
+	"math"
 	"time"
 
 	"github.com/besuhoff/dungeon-game-go/internal/config"
@@ -202,9 +203,36 @@ func (p *Player) UseInventoryItem(itemType InventoryItemID, quantity int32) bool
 	return false
 }
 
+func (p *Player) UseAidKit() bool {
+	canUse := p.UseInventoryItem(InventoryItemAidKit, 1)
+	if !canUse {
+		return false
+	}
+	p.Lives = float32(math.Min(float64(p.Lives+config.AidKitHealAmount), float64(config.PlayerLives)))
+	return true
+}
+
+func (p *Player) UseGoggles() bool {
+	canUse := p.UseInventoryItem(InventoryItemGoggles, 1)
+	if !canUse {
+		return false
+	}
+	p.NightVisionTimer += config.GogglesActiveTime
+	return true
+}
+
 func (p *Player) Recharge(deltaTime float64) bool {
 	maxBullets, exists := MaxBulletsByWeaponType[p.SelectedGunType]
 	if !exists {
+		return false
+	}
+
+	canUse := true
+	if p.SelectedGunType != WeaponTypeBlaster {
+		canUse = p.HasInventoryItem(InventoryAmmoIDByWeaponType[p.SelectedGunType])
+	}
+
+	if !canUse {
 		return false
 	}
 
@@ -218,6 +246,11 @@ func (p *Player) Recharge(deltaTime float64) bool {
 				p.BulletsLeftByWeaponType[p.SelectedGunType] = 0
 			}
 			p.BulletsLeftByWeaponType[p.SelectedGunType]++
+
+			if p.SelectedGunType != WeaponTypeBlaster {
+				p.UseInventoryItem(InventoryAmmoIDByWeaponType[p.SelectedGunType], 1)
+			}
+
 			return true
 		}
 	}

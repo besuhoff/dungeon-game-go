@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/besuhoff/dungeon-game-go/internal/config"
+	"github.com/besuhoff/dungeon-game-go/internal/utils"
 )
 
 // Bullet represents a projectile in the game
@@ -36,6 +37,19 @@ func (a *Bullet) Equal(b *Bullet) bool {
 }
 
 func (b *Bullet) IsVisibleToPlayer(player *Player) bool {
+	if b.WeaponType == WeaponTypeRailgun {
+		return utils.CheckLineRectCollision(
+			b.Position.X,
+			b.Position.Y,
+			b.Position.X+b.Velocity.X,
+			b.Position.Y+b.Velocity.Y,
+			player.Position.X-config.SightRadius,
+			player.Position.Y-config.SightRadius,
+			config.SightRadius*2,
+			config.SightRadius*2,
+		)
+	}
+
 	if player.NightVisionTimer > 0 {
 		return b.DistanceToPoint(player.Position) <= config.SightRadius
 	}
