@@ -33,7 +33,10 @@ func BulletsEqual(a, b *Bullet) bool {
 }
 
 func (a *Bullet) Equal(b *Bullet) bool {
-	return a.Position.X == b.Position.X && a.Position.Y == b.Position.Y && a.IsActive == b.IsActive
+	return a.Position.X == b.Position.X &&
+		a.Position.Y == b.Position.Y &&
+		a.IsActive == b.IsActive &&
+		a.DeletedAt.IsZero() && b.DeletedAt.IsZero()
 }
 
 func (b *Bullet) IsVisibleToPlayer(player *Player) bool {
@@ -55,6 +58,10 @@ func (b *Bullet) IsVisibleToPlayer(player *Player) bool {
 	}
 
 	detectionPoint, detectionDistance := player.DetectionParams()
+	if b.WeaponType == WeaponTypeRocketLauncher && !b.IsActive {
+		detectionDistance = config.TorchRadius * 2
+	}
+
 	distance := b.DistanceToPoint(detectionPoint)
 	return distance <= detectionDistance
 }

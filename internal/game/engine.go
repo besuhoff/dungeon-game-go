@@ -86,6 +86,10 @@ func (e *Engine) AddPlayer(id, username string) *types.Player {
 			InvulnerableTimer:   0,
 			NightVisionTimer:    0,
 			IsAlive:             true,
+			Inventory: []types.InventoryItem{
+				{Type: types.InventoryItemBlaster, Quantity: 1},
+			},
+			SelectedGunType: types.WeaponTypeBlaster,
 		}
 
 		e.state.players[id] = player
@@ -421,7 +425,7 @@ func (e *Engine) Update() {
 			continue
 		}
 
-		if player.Username == "albert.besuhoff" {
+		if e.sessionID == "69430c0336991100bdedceb9" {
 			if !player.HasInventoryItem(types.InventoryItemRailgun) {
 				player.AddInventoryItem(types.InventoryItemRailgun, 1)
 			}

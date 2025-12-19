@@ -138,6 +138,14 @@ export interface Bullet {
      */
     isActive: boolean;
     /**
+     * @generated from protobuf field: int64 deleted_at = 10
+     */
+    deletedAt: bigint;
+    /**
+     * @generated from protobuf field: int64 inactive_ms = 9
+     */
+    inactiveMs: bigint;
+    /**
      * @generated from protobuf field: string weapon_type = 8
      */
     weaponType: string;
@@ -807,6 +815,8 @@ class Bullet$Type extends MessageType$<Bullet> {
             { no: 5, name: "damage", kind: "scalar", T: 2 /*ScalarType.FLOAT*/ },
             { no: 6, name: "is_enemy", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 7, name: "is_active", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 10, name: "deleted_at", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 9, name: "inactive_ms", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
             { no: 8, name: "weapon_type", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
@@ -817,6 +827,8 @@ class Bullet$Type extends MessageType$<Bullet> {
         message.damage = 0;
         message.isEnemy = false;
         message.isActive = false;
+        message.deletedAt = 0n;
+        message.inactiveMs = 0n;
         message.weaponType = "";
         if (value !== undefined)
             reflectionMergePartial<Bullet>(this, message, value);
@@ -847,6 +859,12 @@ class Bullet$Type extends MessageType$<Bullet> {
                     break;
                 case /* bool is_active */ 7:
                     message.isActive = reader.bool();
+                    break;
+                case /* int64 deleted_at */ 10:
+                    message.deletedAt = reader.int64().toBigInt();
+                    break;
+                case /* int64 inactive_ms */ 9:
+                    message.inactiveMs = reader.int64().toBigInt();
                     break;
                 case /* string weapon_type */ 8:
                     message.weaponType = reader.string();
@@ -887,6 +905,12 @@ class Bullet$Type extends MessageType$<Bullet> {
         /* string weapon_type = 8; */
         if (message.weaponType !== "")
             writer.tag(8, WireType.LengthDelimited).string(message.weaponType);
+        /* int64 inactive_ms = 9; */
+        if (message.inactiveMs !== 0n)
+            writer.tag(9, WireType.Varint).int64(message.inactiveMs);
+        /* int64 deleted_at = 10; */
+        if (message.deletedAt !== 0n)
+            writer.tag(10, WireType.Varint).int64(message.deletedAt);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

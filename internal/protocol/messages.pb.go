@@ -356,6 +356,8 @@ type Bullet struct {
 	Damage        float32                `protobuf:"fixed32,5,opt,name=damage,proto3" json:"damage,omitempty"`
 	IsEnemy       bool                   `protobuf:"varint,6,opt,name=is_enemy,json=isEnemy,proto3" json:"is_enemy,omitempty"`
 	IsActive      bool                   `protobuf:"varint,7,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	DeletedAt     int64                  `protobuf:"varint,10,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
+	InactiveMs    int64                  `protobuf:"varint,9,opt,name=inactive_ms,json=inactiveMs,proto3" json:"inactive_ms,omitempty"`
 	WeaponType    string                 `protobuf:"bytes,8,opt,name=weapon_type,json=weaponType,proto3" json:"weapon_type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -438,6 +440,20 @@ func (x *Bullet) GetIsActive() bool {
 		return x.IsActive
 	}
 	return false
+}
+
+func (x *Bullet) GetDeletedAt() int64 {
+	if x != nil {
+		return x.DeletedAt
+	}
+	return 0
+}
+
+func (x *Bullet) GetInactiveMs() int64 {
+	if x != nil {
+		return x.InactiveMs
+	}
+	return 0
 }
 
 func (x *Bullet) GetWeaponType() string {
@@ -1421,7 +1437,7 @@ const file_messages_proto_rawDesc = "" +
 	"\x11selected_gun_type\x18\x0f \x01(\tR\x0fselectedGunType\x1aJ\n" +
 	"\x1cBulletsLeftByWeaponTypeEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\x82\x02\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\xc2\x02\n" +
 	"\x06Bullet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12-\n" +
 	"\bposition\x18\x02 \x01(\v2\x11.protocol.Vector2R\bposition\x12-\n" +
@@ -1429,7 +1445,12 @@ const file_messages_proto_rawDesc = "" +
 	"\bowner_id\x18\x04 \x01(\tR\aownerId\x12\x16\n" +
 	"\x06damage\x18\x05 \x01(\x02R\x06damage\x12\x19\n" +
 	"\bis_enemy\x18\x06 \x01(\bR\aisEnemy\x12\x1b\n" +
-	"\tis_active\x18\a \x01(\bR\bisActive\x12\x1f\n" +
+	"\tis_active\x18\a \x01(\bR\bisActive\x12\x1d\n" +
+	"\n" +
+	"deleted_at\x18\n" +
+	" \x01(\x03R\tdeletedAt\x12\x1f\n" +
+	"\vinactive_ms\x18\t \x01(\x03R\n" +
+	"inactiveMs\x12\x1f\n" +
 	"\vweapon_type\x18\b \x01(\tR\n" +
 	"weaponType\"\x95\x01\n" +
 	"\x04Wall\x12\x0e\n" +

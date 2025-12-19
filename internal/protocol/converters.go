@@ -1,6 +1,8 @@
 package protocol
 
 import (
+	"time"
+
 	"github.com/besuhoff/dungeon-game-go/internal/types"
 )
 
@@ -68,6 +70,8 @@ func ToProtoBullet(b *types.Bullet) *Bullet {
 		Damage:     b.Damage,
 		IsEnemy:    b.IsEnemy,
 		IsActive:   b.IsActive,
+		DeletedAt:  b.DeletedAt.UnixMilli(),
+		InactiveMs: time.Since(b.DeletedAt).Milliseconds(),
 		WeaponType: b.WeaponType,
 	}
 }

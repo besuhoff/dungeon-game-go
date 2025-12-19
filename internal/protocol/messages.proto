@@ -53,6 +53,8 @@ message Bullet {
   float damage = 5;
   bool is_enemy = 6;
   bool is_active = 7;
+  int64 deleted_at = 10;
+  int64 inactive_ms = 9;
   string weapon_type = 8;
 }
 
