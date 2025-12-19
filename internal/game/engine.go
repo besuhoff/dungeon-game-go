@@ -832,7 +832,7 @@ func (e *Engine) Update() {
 
 		if bullet.WeaponType == types.WeaponTypeRocketLauncher && hitFound {
 			// Rocket explosion - apply area damage
-			e.applyRocketExplosionDamage(newPosition, hitObjectIds)
+			e.applyRocketExplosionDamage(newPosition, hitObjectIds, bullet.OwnerID)
 		}
 
 		bullet.Position.X += dx
@@ -1100,7 +1100,9 @@ func (e *Engine) handlePlayerShooting(player *types.Player) {
 
 }
 
-func (e *Engine) applyRocketExplosionDamage(explosionCenter types.Vector2, hitObjectIDs map[string]bool) {
+func (e *Engine) applyRocketExplosionDamage(explosionCenter types.Vector2, hitObjectIDs map[string]bool, ownerID string) {
+	shooter, shooterExists := e.state.players[ownerID]
+
 	for _, enemy := range e.state.enemies {
 		if enemy.IsDead || hitObjectIDs[enemy.ID] {
 			continue
@@ -1114,6 +1116,15 @@ func (e *Engine) applyRocketExplosionDamage(explosionCenter types.Vector2, hitOb
 			if enemy.Lives <= 0 {
 				enemy.IsDead = true
 				enemy.DeadTimer = config.EnemyDeathTraceTime
+
+				if shooterExists {
+					shooter.Money += config.EnemyReward
+					shooter.Score += config.EnemyReward
+					shooter.Kills++
+				}
+
+				// Maybe spawn bonus
+				e.spawnBonus(enemy.Position)
 			}
 		}
 	}
@@ -1131,6 +1142,12 @@ func (e *Engine) applyRocketExplosionDamage(explosionCenter types.Vector2, hitOb
 			if player.Lives <= 0 {
 				player.Lives = 0
 				player.IsAlive = false
+
+				if shooterExists && shooter.ID != player.ID {
+					shooter.Money += config.PlayerReward
+					shooter.Score += config.PlayerReward
+					shooter.Kills++
+				}
 			} else {
 				player.InvulnerableTimer = config.PlayerInvulnerabilityTime
 			}
