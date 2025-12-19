@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 	"sync"
@@ -23,6 +24,19 @@ type EngineGameState struct {
 	shops   map[string]*types.Shop
 }
 
+type EngineStats struct {
+	TotalUpdateTime                time.Duration
+	TotalUpdateTimeSinceLastReport time.Duration
+	UpdateCount                    int64
+	UpdateCountSinceLastReport     int64
+
+	TotalDeltaCalcTime                time.Duration
+	TotalDeltaCalcTimeSinceLastReport time.Duration
+	DeltaCalcCount                    int64
+	DeltaCalcCountSinceLastReport     int64
+
+	LastReportedAt time.Time
+}
 type Engine struct {
 	mu           sync.RWMutex
 	sessionID    string // Session identifier
@@ -35,6 +49,8 @@ type Engine struct {
 	lastUpdate         time.Time
 	playerInputState   map[string]*types.InputPayload
 	itemsToUseByPlayer map[string][]types.InventoryItemID
+
+	stats *EngineStats
 }
 
 // NewEngine creates a new game engine for a session
@@ -55,6 +71,7 @@ func NewEngine(sessionID string) *Engine {
 		respawnQueue:       make(map[string]bool),
 		prevState:          make(map[string]*EngineGameState),
 		lastUpdate:         time.Now(),
+		stats:              &EngineStats{},
 	}
 }
 
@@ -863,6 +880,31 @@ func (e *Engine) Update() {
 			}
 		}
 	}
+
+	// Update stats
+	updateDuration := time.Since(now)
+	e.stats.UpdateCount++
+	e.stats.TotalUpdateTime += updateDuration
+	e.stats.UpdateCountSinceLastReport++
+	e.stats.TotalDeltaCalcTimeSinceLastReport += updateDuration
+
+	if e.stats.LastReportedAt.IsZero() || time.Since(e.stats.LastReportedAt) >= time.Second*10 {
+		avgUpdateTime := e.stats.TotalUpdateTime / time.Duration(e.stats.UpdateCount)
+		avgUpdateTimeSinceLastReport := e.stats.TotalDeltaCalcTimeSinceLastReport / time.Duration(e.stats.UpdateCountSinceLastReport)
+		e.stats.LastReportedAt = time.Now()
+		e.stats.UpdateCountSinceLastReport = 0
+		e.stats.TotalDeltaCalcTimeSinceLastReport = 0
+		e.stats.DeltaCalcCountSinceLastReport = 0
+		e.stats.TotalDeltaCalcTimeSinceLastReport = 0
+
+		// Print stats
+		log.Printf("Engine Stats - Session %s: Total Updates: %d, Avg Update Time: %s, Avg Delta Calc Time (last 10 seconds): %s",
+			e.sessionID,
+			e.stats.UpdateCount,
+			avgUpdateTime.String(),
+			avgUpdateTimeSinceLastReport.String(),
+		)
+	}
 }
 
 func (e *Engine) applyBulletDamage(bullet *types.Bullet, newPosition types.Vector2) (hitFound bool, hitObjectIDs map[string]bool) {
@@ -1216,6 +1258,7 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
+	now := time.Now()
 	prevState := e.prevState[playerID]
 
 	player, exists := e.state.players[playerID]
@@ -1361,6 +1404,10 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) types.GameStateDelt
 
 	e.updatePreviousState(playerID)
 
+	e.stats.DeltaCalcCountSinceLastReport++
+	e.stats.TotalDeltaCalcTimeSinceLastReport += time.Since(now)
+	e.stats.DeltaCalcCount++
+	e.stats.TotalDeltaCalcTime += time.Since(now)
 	return delta
 }
 
