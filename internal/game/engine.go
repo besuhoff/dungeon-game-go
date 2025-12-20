@@ -886,23 +886,41 @@ func (e *Engine) Update() {
 	e.stats.UpdateCount++
 	e.stats.TotalUpdateTime += updateDuration
 	e.stats.UpdateCountSinceLastReport++
-	e.stats.TotalDeltaCalcTimeSinceLastReport += updateDuration
+	e.stats.TotalUpdateTimeSinceLastReport += updateDuration
 
 	if e.stats.LastReportedAt.IsZero() || time.Since(e.stats.LastReportedAt) >= time.Second*10 {
-		avgUpdateTime := e.stats.TotalUpdateTime / time.Duration(e.stats.UpdateCount)
-		avgUpdateTimeSinceLastReport := e.stats.TotalDeltaCalcTimeSinceLastReport / time.Duration(e.stats.UpdateCountSinceLastReport)
+		var avgUpdateTime time.Duration
+		var avgUpdateTimeSinceLastReport time.Duration
+		var avgDeltaCalcTime time.Duration
+		var avgDeltaCalcTimeSinceLastReport time.Duration
+
+		if e.stats.UpdateCount > 0 {
+			avgUpdateTime = e.stats.TotalUpdateTime / time.Duration(e.stats.UpdateCount)
+		}
+		if e.stats.UpdateCountSinceLastReport > 0 {
+			avgUpdateTimeSinceLastReport = e.stats.TotalUpdateTimeSinceLastReport / time.Duration(e.stats.UpdateCountSinceLastReport)
+		}
+		if e.stats.DeltaCalcCount > 0 {
+			avgDeltaCalcTime = e.stats.TotalDeltaCalcTime / time.Duration(e.stats.DeltaCalcCount)
+		}
+		if e.stats.DeltaCalcCountSinceLastReport > 0 {
+			avgDeltaCalcTimeSinceLastReport = e.stats.TotalDeltaCalcTimeSinceLastReport / time.Duration(e.stats.DeltaCalcCountSinceLastReport)
+		}
+
 		e.stats.LastReportedAt = time.Now()
 		e.stats.UpdateCountSinceLastReport = 0
-		e.stats.TotalDeltaCalcTimeSinceLastReport = 0
+		e.stats.TotalUpdateTimeSinceLastReport = 0
 		e.stats.DeltaCalcCountSinceLastReport = 0
 		e.stats.TotalDeltaCalcTimeSinceLastReport = 0
 
 		// Print stats
-		log.Printf("Engine Stats - Session %s: Total Updates: %d, Avg Update Time: %s, Avg Delta Calc Time (last 10 seconds): %s",
+		log.Printf("Engine Stats - Session %s: Total Updates: %d, Avg Update Time: %s, Avg Update Time (last 10 seconds): %s, Avg Delta Calc Time: %s, Avg Delta Calc Time (last 10 seconds): %s",
 			e.sessionID,
 			e.stats.UpdateCount,
 			avgUpdateTime.String(),
 			avgUpdateTimeSinceLastReport.String(),
+			avgDeltaCalcTime.String(),
+			avgDeltaCalcTimeSinceLastReport.String(),
 		)
 	}
 }
