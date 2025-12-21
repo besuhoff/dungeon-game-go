@@ -27,9 +27,9 @@ func (wall *Wall) GetTopLeft() Vector2 {
 	return Vector2{X: wall.Position.X - correctionW, Y: wall.Position.Y - correctionH}
 }
 
-func (wall *Wall) GetCenter() Vector2 {
+func (wall *Wall) GetCenter() *Vector2 {
 	topLeft := wall.GetTopLeft()
-	return Vector2{
+	return &Vector2{
 		X: topLeft.X + wall.Width/2,
 		Y: topLeft.Y + wall.Height/2,
 	}
@@ -39,9 +39,9 @@ func (wall *Wall) GetRadius() float64 {
 	return math.Sqrt(math.Pow(wall.Height/2, 2) + math.Pow(wall.Width/2, 2))
 }
 
-func (wall *Wall) GetCorners() [4]Vector2 {
+func (wall *Wall) GetCorners() [4]*Vector2 {
 	topLeft := wall.GetTopLeft()
-	return [4]Vector2{
+	return [4]*Vector2{
 		{X: topLeft.X, Y: topLeft.Y},
 		{X: topLeft.X + wall.Width, Y: topLeft.Y},
 		{X: topLeft.X + wall.Width, Y: topLeft.Y + wall.Height},
@@ -57,4 +57,10 @@ func (wall *Wall) IsVisibleToPlayer(player *Player) bool {
 		}
 	}
 	return false
+}
+
+func (w *Wall) Clone() *Wall {
+	clone := *w
+	clone.Position = &Vector2{X: w.Position.X, Y: w.Position.Y}
+	return &clone
 }

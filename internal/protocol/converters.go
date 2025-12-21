@@ -7,7 +7,7 @@ import (
 )
 
 // ToProtoVector2 converts types.Vector2 to proto Vector2
-func ToProtoVector2(v types.Vector2) *Vector2 {
+func ToProtoVector2(v *types.Vector2) *Vector2 {
 	return &Vector2{
 		X: v.X,
 		Y: v.Y,
@@ -15,11 +15,11 @@ func ToProtoVector2(v types.Vector2) *Vector2 {
 }
 
 // FromProtoVector2 converts proto Vector2 to types.Vector2
-func FromProtoVector2(v *Vector2) types.Vector2 {
+func FromProtoVector2(v *Vector2) *types.Vector2 {
 	if v == nil {
-		return types.Vector2{}
+		return &types.Vector2{}
 	}
-	return types.Vector2{
+	return &types.Vector2{
 		X: v.X,
 		Y: v.Y,
 	}

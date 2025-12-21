@@ -84,6 +84,8 @@ func (p *Player) Clone() *Player {
 	clone.BulletsLeftByWeaponType = make(map[string]int32)
 	maps.Copy(clone.BulletsLeftByWeaponType, p.BulletsLeftByWeaponType)
 
+	clone.Position = &Vector2{X: p.Position.X, Y: p.Position.Y}
+
 	clone.Inventory = make([]InventoryItem, len(p.Inventory))
 	copy(clone.Inventory, p.Inventory)
 
@@ -111,13 +113,13 @@ func (p *Player) Respawn() bool {
 	return true
 }
 
-func (p *Player) DetectionParams() (Vector2, float64) {
+func (p *Player) DetectionParams() (*Vector2, float64) {
 	if p.NightVisionTimer > 0 {
 		return p.Position, config.NightVisionDetectionRadius
 	}
 
-	playerTorchPoint := Vector2{X: p.Position.X + config.PlayerTorchOffsetX, Y: p.Position.Y + config.PlayerTorchOffsetY}
-	playerTorchPoint.RotateAroundPoint(&p.Position, p.Rotation)
+	playerTorchPoint := &Vector2{X: p.Position.X + config.PlayerTorchOffsetX, Y: p.Position.Y + config.PlayerTorchOffsetY}
+	playerTorchPoint.RotateAroundPoint(p.Position, p.Rotation)
 
 	return playerTorchPoint, config.TorchRadius
 }

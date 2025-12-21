@@ -32,7 +32,7 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			wall := &types.Wall{
 				ScreenObject: types.ScreenObject{
 					ID:       id,
-					Position: types.Vector2{X: obj.X, Y: obj.Y},
+					Position: &types.Vector2{X: obj.X, Y: obj.Y},
 				},
 			}
 			if width, ok := obj.Properties["width"].(float64); ok {
@@ -55,7 +55,7 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			enemy := &types.Enemy{
 				ScreenObject: types.ScreenObject{
 					ID:       id,
-					Position: types.Vector2{X: obj.X, Y: obj.Y},
+					Position: &types.Vector2{X: obj.X, Y: obj.Y},
 				},
 			}
 			if wallID, ok := obj.Properties["wall_id"].(string); ok {
@@ -79,7 +79,7 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			bonus := &types.Bonus{
 				ScreenObject: types.ScreenObject{
 					ID:       id,
-					Position: types.Vector2{X: obj.X, Y: obj.Y},
+					Position: &types.Vector2{X: obj.X, Y: obj.Y},
 				},
 			}
 			if bonusType, ok := obj.Properties["bonus_type"].(string); ok {
@@ -90,7 +90,7 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			shop := &types.Shop{
 				ScreenObject: types.ScreenObject{
 					ID:       id,
-					Position: types.Vector2{X: obj.X, Y: obj.Y},
+					Position: &types.Vector2{X: obj.X, Y: obj.Y},
 				},
 			}
 			e.state.shops[id] = shop
@@ -129,7 +129,7 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 		player := &types.Player{
 			ScreenObject: types.ScreenObject{
 				ID:       playerState.PlayerID,
-				Position: types.Vector2{X: playerState.Position.X, Y: playerState.Position.Y},
+				Position: &types.Vector2{X: playerState.Position.X, Y: playerState.Position.Y},
 			},
 			Username:                playerState.Name,
 			Rotation:                playerState.Position.Rotation,

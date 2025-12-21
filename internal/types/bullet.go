@@ -10,7 +10,7 @@ import (
 // Bullet represents a projectile in the game
 type Bullet struct {
 	ScreenObject
-	Velocity   Vector2   `json:"velocity"`
+	Velocity   *Vector2  `json:"velocity"`
 	OwnerID    string    `json:"ownerId"`
 	IsEnemy    bool      `json:"isEnemy"`
 	IsActive   bool      `json:"isActive"`
@@ -64,4 +64,11 @@ func (b *Bullet) IsVisibleToPlayer(player *Player) bool {
 
 	distance := b.DistanceToPoint(detectionPoint)
 	return distance <= detectionDistance
+}
+
+func (b *Bullet) Clone() *Bullet {
+	clone := *b
+	clone.Position = &Vector2{X: b.Position.X, Y: b.Position.Y}
+	clone.Velocity = &Vector2{X: b.Velocity.X, Y: b.Velocity.Y}
+	return &clone
 }

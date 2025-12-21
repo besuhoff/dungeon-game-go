@@ -16,3 +16,9 @@ func (s *Shop) IsVisibleToPlayer(player *Player) bool {
 	distance := s.DistanceToPoint(detectionPoint)
 	return distance <= detectionDistance+config.ShopSize
 }
+
+func (s *Shop) Clone() *Shop {
+	clone := *s
+	clone.Position = &Vector2{X: s.Position.X, Y: s.Position.Y}
+	return &clone
+}

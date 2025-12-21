@@ -38,15 +38,15 @@ func (a *Enemy) Equal(b *Enemy) bool {
 		a.Rotation == b.Rotation && a.Lives == b.Lives && a.IsDead == b.IsDead
 }
 
-func (e *Enemy) DistanceToPoint(point Vector2) float64 {
+func (e *Enemy) DistanceToPoint(point *Vector2) float64 {
 	dx := e.Position.X - point.X
 	dy := e.Position.Y - point.Y
 	return math.Sqrt(dx*dx + dy*dy)
 }
 
-func (e *Enemy) getGunPoint() Vector2 {
-	enemyGunPoint := Vector2{X: e.Position.X + config.EnemyGunEndOffsetX, Y: e.Position.Y + config.EnemyGunEndOffsetY}
-	enemyGunPoint.RotateAroundPoint(&e.Position, e.Rotation)
+func (e *Enemy) getGunPoint() *Vector2 {
+	enemyGunPoint := &Vector2{X: e.Position.X + config.EnemyGunEndOffsetX, Y: e.Position.Y + config.EnemyGunEndOffsetY}
+	enemyGunPoint.RotateAroundPoint(e.Position, e.Rotation)
 	return enemyGunPoint
 }
 
@@ -59,7 +59,7 @@ func (e *Enemy) Shoot() *Bullet {
 			ID:       uuid.New().String(),
 			Position: enemyGunPoint,
 		},
-		Velocity: Vector2{
+		Velocity: &Vector2{
 			X: -math.Sin(rotationRad) * config.EnemyBulletSpeed,
 			Y: math.Cos(rotationRad) * config.EnemyBulletSpeed,
 		},
@@ -79,4 +79,10 @@ func (e *Enemy) IsVisibleToPlayer(player *Player) bool {
 	detectionPoint, detectionDistance := player.DetectionParams()
 	distance := e.DistanceToPoint(detectionPoint)
 	return distance <= detectionDistance+config.EnemyRadius*2
+}
+
+func (e *Enemy) Clone() *Enemy {
+	clone := *e
+	clone.Position = &Vector2{X: e.Position.X, Y: e.Position.Y}
+	return &clone
 }

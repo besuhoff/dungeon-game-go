@@ -31,3 +31,9 @@ func (b *Bonus) IsVisibleToPlayer(player *Player) bool {
 	}
 	return distance <= detectionDistance+bonusSize
 }
+
+func (b *Bonus) Clone() *Bonus {
+	clone := *b
+	clone.Position = &Vector2{X: b.Position.X, Y: b.Position.Y}
+	return &clone
+}
