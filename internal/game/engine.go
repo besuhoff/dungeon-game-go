@@ -429,6 +429,8 @@ func (e *Engine) Update() {
 	deltaTime := now.Sub(e.lastUpdate).Seconds()
 	e.lastUpdate = now
 
+	playersChunks := make(map[string]bool)
+
 	// Update players
 	for _, player := range e.state.players {
 		if _, exists := e.respawnQueue[player.ID]; exists {
@@ -440,6 +442,14 @@ func (e *Engine) Update() {
 
 		if !player.IsAlive {
 			continue
+		}
+
+		// Track chunks where players are located
+		chunkX, chunkY := chunkXYFromPosition(player.Position)
+		for dx := -1; dx <= 1; dx++ {
+			for dy := -1; dy <= 1; dy++ {
+				playersChunks[fmt.Sprintf("%d,%d", chunkX+dx, chunkY+dy)] = true
+			}
 		}
 
 		if e.sessionID == "69430c0336991100bdedceb9" {
@@ -652,6 +662,12 @@ func (e *Engine) Update() {
 
 	// Update enemies
 	for _, enemy := range e.state.enemies {
+		chunkX, chunkY := chunkXYFromPosition(enemy.Position)
+		chunkKey := fmt.Sprintf("%d,%d", chunkX, chunkY)
+		if _, playerNearby := playersChunks[chunkKey]; !playerNearby {
+			continue // Skip updating enemies in chunks without players
+		}
+
 		if enemy.IsDead {
 			enemy.DeadTimer -= deltaTime
 			if enemy.DeadTimer <= 0 {
