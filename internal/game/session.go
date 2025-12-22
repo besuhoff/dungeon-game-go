@@ -6,6 +6,7 @@ import (
 	"github.com/besuhoff/dungeon-game-go/internal/config"
 	"github.com/besuhoff/dungeon-game-go/internal/db"
 	"github.com/besuhoff/dungeon-game-go/internal/types"
+	"github.com/besuhoff/dungeon-game-go/internal/utils"
 )
 
 // SessionState represents the complete state of a game session
@@ -44,7 +45,12 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			if orientation, ok := obj.Properties["orientation"].(string); ok {
 				wall.Orientation = orientation
 			}
-			e.state.walls[id] = wall
+			chiunkX, chunkY := utils.ChunkXYFromPosition(wall.Position.X, wall.Position.Y)
+			chunkKey := fmt.Sprintf("%d,%d", chiunkX, chunkY)
+			if _, exists := e.state.wallsByChunk[chunkKey]; !exists {
+				e.state.wallsByChunk[chunkKey] = make(map[string]*types.Wall)
+			}
+			e.state.wallsByChunk[chunkKey][id] = wall
 		} else if obj.Type == "enemy" {
 			// Enemies will be regenerated based on walls
 			// Just track that they existed
@@ -70,7 +76,12 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			if direction, ok := obj.Properties["direction"].(float64); ok {
 				enemy.Direction = direction
 			}
-			e.state.enemies[id] = enemy
+			chunkX, chunkY := utils.ChunkXYFromPosition(enemy.Position.X, enemy.Position.Y)
+			chunkKey := fmt.Sprintf("%d,%d", chunkX, chunkY)
+			if _, exists := e.state.enemiesByChunk[chunkKey]; !exists {
+				e.state.enemiesByChunk[chunkKey] = make(map[string]*types.Enemy)
+			}
+			e.state.enemiesByChunk[chunkKey][id] = enemy
 		} else if obj.Type == "bonus" {
 			if obj.Properties == nil {
 				continue
@@ -191,32 +202,36 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 	session.SharedObjects = make(map[string]db.WorldObject)
 
 	// Save walls
-	for id, wall := range e.state.walls {
-		session.SharedObjects[id] = db.WorldObject{
-			ObjectID: id,
-			Type:     "wall",
-			X:        wall.Position.X,
-			Y:        wall.Position.Y,
-			Properties: map[string]interface{}{
-				"width":       wall.Width,
-				"height":      wall.Height,
-				"orientation": wall.Orientation,
-			},
+	for _, walls := range e.state.wallsByChunk {
+		for id, wall := range walls {
+			session.SharedObjects[id] = db.WorldObject{
+				ObjectID: id,
+				Type:     "wall",
+				X:        wall.Position.X,
+				Y:        wall.Position.Y,
+				Properties: map[string]interface{}{
+					"width":       wall.Width,
+					"height":      wall.Height,
+					"orientation": wall.Orientation,
+				},
+			}
 		}
 	}
 
 	// Save enemies
-	for id, enemy := range e.state.enemies {
-		session.SharedObjects[id] = db.WorldObject{
-			ObjectID: id,
-			Type:     "enemy",
-			X:        enemy.Position.X,
-			Y:        enemy.Position.Y,
-			Properties: map[string]interface{}{
-				"wall_id":   enemy.WallID,
-				"direction": enemy.Direction,
-				"lives":     enemy.Lives,
-			},
+	for _, enemies := range e.state.enemiesByChunk {
+		for id, enemy := range enemies {
+			session.SharedObjects[id] = db.WorldObject{
+				ObjectID: id,
+				Type:     "enemy",
+				X:        enemy.Position.X,
+				Y:        enemy.Position.Y,
+				Properties: map[string]interface{}{
+					"wall_id":   enemy.WallID,
+					"direction": enemy.Direction,
+					"lives":     enemy.Lives,
+				},
+			}
 		}
 	}
 
@@ -269,8 +284,8 @@ func (e *Engine) Clear() {
 
 	e.state.players = make(map[string]*types.Player)
 	e.state.bullets = make(map[string]*types.Bullet)
-	e.state.walls = make(map[string]*types.Wall)
-	e.state.enemies = make(map[string]*types.Enemy)
+	e.state.wallsByChunk = make(map[string]map[string]*types.Wall)
+	e.state.enemiesByChunk = make(map[string]map[string]*types.Enemy)
 	e.state.bonuses = make(map[string]*types.Bonus)
 	e.state.shops = make(map[string]*types.Shop)
 	e.chunkHash = make(map[string]bool)

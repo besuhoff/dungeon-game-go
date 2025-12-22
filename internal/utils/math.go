@@ -2,6 +2,8 @@ package utils
 
 import (
 	"math"
+
+	"github.com/besuhoff/dungeon-game-go/internal/config"
 )
 
 // Collision detection helpers
@@ -98,4 +100,9 @@ func ClosestPointOnLineSegment(ax, ay, bx, by, px, py float64) (float64, float64
 	}
 
 	return ax + abx*t, ay + aby*t
+}
+
+func ChunkXYFromPosition(posX, posY float64) (int, int) {
+	chunkSize := config.ChunkSize
+	return int(math.Floor(posX / chunkSize)), int(math.Floor(posY / chunkSize))
 }

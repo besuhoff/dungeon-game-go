@@ -21,6 +21,7 @@ type Config struct {
 	UseTLS                   bool
 	TLSCert                  string
 	TLSKey                   string
+	EngineDebugMode          bool
 }
 
 var AppConfig *Config
@@ -44,6 +45,11 @@ func LoadConfig() *Config {
 		useTLS = true
 	}
 
+	engineDebugMode := false
+	if debugStr := os.Getenv("ENGINE_DEBUG_MODE"); debugStr == "true" {
+		engineDebugMode = true
+	}
+
 	config := &Config{
 		MongoDBURL:               getEnvOrDefault("MONGODB_URL", ""),
 		SecretKey:                getEnvOrDefault("SECRET_KEY", ""),
@@ -56,6 +62,7 @@ func LoadConfig() *Config {
 		UseTLS:                   useTLS,
 		TLSCert:                  getEnvOrDefault("TLS_CERT", ""),
 		TLSKey:                   getEnvOrDefault("TLS_KEY", ""),
+		EngineDebugMode:          engineDebugMode,
 	}
 
 	// Validate required fields

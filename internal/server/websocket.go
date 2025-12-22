@@ -174,7 +174,7 @@ func (c *WebsocketClient) SendGameState(gameState types.GameState) {
 	}
 }
 
-func (c *WebsocketClient) SendGameStateDelta(delta types.GameStateDelta) {
+func (c *WebsocketClient) SendGameStateDelta(delta *types.GameStateDelta) {
 	protoDelta := protocol.ToProtoGameStateDelta(delta)
 	msg := &protocol.GameMessage{
 		Type: protocol.MessageType_GAME_STATE_DELTA,

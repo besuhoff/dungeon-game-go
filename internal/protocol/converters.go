@@ -173,7 +173,7 @@ func ToProtoGameState(gs types.GameState) *GameStateMessage {
 }
 
 // ToProtoGameStateDelta converts types.GameStateDelta to proto GameStateDelta
-func ToProtoGameStateDelta(delta types.GameStateDelta) *GameStateDeltaMessage {
+func ToProtoGameStateDelta(delta *types.GameStateDelta) *GameStateDeltaMessage {
 	protoUpdatedPlayers := make(map[string]*Player)
 	for k, v := range delta.UpdatedPlayers {
 		protoUpdatedPlayers[k] = ToProtoPlayer(v)
