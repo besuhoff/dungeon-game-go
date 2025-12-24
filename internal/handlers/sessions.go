@@ -104,7 +104,7 @@ func (h *SessionHandler) HandleCreateSession(w http.ResponseWriter, r *http.Requ
 	}
 
 	if req.MaxPlayers == 0 {
-		req.MaxPlayers = 4
+		req.MaxPlayers = 10
 	}
 
 	ctx := context.Background()
@@ -212,8 +212,9 @@ func (h *SessionHandler) HandleJoinSession(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	playerID := user.ID.Hex()
 	if len(session.Players) >= session.MaxPlayers {
-		_, ok := session.Players[user.ID.Hex()]
+		_, ok := session.Players[playerID]
 		// Allow re-joining if already in session
 		if !ok {
 			http.Error(w, "Session is full", http.StatusBadRequest)
@@ -227,9 +228,9 @@ func (h *SessionHandler) HandleJoinSession(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Add player to session
-	if _, ok := session.Players[user.ID.Hex()]; !ok {
-		session.Players[user.ID.Hex()] = db.PlayerState{
-			PlayerID:    user.ID.Hex(),
+	if _, ok := session.Players[playerID]; !ok {
+		session.Players[playerID] = db.PlayerState{
+			PlayerID:    playerID,
 			Name:        user.Username,
 			Position:    db.Position{X: 0, Y: 0, Rotation: 0},
 			Lives:       config.PlayerLives,
@@ -247,12 +248,12 @@ func (h *SessionHandler) HandleJoinSession(w http.ResponseWriter, r *http.Reques
 		}
 	} else {
 		// Player re-joining, respawn if needed
-		playerState := session.Players[user.ID.Hex()]
+		playerState := session.Players[playerID]
 
 		if !playerState.IsAlive {
 			playerState.Respawn()
 
-			session.Players[user.ID.Hex()] = playerState
+			session.Players[playerID] = playerState
 			if err := h.sessionRepo.Update(ctx, session); err != nil {
 				http.Error(w, "Failed to join session", http.StatusInternalServerError)
 				return
