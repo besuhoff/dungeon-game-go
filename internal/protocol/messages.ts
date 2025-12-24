@@ -226,6 +226,23 @@ export interface Bonus {
     pickedUpBy: string;
 }
 /**
+ * @generated from protobuf message protocol.ShopItem
+ */
+export interface ShopItem {
+    /**
+     * @generated from protobuf field: int32 quantity = 1
+     */
+    quantity: number;
+    /**
+     * @generated from protobuf field: int32 pack_size = 2
+     */
+    packSize: number;
+    /**
+     * @generated from protobuf field: int32 price = 3
+     */
+    price: number;
+}
+/**
  * @generated from protobuf message protocol.Shop
  */
 export interface Shop {
@@ -237,6 +254,12 @@ export interface Shop {
      * @generated from protobuf field: protocol.Vector2 position = 2
      */
     position?: Vector2;
+    /**
+     * @generated from protobuf field: map<int32, protocol.ShopItem> inventory = 3
+     */
+    inventory: {
+        [key: number]: ShopItem;
+    };
 }
 /**
  * @generated from protobuf message protocol.InputMessage
@@ -266,6 +289,12 @@ export interface InputMessage {
      * @generated from protobuf field: map<int32, bool> item_key = 6
      */
     itemKey: {
+        [key: number]: boolean;
+    };
+    /**
+     * @generated from protobuf field: map<int32, bool> purchase_item_key = 7
+     */
+    purchaseItemKey: {
         [key: number]: boolean;
     };
 }
@@ -311,6 +340,10 @@ export interface GameStateMessage {
     shops: {
         [key: string]: Shop;
     };
+    /**
+     * @generated from protobuf field: repeated string players_shops = 8
+     */
+    playersShops: string[];
     /**
      * @generated from protobuf field: int64 timestamp = 6
      */
@@ -382,6 +415,10 @@ export interface GameStateDeltaMessage {
      * @generated from protobuf field: repeated string removed_shops = 13
      */
     removedShops: string[];
+    /**
+     * @generated from protobuf field: repeated string players_shops = 14
+     */
+    playersShops: string[];
     /**
      * @generated from protobuf field: int64 timestamp = 11
      */
@@ -1156,16 +1193,81 @@ class Bonus$Type extends MessageType$<Bonus> {
  */
 export const Bonus = new Bonus$Type();
 // @generated message type with reflection information, may provide speed optimized methods
+class ShopItem$Type extends MessageType$<ShopItem> {
+    constructor() {
+        super("protocol.ShopItem", [
+            { no: 1, name: "quantity", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 2, name: "pack_size", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 3, name: "price", kind: "scalar", T: 5 /*ScalarType.INT32*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ShopItem>): ShopItem {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.quantity = 0;
+        message.packSize = 0;
+        message.price = 0;
+        if (value !== undefined)
+            reflectionMergePartial<ShopItem>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ShopItem): ShopItem {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* int32 quantity */ 1:
+                    message.quantity = reader.int32();
+                    break;
+                case /* int32 pack_size */ 2:
+                    message.packSize = reader.int32();
+                    break;
+                case /* int32 price */ 3:
+                    message.price = reader.int32();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ShopItem, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* int32 quantity = 1; */
+        if (message.quantity !== 0)
+            writer.tag(1, WireType.Varint).int32(message.quantity);
+        /* int32 pack_size = 2; */
+        if (message.packSize !== 0)
+            writer.tag(2, WireType.Varint).int32(message.packSize);
+        /* int32 price = 3; */
+        if (message.price !== 0)
+            writer.tag(3, WireType.Varint).int32(message.price);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message protocol.ShopItem
+ */
+export const ShopItem = new ShopItem$Type();
+// @generated message type with reflection information, may provide speed optimized methods
 class Shop$Type extends MessageType$<Shop> {
     constructor() {
         super("protocol.Shop", [
             { no: 1, name: "id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "position", kind: "message", T: () => Vector2 }
+            { no: 2, name: "position", kind: "message", T: () => Vector2 },
+            { no: 3, name: "inventory", kind: "map", K: 5 /*ScalarType.INT32*/, V: { kind: "message", T: () => ShopItem } }
         ]);
     }
     create(value?: PartialMessage<Shop>): Shop {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.id = "";
+        message.inventory = {};
         if (value !== undefined)
             reflectionMergePartial<Shop>(this, message, value);
         return message;
@@ -1181,6 +1283,9 @@ class Shop$Type extends MessageType$<Shop> {
                 case /* protocol.Vector2 position */ 2:
                     message.position = Vector2.internalBinaryRead(reader, reader.uint32(), options, message.position);
                     break;
+                case /* map<int32, protocol.ShopItem> inventory */ 3:
+                    this.binaryReadMap3(message.inventory, reader, options);
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -1192,6 +1297,22 @@ class Shop$Type extends MessageType$<Shop> {
         }
         return message;
     }
+    private binaryReadMap3(map: Shop["inventory"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof Shop["inventory"] | undefined, val: Shop["inventory"][any] | undefined;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case 1:
+                    key = reader.int32();
+                    break;
+                case 2:
+                    val = ShopItem.internalBinaryRead(reader, reader.uint32(), options);
+                    break;
+                default: throw new globalThis.Error("unknown map entry field for protocol.Shop.inventory");
+            }
+        }
+        map[key ?? 0] = val ?? ShopItem.create();
+    }
     internalBinaryWrite(message: Shop, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* string id = 1; */
         if (message.id !== "")
@@ -1199,6 +1320,13 @@ class Shop$Type extends MessageType$<Shop> {
         /* protocol.Vector2 position = 2; */
         if (message.position)
             Vector2.internalBinaryWrite(message.position, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* map<int32, protocol.ShopItem> inventory = 3; */
+        for (let k of globalThis.Object.keys(message.inventory)) {
+            writer.tag(3, WireType.LengthDelimited).fork().tag(1, WireType.Varint).int32(parseInt(k));
+            writer.tag(2, WireType.LengthDelimited).fork();
+            ShopItem.internalBinaryWrite(message.inventory[k as any], writer, options);
+            writer.join().join();
+        }
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1218,7 +1346,8 @@ class InputMessage$Type extends MessageType$<InputMessage> {
             { no: 3, name: "left", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 4, name: "right", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 5, name: "shoot", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
-            { no: 6, name: "item_key", kind: "map", K: 5 /*ScalarType.INT32*/, V: { kind: "scalar", T: 8 /*ScalarType.BOOL*/ } }
+            { no: 6, name: "item_key", kind: "map", K: 5 /*ScalarType.INT32*/, V: { kind: "scalar", T: 8 /*ScalarType.BOOL*/ } },
+            { no: 7, name: "purchase_item_key", kind: "map", K: 5 /*ScalarType.INT32*/, V: { kind: "scalar", T: 8 /*ScalarType.BOOL*/ } }
         ]);
     }
     create(value?: PartialMessage<InputMessage>): InputMessage {
@@ -1229,6 +1358,7 @@ class InputMessage$Type extends MessageType$<InputMessage> {
         message.right = false;
         message.shoot = false;
         message.itemKey = {};
+        message.purchaseItemKey = {};
         if (value !== undefined)
             reflectionMergePartial<InputMessage>(this, message, value);
         return message;
@@ -1255,6 +1385,9 @@ class InputMessage$Type extends MessageType$<InputMessage> {
                     break;
                 case /* map<int32, bool> item_key */ 6:
                     this.binaryReadMap6(message.itemKey, reader, options);
+                    break;
+                case /* map<int32, bool> purchase_item_key */ 7:
+                    this.binaryReadMap7(message.purchaseItemKey, reader, options);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1283,6 +1416,22 @@ class InputMessage$Type extends MessageType$<InputMessage> {
         }
         map[key ?? 0] = val ?? false;
     }
+    private binaryReadMap7(map: InputMessage["purchaseItemKey"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof InputMessage["purchaseItemKey"] | undefined, val: InputMessage["purchaseItemKey"][any] | undefined;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case 1:
+                    key = reader.int32();
+                    break;
+                case 2:
+                    val = reader.bool();
+                    break;
+                default: throw new globalThis.Error("unknown map entry field for protocol.InputMessage.purchase_item_key");
+            }
+        }
+        map[key ?? 0] = val ?? false;
+    }
     internalBinaryWrite(message: InputMessage, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* bool forward = 1; */
         if (message.forward !== false)
@@ -1302,6 +1451,9 @@ class InputMessage$Type extends MessageType$<InputMessage> {
         /* map<int32, bool> item_key = 6; */
         for (let k of globalThis.Object.keys(message.itemKey))
             writer.tag(6, WireType.LengthDelimited).fork().tag(1, WireType.Varint).int32(parseInt(k)).tag(2, WireType.Varint).bool(message.itemKey[k as any]).join();
+        /* map<int32, bool> purchase_item_key = 7; */
+        for (let k of globalThis.Object.keys(message.purchaseItemKey))
+            writer.tag(7, WireType.LengthDelimited).fork().tag(1, WireType.Varint).int32(parseInt(k)).tag(2, WireType.Varint).bool(message.purchaseItemKey[k as any]).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1322,6 +1474,7 @@ class GameStateMessage$Type extends MessageType$<GameStateMessage> {
             { no: 4, name: "enemies", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Enemy } },
             { no: 5, name: "bonuses", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Bonus } },
             { no: 7, name: "shops", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Shop } },
+            { no: 8, name: "players_shops", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 6, name: "timestamp", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ }
         ]);
     }
@@ -1333,6 +1486,7 @@ class GameStateMessage$Type extends MessageType$<GameStateMessage> {
         message.enemies = {};
         message.bonuses = {};
         message.shops = {};
+        message.playersShops = [];
         message.timestamp = 0n;
         if (value !== undefined)
             reflectionMergePartial<GameStateMessage>(this, message, value);
@@ -1360,6 +1514,9 @@ class GameStateMessage$Type extends MessageType$<GameStateMessage> {
                     break;
                 case /* map<string, protocol.Shop> shops */ 7:
                     this.binaryReadMap7(message.shops, reader, options);
+                    break;
+                case /* repeated string players_shops */ 8:
+                    message.playersShops.push(reader.string());
                     break;
                 case /* int64 timestamp */ 6:
                     message.timestamp = reader.int64().toBigInt();
@@ -1517,6 +1674,9 @@ class GameStateMessage$Type extends MessageType$<GameStateMessage> {
             Shop.internalBinaryWrite(message.shops[k], writer, options);
             writer.join().join();
         }
+        /* repeated string players_shops = 8; */
+        for (let i = 0; i < message.playersShops.length; i++)
+            writer.tag(8, WireType.LengthDelimited).string(message.playersShops[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1543,6 +1703,7 @@ class GameStateDeltaMessage$Type extends MessageType$<GameStateDeltaMessage> {
             { no: 10, name: "removed_bonuses", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 12, name: "updated_shops", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Shop } },
             { no: 13, name: "removed_shops", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 14, name: "players_shops", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 11, name: "timestamp", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ }
         ]);
     }
@@ -1560,6 +1721,7 @@ class GameStateDeltaMessage$Type extends MessageType$<GameStateDeltaMessage> {
         message.removedBonuses = [];
         message.updatedShops = {};
         message.removedShops = [];
+        message.playersShops = [];
         message.timestamp = 0n;
         if (value !== undefined)
             reflectionMergePartial<GameStateDeltaMessage>(this, message, value);
@@ -1605,6 +1767,9 @@ class GameStateDeltaMessage$Type extends MessageType$<GameStateDeltaMessage> {
                     break;
                 case /* repeated string removed_shops */ 13:
                     message.removedShops.push(reader.string());
+                    break;
+                case /* repeated string players_shops */ 14:
+                    message.playersShops.push(reader.string());
                     break;
                 case /* int64 timestamp */ 11:
                     message.timestamp = reader.int64().toBigInt();
@@ -1800,6 +1965,9 @@ class GameStateDeltaMessage$Type extends MessageType$<GameStateDeltaMessage> {
         /* repeated string removed_shops = 13; */
         for (let i = 0; i < message.removedShops.length; i++)
             writer.tag(13, WireType.LengthDelimited).string(message.removedShops[i]);
+        /* repeated string players_shops = 14; */
+        for (let i = 0; i < message.playersShops.length; i++)
+            writer.tag(14, WireType.LengthDelimited).string(message.playersShops[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

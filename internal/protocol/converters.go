@@ -123,10 +123,22 @@ func ToProtoShop(s *types.Shop) *Shop {
 	if s == nil {
 		return nil
 	}
-	return &Shop{
+	shop := &Shop{
 		Id:       s.ID,
 		Position: ToProtoVector2(s.Position),
 	}
+
+	inventory := make(map[int32]*ShopItem)
+	for itemID, item := range s.Inventory {
+		inventory[int32(itemID)] = &ShopItem{
+			Quantity: int32(item.Quantity),
+			PackSize: int32(item.PackSize),
+			Price:    int32(item.Price),
+		}
+	}
+	shop.Inventory = inventory
+
+	return shop
 }
 
 // ToProtoGameState converts types.GameState to proto GameState
@@ -162,13 +174,14 @@ func ToProtoGameState(gs types.GameState) *GameStateMessage {
 	}
 
 	return &GameStateMessage{
-		Players:   protoPlayers,
-		Bullets:   protoBullets,
-		Walls:     protoWalls,
-		Enemies:   protoEnemies,
-		Bonuses:   protoBonuses,
-		Shops:     protoShops,
-		Timestamp: gs.Timestamp,
+		Players:      protoPlayers,
+		Bullets:      protoBullets,
+		Walls:        protoWalls,
+		Enemies:      protoEnemies,
+		Bonuses:      protoBonuses,
+		Shops:        protoShops,
+		PlayersShops: gs.PlayersShops,
+		Timestamp:    gs.Timestamp,
 	}
 }
 
@@ -222,6 +235,7 @@ func ToProtoGameStateDelta(delta *types.GameStateDelta) *GameStateDeltaMessage {
 		RemovedBonuses: delta.RemovedBonuses,
 		UpdatedShops:   protoUpdatedShops,
 		RemovedShops:   delta.RemovedShops,
+		PlayersShops:   delta.PlayersShops,
 		Timestamp:      delta.Timestamp,
 	}
 }
@@ -232,11 +246,12 @@ func FromProtoInput(input *InputMessage) types.InputPayload {
 		return types.InputPayload{}
 	}
 	return types.InputPayload{
-		Forward:  input.Forward,
-		Backward: input.Backward,
-		Left:     input.Left,
-		Right:    input.Right,
-		Shoot:    input.Shoot,
-		ItemKey:  input.ItemKey,
+		Forward:         input.Forward,
+		Backward:        input.Backward,
+		Left:            input.Left,
+		Right:           input.Right,
+		Shoot:           input.Shoot,
+		ItemKey:         input.ItemKey,
+		PurchaseItemKey: input.PurchaseItemKey,
 	}
 }

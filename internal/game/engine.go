@@ -21,7 +21,7 @@ type EngineGameState struct {
 	wallsByChunk   map[string]map[string]*types.Wall
 	enemiesByChunk map[string]map[string]*types.Enemy
 	bonuses        map[string]*types.Bonus
-	shops          map[string]*types.Shop
+	shopsByChunk   map[string]map[string]*types.Shop
 }
 
 type UpdateTimeStats struct {
@@ -66,10 +66,11 @@ type Engine struct {
 	respawnQueue map[string]bool // Players to respawn
 
 	// Previous state for delta computation
-	prevState          map[string]*EngineGameState
-	lastUpdate         time.Time
-	playerInputState   map[string]*types.InputPayload
-	itemsToUseByPlayer map[string][]types.InventoryItemID
+	prevState               map[string]*EngineGameState
+	lastUpdate              time.Time
+	playerInputState        map[string]*types.InputPayload
+	itemsToUseByPlayer      map[string][]types.InventoryItemID
+	itemsToPurchaseByPlayer map[string][]types.InventoryItemID
 
 	stats     *EngineStats
 	debugMode bool
@@ -85,14 +86,15 @@ func NewEngine(sessionID string) *Engine {
 			wallsByChunk:   make(map[string]map[string]*types.Wall),
 			enemiesByChunk: make(map[string]map[string]*types.Enemy),
 			bonuses:        make(map[string]*types.Bonus),
-			shops:          make(map[string]*types.Shop),
+			shopsByChunk:   make(map[string]map[string]*types.Shop),
 		},
-		playerInputState:   make(map[string]*types.InputPayload),
-		itemsToUseByPlayer: make(map[string][]types.InventoryItemID),
-		chunkHash:          make(map[string]bool),
-		respawnQueue:       make(map[string]bool),
-		prevState:          make(map[string]*EngineGameState),
-		lastUpdate:         time.Now(),
+		playerInputState:        make(map[string]*types.InputPayload),
+		itemsToUseByPlayer:      make(map[string][]types.InventoryItemID),
+		itemsToPurchaseByPlayer: make(map[string][]types.InventoryItemID),
+		chunkHash:               make(map[string]bool),
+		respawnQueue:            make(map[string]bool),
+		prevState:               make(map[string]*EngineGameState),
+		lastUpdate:              time.Now(),
 		stats: &EngineStats{
 			Frequency: time.Second * 1,
 		},
@@ -139,6 +141,7 @@ func (e *Engine) AddPlayer(id, username string) *types.Player {
 
 	e.prevState[id] = &EngineGameState{}
 	e.itemsToUseByPlayer[id] = []types.InventoryItemID{}
+	e.itemsToPurchaseByPlayer[id] = []types.InventoryItemID{}
 	// Generate initial walls and enemies around player
 	e.generateInitialWorld(player.Position)
 
@@ -167,6 +170,7 @@ func (e *Engine) generateChunk(chunkX, chunkY int, playerPos *types.Vector2) {
 	e.chunkHash[chunkKey] = true
 	e.state.wallsByChunk[chunkKey] = make(map[string]*types.Wall)
 	e.state.enemiesByChunk[chunkKey] = make(map[string]*types.Enemy)
+	e.state.shopsByChunk[chunkKey] = make(map[string]*types.Shop)
 
 	chunkStartX := float64(chunkX) * config.ChunkSize
 	chunkStartY := float64(chunkY) * config.ChunkSize
@@ -174,6 +178,15 @@ func (e *Engine) generateChunk(chunkX, chunkY int, playerPos *types.Vector2) {
 	// Randomly generate walls
 	crowdednessFactor := config.MinWallsPerKiloPixel * math.Pow(config.ChunkSize/1000.0, 2)
 	numWalls := rand.Intn(int(crowdednessFactor)+1) + int(crowdednessFactor)
+
+	chunkCenter := &types.Vector2{
+		X: chunkStartX + config.ChunkSize/2,
+		Y: chunkStartY + config.ChunkSize/2,
+	}
+	shop := types.GenerateShop(chunkCenter)
+	log.Printf("Generated shop %+v at chunk %s", shop, chunkKey)
+
+	e.state.shopsByChunk[chunkKey][shop.ID] = shop
 
 	for i := 0; i < numWalls; i++ {
 		// Random orientation
@@ -364,6 +377,7 @@ func (e *Engine) RemovePlayer(id string) {
 	delete(e.playerInputState, id)
 	delete(e.respawnQueue, id)
 	delete(e.itemsToUseByPlayer, id)
+	delete(e.itemsToPurchaseByPlayer, id)
 }
 
 // UpdatePlayerInput updates player movement and rotation based on input
@@ -376,6 +390,12 @@ func (e *Engine) UpdatePlayerInput(playerID string, input types.InputPayload) {
 		for i := range prevInput.ItemKey {
 			if !input.ItemKey[i] {
 				e.itemsToUseByPlayer[playerID] = append(e.itemsToUseByPlayer[playerID], types.InventoryItemID(i))
+			}
+		}
+
+		for i := range prevInput.PurchaseItemKey {
+			if !input.PurchaseItemKey[i] {
+				e.itemsToPurchaseByPlayer[playerID] = append(e.itemsToPurchaseByPlayer[playerID], types.InventoryItemID(i))
 			}
 		}
 	}
@@ -397,14 +417,6 @@ func (e *Engine) updatePreviousState(playerID string) {
 
 	prevState := e.prevState[playerID]
 
-	prevState.shops = make(map[string]*types.Shop)
-	for id, shop := range e.state.shops {
-		if !shop.IsVisibleToPlayer(player) {
-			continue
-		}
-		prevState.shops[id] = shop.Clone()
-	}
-
 	// Save objects to previous state for delta computation
 	prevState.players = make(map[string]*types.Player)
 	for id, p := range e.state.players {
@@ -415,6 +427,7 @@ func (e *Engine) updatePreviousState(playerID string) {
 		prevState.players[id] = p.Clone()
 	}
 
+	prevState.shopsByChunk = make(map[string]map[string]*types.Shop)
 	prevState.wallsByChunk = make(map[string]map[string]*types.Wall)
 	prevState.enemiesByChunk = make(map[string]map[string]*types.Enemy)
 	for neighborChunkX := playerChunkX - 1; neighborChunkX <= playerChunkX+1; neighborChunkX++ {
@@ -425,6 +438,7 @@ func (e *Engine) updatePreviousState(playerID string) {
 			}
 			prevState.wallsByChunk[chunkKey] = make(map[string]*types.Wall)
 			prevState.enemiesByChunk[chunkKey] = make(map[string]*types.Enemy)
+			prevState.shopsByChunk[chunkKey] = make(map[string]*types.Shop)
 
 			for _, w := range e.state.wallsByChunk[chunkKey] {
 				if !w.IsVisibleToPlayer(player) {
@@ -438,6 +452,13 @@ func (e *Engine) updatePreviousState(playerID string) {
 					continue
 				}
 				prevState.enemiesByChunk[chunkKey][enemy.ID] = enemy.Clone()
+			}
+
+			for _, shop := range e.state.shopsByChunk[chunkKey] {
+				if !shop.IsVisibleToPlayer(player) {
+					continue
+				}
+				prevState.shopsByChunk[chunkKey][shop.ID] = shop.Clone()
 			}
 		}
 	}
@@ -487,33 +508,6 @@ func (e *Engine) Update() {
 
 		playerChunkX, playerChunkY := utils.ChunkXYFromPosition(player.Position.X, player.Position.Y)
 
-		if e.sessionID == "69430c0336991100bdedceb9" {
-			if !player.HasInventoryItem(types.InventoryItemRailgun) {
-				player.AddInventoryItem(types.InventoryItemRailgun, 1)
-			}
-			if !player.HasInventoryItem(types.InventoryItemRailgunAmmo) {
-				player.AddInventoryItem(types.InventoryItemRailgunAmmo, 10)
-			}
-			if !player.HasInventoryItem(types.InventoryItemShotgun) {
-				player.AddInventoryItem(types.InventoryItemShotgun, 1)
-			}
-			if !player.HasInventoryItem(types.InventoryItemShotgunAmmo) {
-				player.AddInventoryItem(types.InventoryItemShotgunAmmo, 10)
-			}
-			if !player.HasInventoryItem(types.InventoryItemRocketLauncher) {
-				player.AddInventoryItem(types.InventoryItemRocketLauncher, 1)
-			}
-			if !player.HasInventoryItem(types.InventoryItemRockets) {
-				player.AddInventoryItem(types.InventoryItemRockets, 10)
-			}
-			if !player.HasInventoryItem(types.InventoryItemAidKit) {
-				player.AddInventoryItem(types.InventoryItemAidKit, 10)
-			}
-			if !player.HasInventoryItem(types.InventoryItemGoggles) {
-				player.AddInventoryItem(types.InventoryItemGoggles, 10)
-			}
-		}
-
 		// Update timers
 		if player.InvulnerableTimer > 0 {
 			player.InvulnerableTimer = math.Max(0, player.InvulnerableTimer-deltaTime)
@@ -541,6 +535,24 @@ func (e *Engine) Update() {
 			}
 		}
 		e.itemsToUseByPlayer[player.ID] = []types.InventoryItemID{}
+
+		var playersShop *types.Shop
+		// Check if player is in shop
+		chunkKey := fmt.Sprintf("%d,%d", playerChunkX, playerChunkY)
+		for _, shop := range e.state.shopsByChunk[chunkKey] {
+			if shop.IsPlayerInShop(player) {
+				playersShop = shop
+				break
+			}
+		}
+
+		itemsToPurchase := e.itemsToPurchaseByPlayer[player.ID]
+		for _, itemID := range itemsToPurchase {
+			if playersShop != nil {
+				playersShop.PurchaseInventoryItem(player, itemID)
+			}
+		}
+		e.itemsToPurchaseByPlayer[player.ID] = []types.InventoryItemID{}
 
 		input, inputExists := e.playerInputState[player.ID]
 		if inputExists {
@@ -1423,6 +1435,7 @@ func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
 			Walls:     make(map[string]*types.Wall),
 			Enemies:   make(map[string]*types.Enemy),
 			Bonuses:   make(map[string]*types.Bonus),
+			Shops:     make(map[string]*types.Shop),
 			Timestamp: time.Now().UnixMilli(),
 		}
 	}
@@ -1467,20 +1480,28 @@ func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
 		}
 	}
 
+	playersShops := []string{}
 	shopsCopy := make(map[string]*types.Shop)
-	for k, v := range e.state.shops {
-		if v.IsVisibleToPlayer(player) {
-			shopsCopy[k] = v.Clone()
+	for _, shops := range e.state.shopsByChunk {
+		for k, v := range shops {
+			if v.IsVisibleToPlayer(player) {
+				shopsCopy[k] = v.Clone()
+				if v.IsPlayerInShop(player) {
+					playersShops = append(playersShops, k)
+				}
+			}
 		}
 	}
 
 	return types.GameState{
-		Players:   playersCopy,
-		Bullets:   bulletsCopy,
-		Walls:     wallsCopy,
-		Enemies:   enemiesCopy,
-		Bonuses:   bonusesCopy,
-		Timestamp: time.Now().UnixMilli(),
+		Players:      playersCopy,
+		Bullets:      bulletsCopy,
+		Walls:        wallsCopy,
+		Enemies:      enemiesCopy,
+		Bonuses:      bonusesCopy,
+		Shops:        shopsCopy,
+		PlayersShops: playersShops,
+		Timestamp:    time.Now().UnixMilli(),
 	}
 }
 
@@ -1505,6 +1526,8 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 			UpdatedEnemies: make(map[string]*types.Enemy),
 			RemovedEnemies: make([]string, 0),
 			UpdatedBonuses: make(map[string]*types.Bonus),
+			UpdatedShops:   make(map[string]*types.Shop),
+			RemovedShops:   make([]string, 0),
 			Timestamp:      time.Now().UnixMilli(),
 		}
 	}
@@ -1599,6 +1622,26 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 					delete(prevState.wallsByChunk[neighborChunkKey], id)
 				}
 			}
+
+			for id, shop := range e.state.shopsByChunk[neighborChunkKey] {
+				currentVisible := shop.IsVisibleToPlayer(player)
+				prev, existsInPrev := prevState.shopsByChunk[neighborChunkKey][id]
+
+				if currentVisible && shop.IsPlayerInShop(player) {
+					delta.PlayersShops = append(delta.PlayersShops, id)
+				}
+
+				if currentVisible && !types.ShopsEqual(prev, shop) {
+					delta.UpdatedShops[id] = shop.Clone()
+				}
+
+				if existsInPrev {
+					if !currentVisible {
+						delta.RemovedShops = append(delta.RemovedShops, id)
+					}
+					delete(prevState.shopsByChunk[neighborChunkKey], id)
+				}
+			}
 		}
 	}
 
@@ -1613,6 +1656,13 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 	for _, walls := range prevState.wallsByChunk {
 		for id := range walls {
 			delta.RemovedWalls = append(delta.RemovedWalls, id)
+		}
+	}
+
+	// Check for removed shops that were in visible chunks
+	for _, shops := range prevState.shopsByChunk {
+		for id := range shops {
+			delta.RemovedShops = append(delta.RemovedShops, id)
 		}
 	}
 
@@ -1631,22 +1681,6 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 		current, exists := e.state.bonuses[id]
 		if !exists || !current.IsVisibleToPlayer(player) {
 			delta.RemovedBonuses = append(delta.RemovedBonuses, id)
-		}
-	}
-
-	for id, shop := range e.state.shops {
-		if shop.IsVisibleToPlayer(player) {
-			if _, exists := prevState.shops[id]; !exists {
-				delta.UpdatedShops[id] = shop.Clone()
-			}
-		}
-	}
-
-	// Check for removed shops that were in visible chunks
-	for id := range prevState.shops {
-		current, exists := e.state.shops[id]
-		if !exists || !current.IsVisibleToPlayer(player) {
-			delta.RemovedShops = append(delta.RemovedShops, id)
 		}
 	}
 

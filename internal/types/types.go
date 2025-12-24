@@ -8,13 +8,14 @@ import (
 
 // GameState represents the current state of the game
 type GameState struct {
-	Players   map[string]*Player `json:"players"`
-	Bullets   map[string]*Bullet `json:"bullets"`
-	Walls     map[string]*Wall   `json:"walls"`
-	Enemies   map[string]*Enemy  `json:"enemies"`
-	Bonuses   map[string]*Bonus  `json:"bonuses"`
-	Shops     map[string]*Shop   `json:"shops"`
-	Timestamp int64              `json:"timestamp"`
+	Players      map[string]*Player `json:"players"`
+	Bullets      map[string]*Bullet `json:"bullets"`
+	Walls        map[string]*Wall   `json:"walls"`
+	Enemies      map[string]*Enemy  `json:"enemies"`
+	Bonuses      map[string]*Bonus  `json:"bonuses"`
+	Shops        map[string]*Shop   `json:"shops"`
+	PlayersShops []string           `json:"players_shops,omitempty"`
+	Timestamp    int64              `json:"timestamp"`
 }
 
 // GameStateDelta represents changes to the game state
@@ -37,6 +38,8 @@ type GameStateDelta struct {
 	UpdatedShops map[string]*Shop `json:"updatedShops,omitempty"`
 	RemovedShops []string         `json:"removedShops,omitempty"`
 
+	PlayersShops []string `json:"playersShops,omitempty"`
+
 	Timestamp int64 `json:"timestamp"`
 }
 
@@ -51,12 +54,13 @@ func (d *GameStateDelta) IsEmpty() bool {
 
 // InputPayload for player input
 type InputPayload struct {
-	Forward  bool           `json:"forward"`
-	Backward bool           `json:"backward"`
-	Left     bool           `json:"left"`
-	Right    bool           `json:"right"`
-	Shoot    bool           `json:"shoot"`
-	ItemKey  map[int32]bool `json:"item_key,omitempty"`
+	Forward         bool           `json:"forward"`
+	Backward        bool           `json:"backward"`
+	Left            bool           `json:"left"`
+	Right           bool           `json:"right"`
+	Shoot           bool           `json:"shoot"`
+	ItemKey         map[int32]bool `json:"item_key,omitempty"`
+	PurchaseItemKey map[int32]bool `json:"purchase_item_key,omitempty"`
 }
 
 type CollisionObject struct {
@@ -74,7 +78,7 @@ const (
 	InventoryItemRailgun        InventoryItemID = 4
 
 	InventoryItemShotgunAmmo InventoryItemID = 22
-	InventoryItemRockets     InventoryItemID = 23
+	InventoryItemRocket      InventoryItemID = 23
 	InventoryItemRailgunAmmo InventoryItemID = 24
 
 	InventoryItemGoggles InventoryItemID = 7
@@ -97,7 +101,7 @@ var WeaponTypeByInventoryItem = map[InventoryItemID]string{
 
 var InventoryAmmoIDByWeaponType = map[string]InventoryItemID{
 	WeaponTypeShotgun:        InventoryItemShotgunAmmo,
-	WeaponTypeRocketLauncher: InventoryItemRockets,
+	WeaponTypeRocketLauncher: InventoryItemRocket,
 	WeaponTypeRailgun:        InventoryItemRailgunAmmo,
 }
 
@@ -128,4 +132,22 @@ var DamageByWeaponType = map[string]float32{
 var BulletLifetimeByWeaponType = map[string]time.Duration{
 	WeaponTypeBlaster:        config.BlasterBulletLifetime,
 	WeaponTypeRocketLauncher: config.RocketLauncherBulletLifetime,
+}
+
+var ShopItemPrice = map[InventoryItemID]int{
+	InventoryItemBlaster:        0,
+	InventoryItemShotgun:        500,
+	InventoryItemRocketLauncher: 1500,
+	InventoryItemRailgun:        2000,
+	InventoryItemShotgunAmmo:    50,
+	InventoryItemRocket:         100,
+	InventoryItemRailgunAmmo:    150,
+	InventoryItemGoggles:        300,
+	InventoryItemAidKit:         100,
+}
+
+var ShopItemPackSize = map[InventoryItemID]int{
+	InventoryItemShotgunAmmo: 10,
+	InventoryItemRocket:      5,
+	InventoryItemRailgunAmmo: 10,
 }

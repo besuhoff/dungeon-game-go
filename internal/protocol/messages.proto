@@ -82,9 +82,16 @@ message Bonus {
   string picked_up_by = 4;
 }
 
+message ShopItem {
+  int32 quantity = 1;
+  int32 pack_size = 2;
+  int32 price = 3;
+}
+
 message Shop {
   string id = 1;
   Vector2 position = 2;
+  map<int32, ShopItem> inventory = 3; 
 }
 
 message InputMessage {
@@ -94,6 +101,7 @@ message InputMessage {
   bool right = 4;
   bool shoot = 5;
   map<int32, bool> item_key = 6;
+  map<int32, bool> purchase_item_key = 7;
 }
 
 // Server -> Client messages
@@ -104,6 +112,7 @@ message GameStateMessage {
   map<string, Enemy> enemies = 4;
   map<string, Bonus> bonuses = 5;
   map<string, Shop> shops = 7;
+  repeated string players_shops = 8;
   int64 timestamp = 6;
 }
 
@@ -125,6 +134,8 @@ message GameStateDeltaMessage {
 
   map<string, Shop> updated_shops = 12;
   repeated string removed_shops = 13;
+
+  repeated string players_shops = 14;
   
   int64 timestamp = 11;
 }

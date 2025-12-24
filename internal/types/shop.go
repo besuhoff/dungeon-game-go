@@ -1,10 +1,121 @@
 package types
 
-import "github.com/besuhoff/dungeon-game-go/internal/config"
+import (
+	"math"
+	"math/rand"
+
+	"github.com/besuhoff/dungeon-game-go/internal/config"
+	"github.com/google/uuid"
+)
+
+type ShopInventoryItem struct {
+	Price    int
+	PackSize int
+	Quantity int
+}
 
 // Shop represents a shop object in the game
 type Shop struct {
 	ScreenObject
+
+	Inventory map[InventoryItemID]*ShopInventoryItem
+}
+
+func GenerateShop(position *Vector2) *Shop {
+	shop := &Shop{
+		ScreenObject: ScreenObject{
+			ID:       uuid.New().String(),
+			Position: position,
+		},
+		Inventory: make(map[InventoryItemID]*ShopInventoryItem),
+	}
+
+	weaponItems := []InventoryItemID{InventoryItemShotgun, InventoryItemRocketLauncher, InventoryItemRailgun}
+	ammoItems := []InventoryItemID{InventoryItemShotgunAmmo, InventoryItemRocket, InventoryItemRailgunAmmo}
+
+	for _, itemID := range weaponItems {
+		if rand.Float64() < 0.5 {
+			continue
+		}
+
+		shop.Inventory[itemID] = &ShopInventoryItem{
+			Price:    ShopItemPrice[itemID],
+			PackSize: 1,
+			Quantity: 2 + rand.Intn(3),
+		}
+	}
+
+	for _, itemID := range ammoItems {
+		if rand.Float64() < 0.5 {
+			continue
+		}
+
+		packSize, exists := ShopItemPackSize[itemID]
+		if !exists {
+			packSize = 1
+		}
+
+		quantity := 2 + rand.Intn(3)
+
+		shop.Inventory[itemID] = &ShopInventoryItem{
+			Price:    ShopItemPrice[itemID],
+			PackSize: packSize,
+			Quantity: quantity,
+		}
+	}
+
+	if rand.Float64() > 0.5 {
+		shop.Inventory[InventoryItemAidKit] = &ShopInventoryItem{
+			Price:    ShopItemPrice[InventoryItemAidKit],
+			PackSize: 1,
+			Quantity: 2 + rand.Intn(3),
+		}
+	}
+
+	if rand.Float64() > 0.2 {
+		shop.Inventory[InventoryItemGoggles] = &ShopInventoryItem{
+			Price:    ShopItemPrice[InventoryItemGoggles],
+			PackSize: 1,
+			Quantity: 1 + rand.Intn(2),
+		}
+	}
+
+	return shop
+}
+
+func ShopsEqual(s *Shop, other *Shop) bool {
+	if s == nil && other == nil {
+		return true
+	}
+	if s == nil || other == nil {
+		return false
+	}
+	return s.Equal(other)
+}
+
+func (s *Shop) Equal(other *Shop) bool {
+	if s.Position.X != other.Position.X || s.Position.Y == other.Position.Y {
+		return false
+	}
+
+	if len(s.Inventory) != len(other.Inventory) {
+		return false
+	}
+
+	for itemID, item := range s.Inventory {
+		otherItem, exists := other.Inventory[itemID]
+		if !exists || item.Price != otherItem.Price || item.Quantity != otherItem.Quantity || item.PackSize != otherItem.PackSize {
+			return false
+		}
+	}
+
+	for itemID := range other.Inventory {
+		if _, exists := s.Inventory[itemID]; !exists {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (s *Shop) IsVisibleToPlayer(player *Player) bool {
@@ -20,5 +131,44 @@ func (s *Shop) IsVisibleToPlayer(player *Player) bool {
 func (s *Shop) Clone() *Shop {
 	clone := *s
 	clone.Position = &Vector2{X: s.Position.X, Y: s.Position.Y}
+	clone.Inventory = make(map[InventoryItemID]*ShopInventoryItem)
+	for k, v := range s.Inventory {
+		cloneItem := *v
+		clone.Inventory[k] = &cloneItem
+	}
+
 	return &clone
+}
+
+func (s *Shop) PurchaseInventoryItem(player *Player, itemID InventoryItemID) bool {
+	item, exists := s.Inventory[itemID]
+	if !exists || item.Quantity <= 0 {
+		return false
+	}
+
+	// Prevent purchasing duplicate weapons
+	_, exists = WeaponTypeByInventoryItem[itemID]
+	if exists && player.HasInventoryItem(itemID) {
+		return false
+	}
+
+	packPrice := item.Price * item.PackSize
+
+	if player.Money < packPrice {
+		return false
+	}
+
+	// Deduct money from player
+	player.Money -= packPrice
+
+	// Add item to player's inventory
+	player.AddInventoryItem(itemID, int32(item.PackSize))
+
+	// Decrease shop inventory quantity
+	item.Quantity--
+	return true
+}
+
+func (s *Shop) IsPlayerInShop(player *Player) bool {
+	return s.DistanceToPoint(player.Position) <= config.ShopSize*math.Sqrt2/2+config.PlayerRadius
 }

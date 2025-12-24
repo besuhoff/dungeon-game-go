@@ -104,7 +104,35 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 					Position: &types.Vector2{X: obj.X, Y: obj.Y},
 				},
 			}
-			e.state.shops[id] = shop
+			// Parse inventory from properties
+			if inventory, ok := obj.Properties["inventory"].(map[string]interface{}); ok {
+				shop.Inventory = make(map[types.InventoryItemID]*types.ShopInventoryItem)
+				for itemIDStr, itemData := range inventory {
+					var itemID types.InventoryItemID
+					fmt.Sscanf(itemIDStr, "%d", &itemID)
+					if itemMap, ok := itemData.(map[string]interface{}); ok {
+						item := &types.ShopInventoryItem{}
+						if price, ok := itemMap["price"].(int32); ok {
+							item.Price = int(price)
+						}
+						if quantity, ok := itemMap["quantity"].(int32); ok {
+							item.Quantity = int(quantity)
+						}
+						if packSize, ok := itemMap["pack_size"].(int32); ok {
+							item.PackSize = int(packSize)
+						}
+						shop.Inventory[itemID] = item
+					}
+				}
+			}
+
+			chunkX, chunkY := utils.ChunkXYFromPosition(shop.Position.X, shop.Position.Y)
+			chunkKey := fmt.Sprintf("%d,%d", chunkX, chunkY)
+			if _, exists := e.state.shopsByChunk[chunkKey]; !exists {
+				e.state.shopsByChunk[chunkKey] = make(map[string]*types.Shop)
+			}
+
+			e.state.shopsByChunk[chunkKey][id] = shop
 		}
 	}
 
@@ -235,6 +263,30 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 		}
 	}
 
+	// Save shops
+	for _, shops := range e.state.shopsByChunk {
+		for id, shop := range shops {
+			inventoryProps := make(map[string]interface{})
+			for itemID, item := range shop.Inventory {
+				inventoryProps[fmt.Sprintf("%d", itemID)] = map[string]interface{}{
+					"price":     item.Price,
+					"quantity":  item.Quantity,
+					"pack_size": item.PackSize,
+				}
+			}
+
+			session.SharedObjects[id] = db.WorldObject{
+				ObjectID: id,
+				Type:     "shop",
+				X:        shop.Position.X,
+				Y:        shop.Position.Y,
+				Properties: map[string]interface{}{
+					"inventory": inventoryProps,
+				},
+			}
+		}
+	}
+
 	// Save bonuses
 	for id, bonus := range e.state.bonuses {
 		if bonus.PickedUpBy != "" {
@@ -249,16 +301,6 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 			Properties: map[string]interface{}{
 				"bonus_type": bonus.Type,
 			},
-		}
-	}
-
-	// Save shops
-	for id, shop := range e.state.shops {
-		session.SharedObjects[id] = db.WorldObject{
-			ObjectID: id,
-			Type:     "shop",
-			X:        shop.Position.X,
-			Y:        shop.Position.Y,
 		}
 	}
 
@@ -287,7 +329,7 @@ func (e *Engine) Clear() {
 	e.state.wallsByChunk = make(map[string]map[string]*types.Wall)
 	e.state.enemiesByChunk = make(map[string]map[string]*types.Enemy)
 	e.state.bonuses = make(map[string]*types.Bonus)
-	e.state.shops = make(map[string]*types.Shop)
+	e.state.shopsByChunk = make(map[string]map[string]*types.Shop)
 	e.chunkHash = make(map[string]bool)
 	e.prevState = make(map[string]*EngineGameState)
 }
