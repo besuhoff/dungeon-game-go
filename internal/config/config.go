@@ -160,6 +160,7 @@ const (
 	AidKitHealAmount  = 1.0
 	GogglesSize       = 32.0
 	GogglesActiveTime = 20.0 // Seconds
+	ChestSize         = 32.0
 
 	// World constants
 	ChunkSize            = 2000.0
@@ -176,4 +177,23 @@ const (
 	SessionSaveInterval      = 5 * time.Minute
 	DeadEntitiesCacheTimeout = 5 * time.Second
 	GameLoopInterval         = time.Second / 30
+
+	// Shop constants
+	ShopAmmoProbability = 0.7
+	ShopAmmoMinQuantity = 10
+	ShopAmmoMaxQuantity = 20
+
+	ShopWeaponProbability = 0.7
+	ShopWeaponMinQuantity = 2
+	ShopWeaponMaxQuantity = 5
+
+	ShopAidKitProbability = 0.5
+	ShopAidKitMinQuantity = 10
+	ShopAidKitMaxQuantity = 20
+
+	ShopGogglesProbability = 0.3
+	ShopGogglesMinQuantity = 3
+	ShopGogglesMaxQuantity = 6
+
+	GameVersion = "1.1.0"
 )

@@ -110,6 +110,7 @@ func ToProtoBonus(b *types.Bonus) *Bonus {
 	if b == nil {
 		return nil
 	}
+
 	return &Bonus{
 		Id:         b.ID,
 		Position:   ToProtoVector2(b.Position),
@@ -126,6 +127,7 @@ func ToProtoShop(s *types.Shop) *Shop {
 	shop := &Shop{
 		Id:       s.ID,
 		Position: ToProtoVector2(s.Position),
+		Name:     s.Name,
 	}
 
 	inventory := make(map[int32]*ShopItem)

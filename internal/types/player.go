@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/besuhoff/dungeon-game-go/internal/config"
+	"github.com/google/uuid"
 )
 
 type InventoryItem struct {
@@ -92,7 +93,7 @@ func (p *Player) Clone() *Player {
 	return &clone
 }
 
-func (p *Player) Respawn() bool {
+func (p *Player) Respawn(spawnPoint *Vector2) bool {
 	if p.IsAlive {
 		return false
 	}
@@ -102,6 +103,7 @@ func (p *Player) Respawn() bool {
 	p.BulletsLeftByWeaponType = map[string]int32{
 		WeaponTypeBlaster: config.BlasterMaxBullets,
 	}
+	p.Position = &Vector2{X: spawnPoint.X, Y: spawnPoint.Y}
 	p.InvulnerableTimer = config.PlayerSpawnInvulnerabilityTime
 	p.NightVisionTimer = 0
 	p.Kills = 0
@@ -266,4 +268,71 @@ func (p *Player) SelectGunType(itemID InventoryItemID) bool {
 		return true
 	}
 	return false
+}
+
+func (p *Player) Die() {
+	p.IsAlive = false
+	p.Lives = 0
+}
+
+func (p *Player) DropInventory() *Bonus {
+	if len(p.Inventory) == 0 && p.Money == 0 {
+		return nil
+	}
+
+	if len(p.Inventory) == 1 && p.Inventory[0].Type == InventoryItemBlaster && p.Money == 0 {
+		return nil
+	}
+
+	bonus := &Bonus{
+		ScreenObject: ScreenObject{
+			ID:       uuid.New().String(),
+			Position: &Vector2{X: p.Position.X, Y: p.Position.Y},
+		},
+		Type:      "chest",
+		Inventory: make([]InventoryItem, len(p.Inventory)),
+	}
+
+	for i, item := range p.Inventory {
+		if item.Type == InventoryItemBlaster {
+			continue
+		}
+		bonus.Inventory[i] = item
+	}
+
+	if p.Money > 0 {
+		bonus.Inventory = append(bonus.Inventory, InventoryItem{
+			Type:     InventoryItemMoney,
+			Quantity: int32(p.Money),
+		})
+	}
+
+	p.Money = 0
+
+	p.Inventory = []InventoryItem{}
+	blasterBullersLeft, exists := p.BulletsLeftByWeaponType[WeaponTypeBlaster]
+	if !exists {
+		blasterBullersLeft = config.BlasterMaxBullets
+	}
+
+	p.BulletsLeftByWeaponType = map[string]int32{
+		WeaponTypeBlaster: blasterBullersLeft,
+	}
+	p.SelectedGunType = WeaponTypeBlaster
+
+	return bonus
+}
+
+func (p *Player) PickupBonus(bonus *Bonus) {
+	for _, inventoryItem := range bonus.Inventory {
+		if inventoryItem.Type == InventoryItemMoney {
+			p.Money += int(inventoryItem.Quantity)
+			continue
+		}
+
+		p.AddInventoryItem(inventoryItem.Type, inventoryItem.Quantity)
+	}
+	bonus.Inventory = []InventoryItem{}
+	bonus.PickedUpBy = p.ID
+	bonus.PickedUpAt = time.Now()
 }

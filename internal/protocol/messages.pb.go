@@ -756,6 +756,7 @@ type Shop struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Position      *Vector2               `protobuf:"bytes,2,opt,name=position,proto3" json:"position,omitempty"`
 	Inventory     map[int32]*ShopItem    `protobuf:"bytes,3,rep,name=inventory,proto3" json:"inventory,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -809,6 +810,13 @@ func (x *Shop) GetInventory() map[int32]*ShopItem {
 		return x.Inventory
 	}
 	return nil
+}
+
+func (x *Shop) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
 }
 
 type InputMessage struct {
@@ -1242,7 +1250,6 @@ func (x *PlayerLeaveMessage) GetPlayerId() string {
 
 type PlayerRespawnMessage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	PlayerId      string                 `protobuf:"bytes,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1275,13 +1282,6 @@ func (x *PlayerRespawnMessage) ProtoReflect() protoreflect.Message {
 // Deprecated: Use PlayerRespawnMessage.ProtoReflect.Descriptor instead.
 func (*PlayerRespawnMessage) Descriptor() ([]byte, []int) {
 	return file_messages_proto_rawDescGZIP(), []int{14}
-}
-
-func (x *PlayerRespawnMessage) GetPlayerId() string {
-	if x != nil {
-		return x.PlayerId
-	}
-	return ""
 }
 
 type ErrorMessage struct {
@@ -1567,11 +1567,12 @@ const file_messages_proto_rawDesc = "" +
 	"\bShopItem\x12\x1a\n" +
 	"\bquantity\x18\x01 \x01(\x05R\bquantity\x12\x1b\n" +
 	"\tpack_size\x18\x02 \x01(\x05R\bpackSize\x12\x14\n" +
-	"\x05price\x18\x03 \x01(\x05R\x05price\"\xd4\x01\n" +
+	"\x05price\x18\x03 \x01(\x05R\x05price\"\xe8\x01\n" +
 	"\x04Shop\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12-\n" +
 	"\bposition\x18\x02 \x01(\v2\x11.protocol.Vector2R\bposition\x12;\n" +
-	"\tinventory\x18\x03 \x03(\v2\x1d.protocol.Shop.InventoryEntryR\tinventory\x1aP\n" +
+	"\tinventory\x18\x03 \x03(\v2\x1d.protocol.Shop.InventoryEntryR\tinventory\x12\x12\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\x1aP\n" +
 	"\x0eInventoryEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12(\n" +
 	"\x05value\x18\x02 \x01(\v2\x12.protocol.ShopItemR\x05value:\x028\x01\"\x9d\x03\n" +
@@ -1658,9 +1659,8 @@ const file_messages_proto_rawDesc = "" +
 	"\x11PlayerJoinMessage\x12(\n" +
 	"\x06player\x18\x01 \x01(\v2\x10.protocol.PlayerR\x06player\"1\n" +
 	"\x12PlayerLeaveMessage\x12\x1b\n" +
-	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\"3\n" +
-	"\x14PlayerRespawnMessage\x12\x1b\n" +
-	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\"(\n" +
+	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\"\x16\n" +
+	"\x14PlayerRespawnMessage\"(\n" +
 	"\fErrorMessage\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\"\xf9\x03\n" +
 	"\vGameMessage\x12)\n" +

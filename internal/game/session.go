@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"math/rand"
 
 	"github.com/besuhoff/dungeon-game-go/internal/config"
 	"github.com/besuhoff/dungeon-game-go/internal/db"
@@ -104,26 +105,39 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 					Position: &types.Vector2{X: obj.X, Y: obj.Y},
 				},
 			}
-			// Parse inventory from properties
-			if inventory, ok := obj.Properties["inventory"].(map[string]interface{}); ok {
-				shop.Inventory = make(map[types.InventoryItemID]*types.ShopInventoryItem)
-				for itemIDStr, itemData := range inventory {
-					var itemID types.InventoryItemID
-					fmt.Sscanf(itemIDStr, "%d", &itemID)
-					if itemMap, ok := itemData.(map[string]interface{}); ok {
-						item := &types.ShopInventoryItem{}
-						if price, ok := itemMap["price"].(int32); ok {
-							item.Price = int(price)
+
+			if shopName, ok := obj.Properties["name"].(string); ok {
+				shop.Name = shopName
+			}
+
+			if session.GameVersion < "1.0.0" {
+				shop = types.GenerateShop(shop.Position)
+			} else {
+				// Parse inventory from properties
+				if inventory, ok := obj.Properties["inventory"].(map[string]interface{}); ok {
+					shop.Inventory = make(map[types.InventoryItemID]*types.ShopInventoryItem)
+					for itemIDStr, itemData := range inventory {
+						var itemID types.InventoryItemID
+						fmt.Sscanf(itemIDStr, "%d", &itemID)
+						if itemMap, ok := itemData.(map[string]interface{}); ok {
+							item := &types.ShopInventoryItem{}
+							if price, ok := itemMap["price"].(int32); ok {
+								item.Price = int(price)
+							}
+							if quantity, ok := itemMap["quantity"].(int32); ok {
+								item.Quantity = int(quantity)
+							}
+							if packSize, ok := itemMap["pack_size"].(int32); ok {
+								item.PackSize = int(packSize)
+							}
+							shop.Inventory[itemID] = item
 						}
-						if quantity, ok := itemMap["quantity"].(int32); ok {
-							item.Quantity = int(quantity)
-						}
-						if packSize, ok := itemMap["pack_size"].(int32); ok {
-							item.PackSize = int(packSize)
-						}
-						shop.Inventory[itemID] = item
 					}
 				}
+			}
+
+			if shop.Name == "" {
+				shop.Name = types.ShopNames[rand.Intn(len(types.ShopNames))]
 			}
 
 			chunkX, chunkY := utils.ChunkXYFromPosition(shop.Position.X, shop.Position.Y)
@@ -132,7 +146,7 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 				e.state.shopsByChunk[chunkKey] = make(map[string]*types.Shop)
 			}
 
-			e.state.shopsByChunk[chunkKey][id] = shop
+			e.state.shopsByChunk[chunkKey][shop.ID] = shop
 		}
 	}
 
@@ -185,6 +199,10 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 		}
 
 		e.state.players[playerID] = player
+
+		if !player.IsAlive {
+			e.addPlayerToRespawnQueue(playerID)
+		}
 	}
 
 	// Load chunk hash from world map
@@ -282,6 +300,7 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 				Y:        shop.Position.Y,
 				Properties: map[string]interface{}{
 					"inventory": inventoryProps,
+					"name":      shop.Name,
 				},
 			}
 		}
@@ -317,6 +336,8 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 			Objects: make(map[string]db.WorldObject),
 		}
 	}
+
+	session.GameVersion = config.GameVersion
 }
 
 // Clear removes all state from the engine

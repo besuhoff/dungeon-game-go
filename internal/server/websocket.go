@@ -127,7 +127,7 @@ func (c *WebsocketClient) handleMessage(msg *protocol.GameMessage) {
 		}
 	case protocol.MessageType_PLAYER_RESPAWN:
 		if respawn := msg.GetPlayerRespawn(); respawn != nil {
-			session.Engine.RespawnPlayer(respawn.PlayerId)
+			session.Engine.RespawnPlayer(c.UserID.Hex())
 		}
 	}
 }

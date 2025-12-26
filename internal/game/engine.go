@@ -5,6 +5,8 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -109,7 +111,26 @@ func (e *Engine) AddPlayer(id, username string) *types.Player {
 
 	player, exists := e.state.players[id]
 	if !exists {
-		spawnPoint := e.pickSpawnPoint()
+		chunkKey := "0,0"
+		chunksNumber := len(e.chunkHash)
+		if chunksNumber > 0 {
+			randomIndex := rand.Intn(len(e.chunkHash))
+			i := 0
+			for key := range e.chunkHash {
+				if i == randomIndex {
+					chunkKey = key
+					break
+				}
+				i++
+			}
+		}
+
+		chunkX, _ := strconv.Atoi(strings.Split(chunkKey, ",")[0])
+		chunkY, _ := strconv.Atoi(strings.Split(chunkKey, ",")[1])
+		chunkCenterX := float64(chunkX)*config.ChunkSize + config.ChunkSize/2
+		chunkCenterY := float64(chunkY)*config.ChunkSize + config.ChunkSize/2
+
+		spawnPoint := e.pickSpawnPoint(&types.Vector2{X: chunkCenterX, Y: chunkCenterY})
 
 		player = &types.Player{
 			ScreenObject: types.ScreenObject{
@@ -137,6 +158,8 @@ func (e *Engine) AddPlayer(id, username string) *types.Player {
 		}
 
 		e.state.players[id] = player
+	} else if !player.IsAlive {
+		e.addPlayerToRespawnQueue(id)
 	}
 
 	e.prevState[id] = &EngineGameState{}
@@ -184,7 +207,6 @@ func (e *Engine) generateChunk(chunkX, chunkY int, playerPos *types.Vector2) {
 		Y: chunkStartY + config.ChunkSize/2,
 	}
 	shop := types.GenerateShop(chunkCenter)
-	log.Printf("Generated shop %+v at chunk %s", shop, chunkKey)
 
 	e.state.shopsByChunk[chunkKey][shop.ID] = shop
 
@@ -252,10 +274,30 @@ func (e *Engine) checkWallOverlap(x, y, w, h float64, wall *types.Wall) bool {
 		y+h/2+padding > wall.Position.Y-wall.Height/2
 }
 
-func (e *Engine) pickSpawnPoint() *types.Vector2 {
+func (e *Engine) pickSpawnPoint(playerPos *types.Vector2) *types.Vector2 {
 	// Spawn position near center with some randomization
-	spawnLeft := float64((len(e.state.players)*50)%400-200) - config.PlayerRadius
-	spawnTop := float64((len(e.state.players)*50)%400-200) - config.PlayerRadius
+	chunkX, chunkY := utils.ChunkXYFromPosition(playerPos.X, playerPos.Y)
+
+	// Move to the random neighboring chunk
+	chunkIdToMove := rand.Intn(8)
+	if chunkIdToMove < 3 {
+		chunkY -= 1
+	}
+	if chunkIdToMove > 4 {
+		chunkY += 1
+	}
+
+	if chunkIdToMove == 0 || chunkIdToMove == 3 || chunkIdToMove == 5 {
+		chunkX -= 1
+	}
+	if chunkIdToMove == 2 || chunkIdToMove == 4 || chunkIdToMove == 7 {
+		chunkX += 1
+	}
+
+	// Calculate spawn position in the chunk center
+	spawnLeft := float64(chunkX)*config.ChunkSize + config.ChunkSize/2
+	spawnTop := float64(chunkY)*config.ChunkSize + config.ChunkSize/2
+
 	playerSize := config.PlayerRadius * 2
 
 	// Check collision with walls, enemies, or players
@@ -301,8 +343,8 @@ func (e *Engine) pickSpawnPoint() *types.Vector2 {
 
 		for _, object := range objectsToCheck {
 			if utils.CheckRectCollision(
-				spawnLeft,
-				spawnTop,
+				spawnLeft-config.PlayerRadius,
+				spawnTop-config.PlayerRadius,
 				playerSize,
 				playerSize,
 				object.LeftTopPos.X,
@@ -318,7 +360,7 @@ func (e *Engine) pickSpawnPoint() *types.Vector2 {
 		}
 	}
 
-	return &types.Vector2{X: spawnLeft + config.PlayerRadius, Y: spawnTop + config.PlayerRadius}
+	return &types.Vector2{X: spawnLeft, Y: spawnTop}
 }
 
 // createEnemyForWall creates an enemy that patrols along a wall
@@ -360,12 +402,17 @@ func (e *Engine) createEnemyForWall(wall *types.Wall) *types.Enemy {
 	}
 }
 
-func (e *Engine) RespawnPlayer(id string) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
+func (e *Engine) addPlayerToRespawnQueue(id string) {
 	if _, exists := e.state.players[id]; exists {
 		e.respawnQueue[id] = true
 	}
+}
+
+func (e *Engine) RespawnPlayer(id string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	e.addPlayerToRespawnQueue(id)
 }
 
 // RemovePlayer removes a player from the game
@@ -495,14 +542,14 @@ func (e *Engine) Update() {
 
 	// Update players
 	for _, player := range e.state.players {
-		if _, exists := e.respawnQueue[player.ID]; exists {
-			// Respawn player
-			player.Respawn()
-			delete(e.respawnQueue, player.ID)
-			continue
-		}
-
 		if !player.IsAlive {
+			if _, exists := e.respawnQueue[player.ID]; exists {
+				// Respawn player
+				spawnPoint := e.pickSpawnPoint(player.Position)
+				player.Respawn(spawnPoint)
+				delete(e.respawnQueue, player.ID)
+			}
+
 			continue
 		}
 
@@ -1003,14 +1050,7 @@ func (e *Engine) Update() {
 
 			if distance < config.PlayerRadius+bonusRadius {
 				// Pickup!
-				switch bonus.Type {
-				case "aid_kit":
-					player.AddInventoryItem(types.InventoryItemAidKit, 1)
-				case "goggles":
-					player.AddInventoryItem(types.InventoryItemGoggles, 1)
-				}
-				bonus.PickedUpBy = player.ID
-				bonus.PickedUpAt = time.Now()
+				player.PickupBonus(bonus)
 				break
 			}
 		}
@@ -1121,8 +1161,11 @@ func (e *Engine) applyBulletDamage(bullet *types.Bullet, newPosition *types.Vect
 			// Hit!
 			player.Lives -= bullet.Damage
 			if player.Lives <= 0 {
-				player.Lives = 0
-				player.IsAlive = false
+				chest := player.DropInventory()
+				if chest != nil {
+					e.state.bonuses[chest.ID] = chest
+				}
+				player.Die()
 
 				// Award money to shooter
 				if shooter, exists := e.state.players[bullet.OwnerID]; exists {
@@ -1370,8 +1413,11 @@ func (e *Engine) applyRocketExplosionDamage(explosionCenter *types.Vector2, hitO
 			damage := config.RocketLauncherDamage * (1 - distance/config.RocketLauncherDamageRadius)
 			player.Lives -= float32(damage)
 			if player.Lives <= 0 {
-				player.Lives = 0
-				player.IsAlive = false
+				chest := player.DropInventory()
+				if chest != nil {
+					e.state.bonuses[chest.ID] = chest
+				}
+				player.Die()
 
 				if shooterExists && shooter.ID != player.ID {
 					shooter.Money += config.PlayerReward
@@ -1393,8 +1439,10 @@ func (e *Engine) spawnBonus(pos *types.Vector2) {
 	}
 
 	bonusType := "aid_kit"
+	inventoryItemID := types.InventoryItemAidKit
 	if rand.Float64() < config.EnemyDropChanceGoggles {
 		bonusType = "goggles"
+		inventoryItemID = types.InventoryItemGoggles
 	}
 
 	bonus := &types.Bonus{
@@ -1403,6 +1451,9 @@ func (e *Engine) spawnBonus(pos *types.Vector2) {
 			Position: pos,
 		},
 		Type: bonusType,
+		Inventory: []types.InventoryItem{
+			{Type: inventoryItemID, Quantity: 1},
+		},
 	}
 
 	e.state.bonuses[bonus.ID] = bonus

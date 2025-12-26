@@ -114,19 +114,7 @@ func (h *SessionHandler) HandleCreateSession(w http.ResponseWriter, r *http.Requ
 		MaxPlayers: req.MaxPlayers,
 		IsPrivate:  req.IsPrivate,
 		Password:   req.Password,
-		Players: map[string]db.PlayerState{
-			user.ID.Hex(): {
-				PlayerID: user.ID.Hex(),
-				Name:     user.Username,
-				Position: db.Position{X: 0, Y: 0, Rotation: 0},
-				Lives:    config.PlayerLives,
-				IsAlive:  true,
-				BulletsLeftByWeaponType: map[string]int32{
-					types.WeaponTypeBlaster: config.BlasterMaxBullets,
-				},
-				InvulnerableTimer: config.PlayerSpawnInvulnerabilityTime,
-			},
-		},
+		Players:    map[string]db.PlayerState{},
 	}
 
 	if err := h.sessionRepo.Create(ctx, session); err != nil {
@@ -245,19 +233,6 @@ func (h *SessionHandler) HandleJoinSession(w http.ResponseWriter, r *http.Reques
 		if err := h.sessionRepo.Update(ctx, session); err != nil {
 			http.Error(w, "Failed to join session", http.StatusInternalServerError)
 			return
-		}
-	} else {
-		// Player re-joining, respawn if needed
-		playerState := session.Players[playerID]
-
-		if !playerState.IsAlive {
-			playerState.Respawn()
-
-			session.Players[playerID] = playerState
-			if err := h.sessionRepo.Update(ctx, session); err != nil {
-				http.Error(w, "Failed to join session", http.StatusInternalServerError)
-				return
-			}
 		}
 	}
 

@@ -18,15 +18,19 @@ type ShopInventoryItem struct {
 type Shop struct {
 	ScreenObject
 
+	Name      string
 	Inventory map[InventoryItemID]*ShopInventoryItem
 }
 
 func GenerateShop(position *Vector2) *Shop {
+	shopName := ShopNames[rand.Intn(len(ShopNames))]
+
 	shop := &Shop{
 		ScreenObject: ScreenObject{
 			ID:       uuid.New().String(),
 			Position: position,
 		},
+		Name:      shopName,
 		Inventory: make(map[InventoryItemID]*ShopInventoryItem),
 	}
 
@@ -34,49 +38,44 @@ func GenerateShop(position *Vector2) *Shop {
 	ammoItems := []InventoryItemID{InventoryItemShotgunAmmo, InventoryItemRocket, InventoryItemRailgunAmmo}
 
 	for _, itemID := range weaponItems {
-		if rand.Float64() < 0.5 {
-			continue
-		}
-
-		shop.Inventory[itemID] = &ShopInventoryItem{
-			Price:    ShopItemPrice[itemID],
-			PackSize: 1,
-			Quantity: 2 + rand.Intn(3),
+		if rand.Float64() < config.ShopWeaponProbability {
+			shop.Inventory[itemID] = &ShopInventoryItem{
+				Price:    ShopItemPrice[itemID],
+				PackSize: 1,
+				Quantity: config.ShopWeaponMinQuantity + rand.Intn(config.ShopWeaponMaxQuantity-config.ShopWeaponMinQuantity+1),
+			}
 		}
 	}
 
 	for _, itemID := range ammoItems {
-		if rand.Float64() < 0.5 {
-			continue
-		}
+		if rand.Float64() >= config.ShopAmmoProbability {
 
-		packSize, exists := ShopItemPackSize[itemID]
-		if !exists {
-			packSize = 1
-		}
+			packSize, exists := ShopItemPackSize[itemID]
+			if !exists {
+				packSize = 1
+			}
 
-		quantity := 2 + rand.Intn(3)
-
-		shop.Inventory[itemID] = &ShopInventoryItem{
-			Price:    ShopItemPrice[itemID],
-			PackSize: packSize,
-			Quantity: quantity,
+			shop.Inventory[itemID] = &ShopInventoryItem{
+				Price:    ShopItemPrice[itemID],
+				PackSize: packSize,
+				Quantity: config.ShopAmmoMinQuantity + rand.Intn(config.ShopAmmoMaxQuantity-config.ShopAmmoMinQuantity+1),
+			}
 		}
 	}
 
-	if rand.Float64() > 0.5 {
+	if rand.Float64() < config.ShopAidKitProbability {
 		shop.Inventory[InventoryItemAidKit] = &ShopInventoryItem{
 			Price:    ShopItemPrice[InventoryItemAidKit],
 			PackSize: 1,
-			Quantity: 2 + rand.Intn(3),
+			Quantity: config.ShopAidKitMinQuantity + rand.Intn(config.ShopAidKitMaxQuantity-config.ShopAidKitMinQuantity+1),
 		}
 	}
 
-	if rand.Float64() > 0.2 {
+	if rand.Float64() < config.ShopGogglesProbability {
 		shop.Inventory[InventoryItemGoggles] = &ShopInventoryItem{
 			Price:    ShopItemPrice[InventoryItemGoggles],
 			PackSize: 1,
-			Quantity: 1 + rand.Intn(2),
+			Quantity: config.ShopGogglesMinQuantity + rand.Intn(config.ShopGogglesMaxQuantity-config.ShopGogglesMinQuantity+1),
 		}
 	}
 

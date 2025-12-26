@@ -260,6 +260,10 @@ export interface Shop {
     inventory: {
         [key: number]: ShopItem;
     };
+    /**
+     * @generated from protobuf field: string name = 4
+     */
+    name: string;
 }
 /**
  * @generated from protobuf message protocol.InputMessage
@@ -446,10 +450,6 @@ export interface PlayerLeaveMessage {
  * @generated from protobuf message protocol.PlayerRespawnMessage
  */
 export interface PlayerRespawnMessage {
-    /**
-     * @generated from protobuf field: string player_id = 1
-     */
-    playerId: string;
 }
 /**
  * @generated from protobuf message protocol.ErrorMessage
@@ -1261,13 +1261,15 @@ class Shop$Type extends MessageType$<Shop> {
         super("protocol.Shop", [
             { no: 1, name: "id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "position", kind: "message", T: () => Vector2 },
-            { no: 3, name: "inventory", kind: "map", K: 5 /*ScalarType.INT32*/, V: { kind: "message", T: () => ShopItem } }
+            { no: 3, name: "inventory", kind: "map", K: 5 /*ScalarType.INT32*/, V: { kind: "message", T: () => ShopItem } },
+            { no: 4, name: "name", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<Shop>): Shop {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.id = "";
         message.inventory = {};
+        message.name = "";
         if (value !== undefined)
             reflectionMergePartial<Shop>(this, message, value);
         return message;
@@ -1285,6 +1287,9 @@ class Shop$Type extends MessageType$<Shop> {
                     break;
                 case /* map<int32, protocol.ShopItem> inventory */ 3:
                     this.binaryReadMap3(message.inventory, reader, options);
+                    break;
+                case /* string name */ 4:
+                    message.name = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1327,6 +1332,9 @@ class Shop$Type extends MessageType$<Shop> {
             ShopItem.internalBinaryWrite(message.inventory[k as any], writer, options);
             writer.join().join();
         }
+        /* string name = 4; */
+        if (message.name !== "")
+            writer.tag(4, WireType.LengthDelimited).string(message.name);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -2074,13 +2082,10 @@ export const PlayerLeaveMessage = new PlayerLeaveMessage$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class PlayerRespawnMessage$Type extends MessageType$<PlayerRespawnMessage> {
     constructor() {
-        super("protocol.PlayerRespawnMessage", [
-            { no: 1, name: "player_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
-        ]);
+        super("protocol.PlayerRespawnMessage", []);
     }
     create(value?: PartialMessage<PlayerRespawnMessage>): PlayerRespawnMessage {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.playerId = "";
         if (value !== undefined)
             reflectionMergePartial<PlayerRespawnMessage>(this, message, value);
         return message;
@@ -2090,9 +2095,6 @@ class PlayerRespawnMessage$Type extends MessageType$<PlayerRespawnMessage> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* string player_id */ 1:
-                    message.playerId = reader.string();
-                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -2105,9 +2107,6 @@ class PlayerRespawnMessage$Type extends MessageType$<PlayerRespawnMessage> {
         return message;
     }
     internalBinaryWrite(message: PlayerRespawnMessage, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string player_id = 1; */
-        if (message.playerId !== "")
-            writer.tag(1, WireType.LengthDelimited).string(message.playerId);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/besuhoff/dungeon-game-go/internal/config"
-	"github.com/besuhoff/dungeon-game-go/internal/types"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -47,21 +46,6 @@ type PlayerState struct {
 	SelectedGunType         string           `bson:"selected_gun_type" json:"selected_gun_type"`
 }
 
-func (ps *PlayerState) Respawn() {
-	ps.IsAlive = true
-	ps.Lives = config.PlayerLives
-	ps.BulletsLeftByWeaponType = map[string]int32{
-		types.WeaponTypeBlaster: config.BlasterMaxBullets,
-	}
-	ps.InvulnerableTimer = config.PlayerSpawnInvulnerabilityTime
-	ps.NightVisionTimer = 0
-	ps.Kills = 0
-	ps.Money = 0
-	ps.Score = 0
-	ps.Inventory = []InventoryItem{{Type: int32(types.InventoryItemBlaster), Quantity: 1}}
-	ps.SelectedGunType = types.WeaponTypeBlaster
-}
-
 // Position represents x, y coordinates and rotation
 type Position struct {
 	X        float64 `bson:"x" json:"x"`
@@ -101,6 +85,7 @@ type GameSession struct {
 	CreatedAt     time.Time              `bson:"created_at" json:"created_at"`
 	LastUpdated   time.Time              `bson:"last_updated" json:"last_updated"`
 	IsActive      bool                   `bson:"is_active" json:"is_active"`
+	GameVersion   string                 `bson:"game_version" json:"game_version"`
 }
 
 // UserRepository provides database operations for users
@@ -210,6 +195,7 @@ func (r *GameSessionRepository) FindActiveSessions(ctx context.Context) ([]GameS
 func (r *GameSessionRepository) Create(ctx context.Context, session *GameSession) error {
 	session.CreatedAt = time.Now()
 	session.LastUpdated = time.Now()
+	session.GameVersion = config.GameVersion
 	session.IsActive = true
 
 	if session.Players == nil {

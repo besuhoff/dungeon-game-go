@@ -9,9 +9,10 @@ import (
 // Bonus represents a pickup item
 type Bonus struct {
 	ScreenObject
-	Type       string    `json:"type"` // "aid_kit" or "goggles"
-	PickedUpBy string    `json:"picked_up_by,omitempty"`
-	PickedUpAt time.Time `json:"-"`
+	Type       string          `json:"type"` // "aid_kit" or "goggles"
+	PickedUpBy string          `json:"picked_up_by,omitempty"`
+	PickedUpAt time.Time       `json:"-"`
+	Inventory  []InventoryItem `json:"inventory"`
 }
 
 func (b *Bonus) IsVisibleToPlayer(player *Player) bool {
@@ -28,6 +29,8 @@ func (b *Bonus) IsVisibleToPlayer(player *Player) bool {
 		bonusSize = config.AidKitSize
 	case "goggles":
 		bonusSize = config.GogglesSize
+	case "chest":
+		bonusSize = config.ChestSize
 	}
 	return distance <= detectionDistance+bonusSize
 }
@@ -35,5 +38,7 @@ func (b *Bonus) IsVisibleToPlayer(player *Player) bool {
 func (b *Bonus) Clone() *Bonus {
 	clone := *b
 	clone.Position = &Vector2{X: b.Position.X, Y: b.Position.Y}
+	clone.Inventory = make([]InventoryItem, len(b.Inventory))
+	copy(clone.Inventory, b.Inventory)
 	return &clone
 }

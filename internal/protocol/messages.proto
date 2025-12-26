@@ -92,6 +92,7 @@ message Shop {
   string id = 1;
   Vector2 position = 2;
   map<int32, ShopItem> inventory = 3; 
+  string name = 4;
 }
 
 message InputMessage {
@@ -149,7 +150,6 @@ message PlayerLeaveMessage {
 }
 
 message PlayerRespawnMessage {
-  string player_id = 1;
 }
 
 message ErrorMessage {

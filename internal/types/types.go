@@ -83,6 +83,8 @@ const (
 
 	InventoryItemGoggles InventoryItemID = 7
 	InventoryItemAidKit  InventoryItemID = 8
+
+	InventoryItemMoney InventoryItemID = 100
 )
 
 const (
@@ -137,17 +139,40 @@ var BulletLifetimeByWeaponType = map[string]time.Duration{
 var ShopItemPrice = map[InventoryItemID]int{
 	InventoryItemBlaster:        0,
 	InventoryItemShotgun:        500,
-	InventoryItemRocketLauncher: 1500,
-	InventoryItemRailgun:        2000,
-	InventoryItemShotgunAmmo:    50,
-	InventoryItemRocket:         100,
-	InventoryItemRailgunAmmo:    150,
-	InventoryItemGoggles:        300,
-	InventoryItemAidKit:         100,
+	InventoryItemRocketLauncher: 1000,
+	InventoryItemRailgun:        1500,
+	InventoryItemShotgunAmmo:    20,
+	InventoryItemRocket:         30,
+	InventoryItemRailgunAmmo:    30,
+	InventoryItemGoggles:        100,
+	InventoryItemAidKit:         50,
 }
 
 var ShopItemPackSize = map[InventoryItemID]int{
 	InventoryItemShotgunAmmo: 10,
 	InventoryItemRocket:      5,
 	InventoryItemRailgunAmmo: 10,
+}
+
+var ShopNames = []string{
+	"Bob's Armory",
+	"Alice's Arsenal",
+	"The Gun Emporium",
+	"Blaster Bazaar",
+	"Rocket Retailers",
+	"Railgun R Us",
+	"Shotgun Shack",
+	"The Ammo Depot",
+	"Gadget Gallery",
+	"Survivor's Supplies",
+	"The Armament Annex",
+	"Firepower Finds",
+	"The Weapon Warehouse",
+	"Bullet Boutique",
+	"The Combat Corner",
+	"Defense Den",
+	"Warrior's Wares",
+	"The Tactical Tradepost",
+	"Marksman's Market",
+	"The Battle Bodega",
 }
