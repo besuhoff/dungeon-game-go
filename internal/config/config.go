@@ -9,6 +9,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const GameVersion = "1.1.1"
+
 type Config struct {
 	MongoDBURL               string
 	SecretKey                string
@@ -107,6 +109,7 @@ const (
 	PlayerInvulnerabilityTime      = 1.0   // Seconds
 	PlayerSpawnInvulnerabilityTime = 3.0   // Seconds after spawn
 	PlayerReward                   = 100.0 // Money for killing enemy
+	PlayerDropInventoryLifetime    = 5 * time.Minute
 
 	// Blaster constants
 	BlasterBulletDamage       = 1
@@ -194,6 +197,4 @@ const (
 	ShopGogglesProbability = 0.3
 	ShopGogglesMinQuantity = 3
 	ShopGogglesMaxQuantity = 6
-
-	GameVersion = "1.1.0"
 )

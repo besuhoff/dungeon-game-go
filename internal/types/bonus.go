@@ -18,6 +18,7 @@ type Bonus struct {
 	Type       string          `json:"type"`
 	PickedUpBy string          `json:"picked_up_by,omitempty"`
 	DroppedBy  string          `json:"dropped_by,omitempty"`
+	DroppedAt  time.Time       `json:"-"`
 	PickedUpAt time.Time       `json:"-"`
 	Inventory  []InventoryItem `json:"inventory"`
 }

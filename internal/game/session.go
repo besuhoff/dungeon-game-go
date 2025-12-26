@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"math/rand"
+	"time"
 
 	"github.com/besuhoff/dungeon-game-go/internal/config"
 	"github.com/besuhoff/dungeon-game-go/internal/db"
@@ -100,6 +101,12 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			if droppedBy, ok := obj.Properties["dropped_by"].(string); ok {
 				bonus.DroppedBy = droppedBy
 			}
+			if droppedAt, ok := obj.Properties["dropped_at"].(int64); ok {
+				if droppedAt > 0 {
+					bonus.DroppedAt = time.Unix(droppedAt, 0)
+				}
+			}
+
 			e.state.bonuses[id] = bonus
 		} else if obj.Type == "shop" {
 			shop := &types.Shop{
@@ -315,6 +322,11 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 			continue // Skip picked up bonuses
 		}
 
+		droppedAt := int64(0)
+		if !bonus.DroppedAt.IsZero() {
+			droppedAt = bonus.DroppedAt.Unix()
+		}
+
 		session.SharedObjects[id] = db.WorldObject{
 			ObjectID: id,
 			Type:     "bonus",
@@ -323,6 +335,7 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 			Properties: map[string]interface{}{
 				"bonus_type": bonus.Type,
 				"dropped_by": bonus.DroppedBy,
+				"dropped_at": droppedAt,
 			},
 		}
 	}

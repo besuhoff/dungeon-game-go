@@ -7,9 +7,7 @@ import (
 	"strings"
 
 	"github.com/besuhoff/dungeon-game-go/internal/auth"
-	"github.com/besuhoff/dungeon-game-go/internal/config"
 	"github.com/besuhoff/dungeon-game-go/internal/db"
-	"github.com/besuhoff/dungeon-game-go/internal/types"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -215,32 +213,9 @@ func (h *SessionHandler) HandleJoinSession(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Add player to session
-	if _, ok := session.Players[playerID]; !ok {
-		session.Players[playerID] = db.PlayerState{
-			PlayerID:    playerID,
-			Name:        user.Username,
-			Position:    db.Position{X: 0, Y: 0, Rotation: 0},
-			Lives:       config.PlayerLives,
-			IsAlive:     true,
-			IsConnected: false,
-			BulletsLeftByWeaponType: map[string]int32{
-				types.WeaponTypeBlaster: config.BlasterMaxBullets,
-			},
-			InvulnerableTimer: config.PlayerSpawnInvulnerabilityTime,
-		}
-
-		if err := h.sessionRepo.Update(ctx, session); err != nil {
-			http.Error(w, "Failed to join session", http.StatusInternalServerError)
-			return
-		}
-	}
-
 	// Update user's current session
 	user.CurrentSession = session.ID.Hex()
 	h.userRepo.Update(ctx, user)
-
-	// Prepare environment for the player
 
 	host, _ := h.userRepo.FindByID(ctx, session.HostID)
 	response := h.sessionToResponse(session, host)

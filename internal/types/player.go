@@ -292,6 +292,7 @@ func (p *Player) DropInventory() *Bonus {
 		Type:      BonusTypeChest,
 		Inventory: make([]InventoryItem, len(p.Inventory)),
 		DroppedBy: p.ID,
+		DroppedAt: time.Now(),
 	}
 
 	for i, item := range p.Inventory {

@@ -140,17 +140,11 @@ func (e *Engine) AddPlayer(id, username string) *types.Player {
 
 			Username: username,
 			Lives:    config.PlayerLives,
-			Score:    0,
-			Money:    0,
-			Kills:    0,
-			Rotation: 0, // facing up
 			BulletsLeftByWeaponType: map[string]int32{
 				types.WeaponTypeBlaster: config.BlasterMaxBullets,
 			},
-			RechargeAccumulator: 0,
-			InvulnerableTimer:   0,
-			NightVisionTimer:    0,
-			IsAlive:             true,
+			InvulnerableTimer: config.PlayerSpawnInvulnerabilityTime,
+			IsAlive:           true,
 			Inventory: []types.InventoryItem{
 				{Type: types.InventoryItemBlaster, Quantity: 1},
 			},
@@ -1036,6 +1030,13 @@ func (e *Engine) Update() {
 			continue
 		}
 
+		// Check for dropped timeout
+		if bonus.DroppedBy != "" && !bonus.DroppedAt.IsZero() && time.Since(bonus.DroppedAt) > config.PlayerDropInventoryLifetime {
+			delete(e.state.bonuses, bonus.ID)
+			continue
+		}
+
+		// Check pickup by players
 		for _, player := range e.state.players {
 			if !player.IsAlive {
 				continue
