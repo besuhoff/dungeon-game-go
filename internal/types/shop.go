@@ -93,7 +93,7 @@ func ShopsEqual(s *Shop, other *Shop) bool {
 }
 
 func (s *Shop) Equal(other *Shop) bool {
-	if s.Position.X != other.Position.X || s.Position.Y == other.Position.Y {
+	if s.Position.X != other.Position.X || s.Position.Y != other.Position.Y {
 		return false
 	}
 

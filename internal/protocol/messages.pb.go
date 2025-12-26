@@ -921,17 +921,18 @@ func (x *InputMessage) GetPurchaseItemKey() map[int32]bool {
 
 // Server -> Client messages
 type GameStateMessage struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Players       map[string]*Player     `protobuf:"bytes,1,rep,name=players,proto3" json:"players,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Bullets       map[string]*Bullet     `protobuf:"bytes,2,rep,name=bullets,proto3" json:"bullets,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Walls         map[string]*Wall       `protobuf:"bytes,3,rep,name=walls,proto3" json:"walls,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Enemies       map[string]*Enemy      `protobuf:"bytes,4,rep,name=enemies,proto3" json:"enemies,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Bonuses       map[string]*Bonus      `protobuf:"bytes,5,rep,name=bonuses,proto3" json:"bonuses,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Shops         map[string]*Shop       `protobuf:"bytes,7,rep,name=shops,proto3" json:"shops,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	PlayersShops  []string               `protobuf:"bytes,8,rep,name=players_shops,json=playersShops,proto3" json:"players_shops,omitempty"`
-	Timestamp     int64                  `protobuf:"varint,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Players              map[string]*Player     `protobuf:"bytes,1,rep,name=players,proto3" json:"players,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Bullets              map[string]*Bullet     `protobuf:"bytes,2,rep,name=bullets,proto3" json:"bullets,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Walls                map[string]*Wall       `protobuf:"bytes,3,rep,name=walls,proto3" json:"walls,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Enemies              map[string]*Enemy      `protobuf:"bytes,4,rep,name=enemies,proto3" json:"enemies,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Bonuses              map[string]*Bonus      `protobuf:"bytes,5,rep,name=bonuses,proto3" json:"bonuses,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Shops                map[string]*Shop       `protobuf:"bytes,7,rep,name=shops,proto3" json:"shops,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	PlayersShops         []string               `protobuf:"bytes,8,rep,name=players_shops,json=playersShops,proto3" json:"players_shops,omitempty"`
+	OtherPlayerPositions map[string]*Vector2    `protobuf:"bytes,9,rep,name=other_player_positions,json=otherPlayerPositions,proto3" json:"other_player_positions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Timestamp            int64                  `protobuf:"varint,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *GameStateMessage) Reset() {
@@ -1013,6 +1014,13 @@ func (x *GameStateMessage) GetPlayersShops() []string {
 	return nil
 }
 
+func (x *GameStateMessage) GetOtherPlayerPositions() map[string]*Vector2 {
+	if x != nil {
+		return x.OtherPlayerPositions
+	}
+	return nil
+}
+
 func (x *GameStateMessage) GetTimestamp() int64 {
 	if x != nil {
 		return x.Timestamp
@@ -1021,23 +1029,26 @@ func (x *GameStateMessage) GetTimestamp() int64 {
 }
 
 type GameStateDeltaMessage struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	UpdatedPlayers map[string]*Player     `protobuf:"bytes,1,rep,name=updated_players,json=updatedPlayers,proto3" json:"updated_players,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	RemovedPlayers []string               `protobuf:"bytes,2,rep,name=removed_players,json=removedPlayers,proto3" json:"removed_players,omitempty"`
-	UpdatedBullets map[string]*Bullet     `protobuf:"bytes,3,rep,name=updated_bullets,json=updatedBullets,proto3" json:"updated_bullets,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	RemovedBullets map[string]*Bullet     `protobuf:"bytes,4,rep,name=removed_bullets,json=removedBullets,proto3" json:"removed_bullets,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	UpdatedWalls   map[string]*Wall       `protobuf:"bytes,5,rep,name=updated_walls,json=updatedWalls,proto3" json:"updated_walls,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	RemovedWalls   []string               `protobuf:"bytes,6,rep,name=removed_walls,json=removedWalls,proto3" json:"removed_walls,omitempty"`
-	UpdatedEnemies map[string]*Enemy      `protobuf:"bytes,7,rep,name=updated_enemies,json=updatedEnemies,proto3" json:"updated_enemies,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	RemovedEnemies []string               `protobuf:"bytes,8,rep,name=removed_enemies,json=removedEnemies,proto3" json:"removed_enemies,omitempty"`
-	UpdatedBonuses map[string]*Bonus      `protobuf:"bytes,9,rep,name=updated_bonuses,json=updatedBonuses,proto3" json:"updated_bonuses,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	RemovedBonuses []string               `protobuf:"bytes,10,rep,name=removed_bonuses,json=removedBonuses,proto3" json:"removed_bonuses,omitempty"`
-	UpdatedShops   map[string]*Shop       `protobuf:"bytes,12,rep,name=updated_shops,json=updatedShops,proto3" json:"updated_shops,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	RemovedShops   []string               `protobuf:"bytes,13,rep,name=removed_shops,json=removedShops,proto3" json:"removed_shops,omitempty"`
-	PlayersShops   []string               `protobuf:"bytes,14,rep,name=players_shops,json=playersShops,proto3" json:"players_shops,omitempty"`
-	Timestamp      int64                  `protobuf:"varint,11,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state                       protoimpl.MessageState `protogen:"open.v1"`
+	UpdatedPlayers              map[string]*Player     `protobuf:"bytes,1,rep,name=updated_players,json=updatedPlayers,proto3" json:"updated_players,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	RemovedPlayers              []string               `protobuf:"bytes,2,rep,name=removed_players,json=removedPlayers,proto3" json:"removed_players,omitempty"`
+	UpdatedBullets              map[string]*Bullet     `protobuf:"bytes,3,rep,name=updated_bullets,json=updatedBullets,proto3" json:"updated_bullets,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	RemovedBullets              map[string]*Bullet     `protobuf:"bytes,4,rep,name=removed_bullets,json=removedBullets,proto3" json:"removed_bullets,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	UpdatedWalls                map[string]*Wall       `protobuf:"bytes,5,rep,name=updated_walls,json=updatedWalls,proto3" json:"updated_walls,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	RemovedWalls                []string               `protobuf:"bytes,6,rep,name=removed_walls,json=removedWalls,proto3" json:"removed_walls,omitempty"`
+	UpdatedEnemies              map[string]*Enemy      `protobuf:"bytes,7,rep,name=updated_enemies,json=updatedEnemies,proto3" json:"updated_enemies,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	RemovedEnemies              []string               `protobuf:"bytes,8,rep,name=removed_enemies,json=removedEnemies,proto3" json:"removed_enemies,omitempty"`
+	UpdatedBonuses              map[string]*Bonus      `protobuf:"bytes,9,rep,name=updated_bonuses,json=updatedBonuses,proto3" json:"updated_bonuses,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	RemovedBonuses              []string               `protobuf:"bytes,10,rep,name=removed_bonuses,json=removedBonuses,proto3" json:"removed_bonuses,omitempty"`
+	UpdatedShops                map[string]*Shop       `protobuf:"bytes,12,rep,name=updated_shops,json=updatedShops,proto3" json:"updated_shops,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	RemovedShops                []string               `protobuf:"bytes,13,rep,name=removed_shops,json=removedShops,proto3" json:"removed_shops,omitempty"`
+	AddedPlayersShops           []string               `protobuf:"bytes,14,rep,name=added_players_shops,json=addedPlayersShops,proto3" json:"added_players_shops,omitempty"`
+	RemovedPlayersShops         []string               `protobuf:"bytes,17,rep,name=removed_players_shops,json=removedPlayersShops,proto3" json:"removed_players_shops,omitempty"`
+	UpdatedOtherPlayerPositions map[string]*Vector2    `protobuf:"bytes,15,rep,name=updated_other_player_positions,json=updatedOtherPlayerPositions,proto3" json:"updated_other_player_positions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	RemovedOtherPlayerPositions []string               `protobuf:"bytes,16,rep,name=removed_other_player_positions,json=removedOtherPlayerPositions,proto3" json:"removed_other_player_positions,omitempty"`
+	Timestamp                   int64                  `protobuf:"varint,11,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *GameStateDeltaMessage) Reset() {
@@ -1154,9 +1165,30 @@ func (x *GameStateDeltaMessage) GetRemovedShops() []string {
 	return nil
 }
 
-func (x *GameStateDeltaMessage) GetPlayersShops() []string {
+func (x *GameStateDeltaMessage) GetAddedPlayersShops() []string {
 	if x != nil {
-		return x.PlayersShops
+		return x.AddedPlayersShops
+	}
+	return nil
+}
+
+func (x *GameStateDeltaMessage) GetRemovedPlayersShops() []string {
+	if x != nil {
+		return x.RemovedPlayersShops
+	}
+	return nil
+}
+
+func (x *GameStateDeltaMessage) GetUpdatedOtherPlayerPositions() map[string]*Vector2 {
+	if x != nil {
+		return x.UpdatedOtherPlayerPositions
+	}
+	return nil
+}
+
+func (x *GameStateDeltaMessage) GetRemovedOtherPlayerPositions() []string {
+	if x != nil {
+		return x.RemovedOtherPlayerPositions
 	}
 	return nil
 }
@@ -1599,7 +1631,7 @@ const file_messages_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\x1aB\n" +
 	"\x14PurchaseItemKeyEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"\xa5\a\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"\xed\b\n" +
 	"\x10GameStateMessage\x12A\n" +
 	"\aplayers\x18\x01 \x03(\v2'.protocol.GameStateMessage.PlayersEntryR\aplayers\x12A\n" +
 	"\abullets\x18\x02 \x03(\v2'.protocol.GameStateMessage.BulletsEntryR\abullets\x12;\n" +
@@ -1607,7 +1639,8 @@ const file_messages_proto_rawDesc = "" +
 	"\aenemies\x18\x04 \x03(\v2'.protocol.GameStateMessage.EnemiesEntryR\aenemies\x12A\n" +
 	"\abonuses\x18\x05 \x03(\v2'.protocol.GameStateMessage.BonusesEntryR\abonuses\x12;\n" +
 	"\x05shops\x18\a \x03(\v2%.protocol.GameStateMessage.ShopsEntryR\x05shops\x12#\n" +
-	"\rplayers_shops\x18\b \x03(\tR\fplayersShops\x12\x1c\n" +
+	"\rplayers_shops\x18\b \x03(\tR\fplayersShops\x12j\n" +
+	"\x16other_player_positions\x18\t \x03(\v24.protocol.GameStateMessage.OtherPlayerPositionsEntryR\x14otherPlayerPositions\x12\x1c\n" +
 	"\ttimestamp\x18\x06 \x01(\x03R\ttimestamp\x1aL\n" +
 	"\fPlayersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12&\n" +
@@ -1628,7 +1661,10 @@ const file_messages_proto_rawDesc = "" +
 	"\n" +
 	"ShopsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12$\n" +
-	"\x05value\x18\x02 \x01(\v2\x0e.protocol.ShopR\x05value:\x028\x01\"\xee\v\n" +
+	"\x05value\x18\x02 \x01(\v2\x0e.protocol.ShopR\x05value:\x028\x01\x1aZ\n" +
+	"\x19OtherPlayerPositionsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12'\n" +
+	"\x05value\x18\x02 \x01(\v2\x11.protocol.Vector2R\x05value:\x028\x01\"\xdd\x0e\n" +
 	"\x15GameStateDeltaMessage\x12\\\n" +
 	"\x0fupdated_players\x18\x01 \x03(\v23.protocol.GameStateDeltaMessage.UpdatedPlayersEntryR\x0eupdatedPlayers\x12'\n" +
 	"\x0fremoved_players\x18\x02 \x03(\tR\x0eremovedPlayers\x12\\\n" +
@@ -1642,8 +1678,11 @@ const file_messages_proto_rawDesc = "" +
 	"\x0fremoved_bonuses\x18\n" +
 	" \x03(\tR\x0eremovedBonuses\x12V\n" +
 	"\rupdated_shops\x18\f \x03(\v21.protocol.GameStateDeltaMessage.UpdatedShopsEntryR\fupdatedShops\x12#\n" +
-	"\rremoved_shops\x18\r \x03(\tR\fremovedShops\x12#\n" +
-	"\rplayers_shops\x18\x0e \x03(\tR\fplayersShops\x12\x1c\n" +
+	"\rremoved_shops\x18\r \x03(\tR\fremovedShops\x12.\n" +
+	"\x13added_players_shops\x18\x0e \x03(\tR\x11addedPlayersShops\x122\n" +
+	"\x15removed_players_shops\x18\x11 \x03(\tR\x13removedPlayersShops\x12\x85\x01\n" +
+	"\x1eupdated_other_player_positions\x18\x0f \x03(\v2@.protocol.GameStateDeltaMessage.UpdatedOtherPlayerPositionsEntryR\x1bupdatedOtherPlayerPositions\x12C\n" +
+	"\x1eremoved_other_player_positions\x18\x10 \x03(\tR\x1bremovedOtherPlayerPositions\x12\x1c\n" +
 	"\ttimestamp\x18\v \x01(\x03R\ttimestamp\x1aS\n" +
 	"\x13UpdatedPlayersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12&\n" +
@@ -1665,7 +1704,10 @@ const file_messages_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\v2\x0f.protocol.BonusR\x05value:\x028\x01\x1aO\n" +
 	"\x11UpdatedShopsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12$\n" +
-	"\x05value\x18\x02 \x01(\v2\x0e.protocol.ShopR\x05value:\x028\x01\"=\n" +
+	"\x05value\x18\x02 \x01(\v2\x0e.protocol.ShopR\x05value:\x028\x01\x1aa\n" +
+	" UpdatedOtherPlayerPositionsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12'\n" +
+	"\x05value\x18\x02 \x01(\v2\x11.protocol.Vector2R\x05value:\x028\x01\"=\n" +
 	"\x11PlayerJoinMessage\x12(\n" +
 	"\x06player\x18\x01 \x01(\v2\x10.protocol.PlayerR\x06player\"1\n" +
 	"\x12PlayerLeaveMessage\x12\x1b\n" +
@@ -1711,7 +1753,7 @@ func file_messages_proto_rawDescGZIP() []byte {
 }
 
 var file_messages_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_messages_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
+var file_messages_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
 var file_messages_proto_goTypes = []any{
 	(MessageType)(0),              // 0: protocol.MessageType
 	(*Vector2)(nil),               // 1: protocol.Vector2
@@ -1741,13 +1783,15 @@ var file_messages_proto_goTypes = []any{
 	nil,                           // 25: protocol.GameStateMessage.EnemiesEntry
 	nil,                           // 26: protocol.GameStateMessage.BonusesEntry
 	nil,                           // 27: protocol.GameStateMessage.ShopsEntry
-	nil,                           // 28: protocol.GameStateDeltaMessage.UpdatedPlayersEntry
-	nil,                           // 29: protocol.GameStateDeltaMessage.UpdatedBulletsEntry
-	nil,                           // 30: protocol.GameStateDeltaMessage.RemovedBulletsEntry
-	nil,                           // 31: protocol.GameStateDeltaMessage.UpdatedWallsEntry
-	nil,                           // 32: protocol.GameStateDeltaMessage.UpdatedEnemiesEntry
-	nil,                           // 33: protocol.GameStateDeltaMessage.UpdatedBonusesEntry
-	nil,                           // 34: protocol.GameStateDeltaMessage.UpdatedShopsEntry
+	nil,                           // 28: protocol.GameStateMessage.OtherPlayerPositionsEntry
+	nil,                           // 29: protocol.GameStateDeltaMessage.UpdatedPlayersEntry
+	nil,                           // 30: protocol.GameStateDeltaMessage.UpdatedBulletsEntry
+	nil,                           // 31: protocol.GameStateDeltaMessage.RemovedBulletsEntry
+	nil,                           // 32: protocol.GameStateDeltaMessage.UpdatedWallsEntry
+	nil,                           // 33: protocol.GameStateDeltaMessage.UpdatedEnemiesEntry
+	nil,                           // 34: protocol.GameStateDeltaMessage.UpdatedBonusesEntry
+	nil,                           // 35: protocol.GameStateDeltaMessage.UpdatedShopsEntry
+	nil,                           // 36: protocol.GameStateDeltaMessage.UpdatedOtherPlayerPositionsEntry
 }
 var file_messages_proto_depIdxs = []int32{
 	1,  // 0: protocol.Player.position:type_name -> protocol.Vector2
@@ -1769,41 +1813,45 @@ var file_messages_proto_depIdxs = []int32{
 	25, // 16: protocol.GameStateMessage.enemies:type_name -> protocol.GameStateMessage.EnemiesEntry
 	26, // 17: protocol.GameStateMessage.bonuses:type_name -> protocol.GameStateMessage.BonusesEntry
 	27, // 18: protocol.GameStateMessage.shops:type_name -> protocol.GameStateMessage.ShopsEntry
-	28, // 19: protocol.GameStateDeltaMessage.updated_players:type_name -> protocol.GameStateDeltaMessage.UpdatedPlayersEntry
-	29, // 20: protocol.GameStateDeltaMessage.updated_bullets:type_name -> protocol.GameStateDeltaMessage.UpdatedBulletsEntry
-	30, // 21: protocol.GameStateDeltaMessage.removed_bullets:type_name -> protocol.GameStateDeltaMessage.RemovedBulletsEntry
-	31, // 22: protocol.GameStateDeltaMessage.updated_walls:type_name -> protocol.GameStateDeltaMessage.UpdatedWallsEntry
-	32, // 23: protocol.GameStateDeltaMessage.updated_enemies:type_name -> protocol.GameStateDeltaMessage.UpdatedEnemiesEntry
-	33, // 24: protocol.GameStateDeltaMessage.updated_bonuses:type_name -> protocol.GameStateDeltaMessage.UpdatedBonusesEntry
-	34, // 25: protocol.GameStateDeltaMessage.updated_shops:type_name -> protocol.GameStateDeltaMessage.UpdatedShopsEntry
-	3,  // 26: protocol.PlayerJoinMessage.player:type_name -> protocol.Player
-	0,  // 27: protocol.GameMessage.type:type_name -> protocol.MessageType
-	10, // 28: protocol.GameMessage.input:type_name -> protocol.InputMessage
-	11, // 29: protocol.GameMessage.game_state:type_name -> protocol.GameStateMessage
-	12, // 30: protocol.GameMessage.game_state_delta:type_name -> protocol.GameStateDeltaMessage
-	13, // 31: protocol.GameMessage.player_join:type_name -> protocol.PlayerJoinMessage
-	14, // 32: protocol.GameMessage.player_leave:type_name -> protocol.PlayerLeaveMessage
-	15, // 33: protocol.GameMessage.player_respawn:type_name -> protocol.PlayerRespawnMessage
-	16, // 34: protocol.GameMessage.error:type_name -> protocol.ErrorMessage
-	8,  // 35: protocol.Shop.InventoryEntry.value:type_name -> protocol.ShopItem
-	3,  // 36: protocol.GameStateMessage.PlayersEntry.value:type_name -> protocol.Player
-	4,  // 37: protocol.GameStateMessage.BulletsEntry.value:type_name -> protocol.Bullet
-	5,  // 38: protocol.GameStateMessage.WallsEntry.value:type_name -> protocol.Wall
-	6,  // 39: protocol.GameStateMessage.EnemiesEntry.value:type_name -> protocol.Enemy
-	7,  // 40: protocol.GameStateMessage.BonusesEntry.value:type_name -> protocol.Bonus
-	9,  // 41: protocol.GameStateMessage.ShopsEntry.value:type_name -> protocol.Shop
-	3,  // 42: protocol.GameStateDeltaMessage.UpdatedPlayersEntry.value:type_name -> protocol.Player
-	4,  // 43: protocol.GameStateDeltaMessage.UpdatedBulletsEntry.value:type_name -> protocol.Bullet
-	4,  // 44: protocol.GameStateDeltaMessage.RemovedBulletsEntry.value:type_name -> protocol.Bullet
-	5,  // 45: protocol.GameStateDeltaMessage.UpdatedWallsEntry.value:type_name -> protocol.Wall
-	6,  // 46: protocol.GameStateDeltaMessage.UpdatedEnemiesEntry.value:type_name -> protocol.Enemy
-	7,  // 47: protocol.GameStateDeltaMessage.UpdatedBonusesEntry.value:type_name -> protocol.Bonus
-	9,  // 48: protocol.GameStateDeltaMessage.UpdatedShopsEntry.value:type_name -> protocol.Shop
-	49, // [49:49] is the sub-list for method output_type
-	49, // [49:49] is the sub-list for method input_type
-	49, // [49:49] is the sub-list for extension type_name
-	49, // [49:49] is the sub-list for extension extendee
-	0,  // [0:49] is the sub-list for field type_name
+	28, // 19: protocol.GameStateMessage.other_player_positions:type_name -> protocol.GameStateMessage.OtherPlayerPositionsEntry
+	29, // 20: protocol.GameStateDeltaMessage.updated_players:type_name -> protocol.GameStateDeltaMessage.UpdatedPlayersEntry
+	30, // 21: protocol.GameStateDeltaMessage.updated_bullets:type_name -> protocol.GameStateDeltaMessage.UpdatedBulletsEntry
+	31, // 22: protocol.GameStateDeltaMessage.removed_bullets:type_name -> protocol.GameStateDeltaMessage.RemovedBulletsEntry
+	32, // 23: protocol.GameStateDeltaMessage.updated_walls:type_name -> protocol.GameStateDeltaMessage.UpdatedWallsEntry
+	33, // 24: protocol.GameStateDeltaMessage.updated_enemies:type_name -> protocol.GameStateDeltaMessage.UpdatedEnemiesEntry
+	34, // 25: protocol.GameStateDeltaMessage.updated_bonuses:type_name -> protocol.GameStateDeltaMessage.UpdatedBonusesEntry
+	35, // 26: protocol.GameStateDeltaMessage.updated_shops:type_name -> protocol.GameStateDeltaMessage.UpdatedShopsEntry
+	36, // 27: protocol.GameStateDeltaMessage.updated_other_player_positions:type_name -> protocol.GameStateDeltaMessage.UpdatedOtherPlayerPositionsEntry
+	3,  // 28: protocol.PlayerJoinMessage.player:type_name -> protocol.Player
+	0,  // 29: protocol.GameMessage.type:type_name -> protocol.MessageType
+	10, // 30: protocol.GameMessage.input:type_name -> protocol.InputMessage
+	11, // 31: protocol.GameMessage.game_state:type_name -> protocol.GameStateMessage
+	12, // 32: protocol.GameMessage.game_state_delta:type_name -> protocol.GameStateDeltaMessage
+	13, // 33: protocol.GameMessage.player_join:type_name -> protocol.PlayerJoinMessage
+	14, // 34: protocol.GameMessage.player_leave:type_name -> protocol.PlayerLeaveMessage
+	15, // 35: protocol.GameMessage.player_respawn:type_name -> protocol.PlayerRespawnMessage
+	16, // 36: protocol.GameMessage.error:type_name -> protocol.ErrorMessage
+	8,  // 37: protocol.Shop.InventoryEntry.value:type_name -> protocol.ShopItem
+	3,  // 38: protocol.GameStateMessage.PlayersEntry.value:type_name -> protocol.Player
+	4,  // 39: protocol.GameStateMessage.BulletsEntry.value:type_name -> protocol.Bullet
+	5,  // 40: protocol.GameStateMessage.WallsEntry.value:type_name -> protocol.Wall
+	6,  // 41: protocol.GameStateMessage.EnemiesEntry.value:type_name -> protocol.Enemy
+	7,  // 42: protocol.GameStateMessage.BonusesEntry.value:type_name -> protocol.Bonus
+	9,  // 43: protocol.GameStateMessage.ShopsEntry.value:type_name -> protocol.Shop
+	1,  // 44: protocol.GameStateMessage.OtherPlayerPositionsEntry.value:type_name -> protocol.Vector2
+	3,  // 45: protocol.GameStateDeltaMessage.UpdatedPlayersEntry.value:type_name -> protocol.Player
+	4,  // 46: protocol.GameStateDeltaMessage.UpdatedBulletsEntry.value:type_name -> protocol.Bullet
+	4,  // 47: protocol.GameStateDeltaMessage.RemovedBulletsEntry.value:type_name -> protocol.Bullet
+	5,  // 48: protocol.GameStateDeltaMessage.UpdatedWallsEntry.value:type_name -> protocol.Wall
+	6,  // 49: protocol.GameStateDeltaMessage.UpdatedEnemiesEntry.value:type_name -> protocol.Enemy
+	7,  // 50: protocol.GameStateDeltaMessage.UpdatedBonusesEntry.value:type_name -> protocol.Bonus
+	9,  // 51: protocol.GameStateDeltaMessage.UpdatedShopsEntry.value:type_name -> protocol.Shop
+	1,  // 52: protocol.GameStateDeltaMessage.UpdatedOtherPlayerPositionsEntry.value:type_name -> protocol.Vector2
+	53, // [53:53] is the sub-list for method output_type
+	53, // [53:53] is the sub-list for method input_type
+	53, // [53:53] is the sub-list for extension type_name
+	53, // [53:53] is the sub-list for extension extendee
+	0,  // [0:53] is the sub-list for field type_name
 }
 
 func init() { file_messages_proto_init() }
@@ -1826,7 +1874,7 @@ func file_messages_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_messages_proto_rawDesc), len(file_messages_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   34,
+			NumMessages:   36,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

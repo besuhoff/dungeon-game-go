@@ -8,14 +8,15 @@ import (
 
 // GameState represents the current state of the game
 type GameState struct {
-	Players      map[string]*Player `json:"players"`
-	Bullets      map[string]*Bullet `json:"bullets"`
-	Walls        map[string]*Wall   `json:"walls"`
-	Enemies      map[string]*Enemy  `json:"enemies"`
-	Bonuses      map[string]*Bonus  `json:"bonuses"`
-	Shops        map[string]*Shop   `json:"shops"`
-	PlayersShops []string           `json:"players_shops,omitempty"`
-	Timestamp    int64              `json:"timestamp"`
+	Players              map[string]*Player  `json:"players"`
+	Bullets              map[string]*Bullet  `json:"bullets"`
+	Walls                map[string]*Wall    `json:"walls"`
+	Enemies              map[string]*Enemy   `json:"enemies"`
+	Bonuses              map[string]*Bonus   `json:"bonuses"`
+	Shops                map[string]*Shop    `json:"shops"`
+	PlayersShops         []string            `json:"players_shops,omitempty"`
+	OtherPlayerPositions map[string]*Vector2 `json:"other_player_positions,omitempty"`
+	Timestamp            int64               `json:"timestamp"`
 }
 
 // GameStateDelta represents changes to the game state
@@ -38,7 +39,11 @@ type GameStateDelta struct {
 	UpdatedShops map[string]*Shop `json:"updatedShops,omitempty"`
 	RemovedShops []string         `json:"removedShops,omitempty"`
 
-	PlayersShops []string `json:"playersShops,omitempty"`
+	AddedPlayersShops   []string `json:"playersShops,omitempty"`
+	RemovedPlayersShops []string `json:"removedPlayersShops,omitempty"`
+
+	UpdatedOtherPlayerPositions map[string]*Vector2 `json:"otherPlayerPositions,omitempty"`
+	RemovedOtherPlayerPositions []string            `json:"removedOtherPlayerPositions,omitempty"`
 
 	Timestamp int64 `json:"timestamp"`
 }
@@ -49,7 +54,10 @@ func (d *GameStateDelta) IsEmpty() bool {
 		len(d.UpdatedBullets) == 0 && len(d.RemovedBullets) == 0 &&
 		len(d.UpdatedWalls) == 0 && len(d.RemovedWalls) == 0 &&
 		len(d.UpdatedEnemies) == 0 && len(d.RemovedEnemies) == 0 &&
-		len(d.UpdatedBonuses) == 0
+		len(d.UpdatedBonuses) == 0 && len(d.RemovedBonuses) == 0 &&
+		len(d.UpdatedShops) == 0 && len(d.RemovedShops) == 0 &&
+		len(d.UpdatedOtherPlayerPositions) == 0 && len(d.RemovedOtherPlayerPositions) == 0 &&
+		len(d.AddedPlayersShops) == 0 && len(d.RemovedPlayersShops) == 0
 }
 
 // InputPayload for player input

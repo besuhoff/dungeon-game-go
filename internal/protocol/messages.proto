@@ -115,6 +115,7 @@ message GameStateMessage {
   map<string, Bonus> bonuses = 5;
   map<string, Shop> shops = 7;
   repeated string players_shops = 8;
+  map<string, Vector2> other_player_positions = 9;
   int64 timestamp = 6;
 }
 
@@ -137,7 +138,11 @@ message GameStateDeltaMessage {
   map<string, Shop> updated_shops = 12;
   repeated string removed_shops = 13;
 
-  repeated string players_shops = 14;
+  repeated string added_players_shops = 14;
+  repeated string removed_players_shops = 17;
+
+  map<string, Vector2> updated_other_player_positions = 15;
+  repeated string removed_other_player_positions = 16;
   
   int64 timestamp = 11;
 }

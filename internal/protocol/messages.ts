@@ -353,6 +353,12 @@ export interface GameStateMessage {
      */
     playersShops: string[];
     /**
+     * @generated from protobuf field: map<string, protocol.Vector2> other_player_positions = 9
+     */
+    otherPlayerPositions: {
+        [key: string]: Vector2;
+    };
+    /**
      * @generated from protobuf field: int64 timestamp = 6
      */
     timestamp: bigint;
@@ -424,9 +430,23 @@ export interface GameStateDeltaMessage {
      */
     removedShops: string[];
     /**
-     * @generated from protobuf field: repeated string players_shops = 14
+     * @generated from protobuf field: repeated string added_players_shops = 14
      */
-    playersShops: string[];
+    addedPlayersShops: string[];
+    /**
+     * @generated from protobuf field: repeated string removed_players_shops = 17
+     */
+    removedPlayersShops: string[];
+    /**
+     * @generated from protobuf field: map<string, protocol.Vector2> updated_other_player_positions = 15
+     */
+    updatedOtherPlayerPositions: {
+        [key: string]: Vector2;
+    };
+    /**
+     * @generated from protobuf field: repeated string removed_other_player_positions = 16
+     */
+    removedOtherPlayerPositions: string[];
     /**
      * @generated from protobuf field: int64 timestamp = 11
      */
@@ -1495,6 +1515,7 @@ class GameStateMessage$Type extends MessageType$<GameStateMessage> {
             { no: 5, name: "bonuses", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Bonus } },
             { no: 7, name: "shops", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Shop } },
             { no: 8, name: "players_shops", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 9, name: "other_player_positions", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Vector2 } },
             { no: 6, name: "timestamp", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ }
         ]);
     }
@@ -1507,6 +1528,7 @@ class GameStateMessage$Type extends MessageType$<GameStateMessage> {
         message.bonuses = {};
         message.shops = {};
         message.playersShops = [];
+        message.otherPlayerPositions = {};
         message.timestamp = 0n;
         if (value !== undefined)
             reflectionMergePartial<GameStateMessage>(this, message, value);
@@ -1537,6 +1559,9 @@ class GameStateMessage$Type extends MessageType$<GameStateMessage> {
                     break;
                 case /* repeated string players_shops */ 8:
                     message.playersShops.push(reader.string());
+                    break;
+                case /* map<string, protocol.Vector2> other_player_positions */ 9:
+                    this.binaryReadMap9(message.otherPlayerPositions, reader, options);
                     break;
                 case /* int64 timestamp */ 6:
                     message.timestamp = reader.int64().toBigInt();
@@ -1648,6 +1673,22 @@ class GameStateMessage$Type extends MessageType$<GameStateMessage> {
         }
         map[key ?? ""] = val ?? Shop.create();
     }
+    private binaryReadMap9(map: GameStateMessage["otherPlayerPositions"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateMessage["otherPlayerPositions"] | undefined, val: GameStateMessage["otherPlayerPositions"][any] | undefined;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case 1:
+                    key = reader.string();
+                    break;
+                case 2:
+                    val = Vector2.internalBinaryRead(reader, reader.uint32(), options);
+                    break;
+                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateMessage.other_player_positions");
+            }
+        }
+        map[key ?? ""] = val ?? Vector2.create();
+    }
     internalBinaryWrite(message: GameStateMessage, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* map<string, protocol.Player> players = 1; */
         for (let k of globalThis.Object.keys(message.players)) {
@@ -1697,6 +1738,13 @@ class GameStateMessage$Type extends MessageType$<GameStateMessage> {
         /* repeated string players_shops = 8; */
         for (let i = 0; i < message.playersShops.length; i++)
             writer.tag(8, WireType.LengthDelimited).string(message.playersShops[i]);
+        /* map<string, protocol.Vector2> other_player_positions = 9; */
+        for (let k of globalThis.Object.keys(message.otherPlayerPositions)) {
+            writer.tag(9, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
+            writer.tag(2, WireType.LengthDelimited).fork();
+            Vector2.internalBinaryWrite(message.otherPlayerPositions[k], writer, options);
+            writer.join().join();
+        }
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1723,7 +1771,10 @@ class GameStateDeltaMessage$Type extends MessageType$<GameStateDeltaMessage> {
             { no: 10, name: "removed_bonuses", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 12, name: "updated_shops", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Shop } },
             { no: 13, name: "removed_shops", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 14, name: "players_shops", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 14, name: "added_players_shops", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 17, name: "removed_players_shops", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 15, name: "updated_other_player_positions", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Vector2 } },
+            { no: 16, name: "removed_other_player_positions", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 11, name: "timestamp", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ }
         ]);
     }
@@ -1741,7 +1792,10 @@ class GameStateDeltaMessage$Type extends MessageType$<GameStateDeltaMessage> {
         message.removedBonuses = [];
         message.updatedShops = {};
         message.removedShops = [];
-        message.playersShops = [];
+        message.addedPlayersShops = [];
+        message.removedPlayersShops = [];
+        message.updatedOtherPlayerPositions = {};
+        message.removedOtherPlayerPositions = [];
         message.timestamp = 0n;
         if (value !== undefined)
             reflectionMergePartial<GameStateDeltaMessage>(this, message, value);
@@ -1788,8 +1842,17 @@ class GameStateDeltaMessage$Type extends MessageType$<GameStateDeltaMessage> {
                 case /* repeated string removed_shops */ 13:
                     message.removedShops.push(reader.string());
                     break;
-                case /* repeated string players_shops */ 14:
-                    message.playersShops.push(reader.string());
+                case /* repeated string added_players_shops */ 14:
+                    message.addedPlayersShops.push(reader.string());
+                    break;
+                case /* repeated string removed_players_shops */ 17:
+                    message.removedPlayersShops.push(reader.string());
+                    break;
+                case /* map<string, protocol.Vector2> updated_other_player_positions */ 15:
+                    this.binaryReadMap15(message.updatedOtherPlayerPositions, reader, options);
+                    break;
+                case /* repeated string removed_other_player_positions */ 16:
+                    message.removedOtherPlayerPositions.push(reader.string());
                     break;
                 case /* int64 timestamp */ 11:
                     message.timestamp = reader.int64().toBigInt();
@@ -1917,6 +1980,22 @@ class GameStateDeltaMessage$Type extends MessageType$<GameStateDeltaMessage> {
         }
         map[key ?? ""] = val ?? Shop.create();
     }
+    private binaryReadMap15(map: GameStateDeltaMessage["updatedOtherPlayerPositions"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof GameStateDeltaMessage["updatedOtherPlayerPositions"] | undefined, val: GameStateDeltaMessage["updatedOtherPlayerPositions"][any] | undefined;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case 1:
+                    key = reader.string();
+                    break;
+                case 2:
+                    val = Vector2.internalBinaryRead(reader, reader.uint32(), options);
+                    break;
+                default: throw new globalThis.Error("unknown map entry field for protocol.GameStateDeltaMessage.updated_other_player_positions");
+            }
+        }
+        map[key ?? ""] = val ?? Vector2.create();
+    }
     internalBinaryWrite(message: GameStateDeltaMessage, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* map<string, protocol.Player> updated_players = 1; */
         for (let k of globalThis.Object.keys(message.updatedPlayers)) {
@@ -1985,9 +2064,22 @@ class GameStateDeltaMessage$Type extends MessageType$<GameStateDeltaMessage> {
         /* repeated string removed_shops = 13; */
         for (let i = 0; i < message.removedShops.length; i++)
             writer.tag(13, WireType.LengthDelimited).string(message.removedShops[i]);
-        /* repeated string players_shops = 14; */
-        for (let i = 0; i < message.playersShops.length; i++)
-            writer.tag(14, WireType.LengthDelimited).string(message.playersShops[i]);
+        /* repeated string added_players_shops = 14; */
+        for (let i = 0; i < message.addedPlayersShops.length; i++)
+            writer.tag(14, WireType.LengthDelimited).string(message.addedPlayersShops[i]);
+        /* map<string, protocol.Vector2> updated_other_player_positions = 15; */
+        for (let k of globalThis.Object.keys(message.updatedOtherPlayerPositions)) {
+            writer.tag(15, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
+            writer.tag(2, WireType.LengthDelimited).fork();
+            Vector2.internalBinaryWrite(message.updatedOtherPlayerPositions[k], writer, options);
+            writer.join().join();
+        }
+        /* repeated string removed_other_player_positions = 16; */
+        for (let i = 0; i < message.removedOtherPlayerPositions.length; i++)
+            writer.tag(16, WireType.LengthDelimited).string(message.removedOtherPlayerPositions[i]);
+        /* repeated string removed_players_shops = 17; */
+        for (let i = 0; i < message.removedPlayersShops.length; i++)
+            writer.tag(17, WireType.LengthDelimited).string(message.removedPlayersShops[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

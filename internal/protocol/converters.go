@@ -176,15 +176,21 @@ func ToProtoGameState(gs types.GameState) *GameStateMessage {
 		protoShops[k] = ToProtoShop(v)
 	}
 
+	otherPlayerPositions := make(map[string]*Vector2)
+	for k, v := range gs.OtherPlayerPositions {
+		otherPlayerPositions[k] = ToProtoVector2(v)
+	}
+
 	return &GameStateMessage{
-		Players:      protoPlayers,
-		Bullets:      protoBullets,
-		Walls:        protoWalls,
-		Enemies:      protoEnemies,
-		Bonuses:      protoBonuses,
-		Shops:        protoShops,
-		PlayersShops: gs.PlayersShops,
-		Timestamp:    gs.Timestamp,
+		Players:              protoPlayers,
+		Bullets:              protoBullets,
+		Walls:                protoWalls,
+		Enemies:              protoEnemies,
+		Bonuses:              protoBonuses,
+		Shops:                protoShops,
+		PlayersShops:         gs.PlayersShops,
+		OtherPlayerPositions: otherPlayerPositions,
+		Timestamp:            gs.Timestamp,
 	}
 }
 
@@ -225,21 +231,29 @@ func ToProtoGameStateDelta(delta *types.GameStateDelta) *GameStateDeltaMessage {
 		protoUpdatedShops[k] = ToProtoShop(v)
 	}
 
+	protoUpdatedOtherPlayerPositions := make(map[string]*Vector2)
+	for k, v := range delta.UpdatedOtherPlayerPositions {
+		protoUpdatedOtherPlayerPositions[k] = ToProtoVector2(v)
+	}
+
 	return &GameStateDeltaMessage{
-		UpdatedPlayers: protoUpdatedPlayers,
-		RemovedPlayers: delta.RemovedPlayers,
-		UpdatedBullets: protoUpdatedBullets,
-		RemovedBullets: protoRemovedBullets,
-		UpdatedWalls:   protoUpdatedWalls,
-		RemovedWalls:   delta.RemovedWalls,
-		UpdatedEnemies: protoUpdatedEnemies,
-		RemovedEnemies: delta.RemovedEnemies,
-		UpdatedBonuses: protoUpdatedBonuses,
-		RemovedBonuses: delta.RemovedBonuses,
-		UpdatedShops:   protoUpdatedShops,
-		RemovedShops:   delta.RemovedShops,
-		PlayersShops:   delta.PlayersShops,
-		Timestamp:      delta.Timestamp,
+		UpdatedPlayers:              protoUpdatedPlayers,
+		RemovedPlayers:              delta.RemovedPlayers,
+		UpdatedBullets:              protoUpdatedBullets,
+		RemovedBullets:              protoRemovedBullets,
+		UpdatedWalls:                protoUpdatedWalls,
+		RemovedWalls:                delta.RemovedWalls,
+		UpdatedEnemies:              protoUpdatedEnemies,
+		RemovedEnemies:              delta.RemovedEnemies,
+		UpdatedBonuses:              protoUpdatedBonuses,
+		RemovedBonuses:              delta.RemovedBonuses,
+		UpdatedShops:                protoUpdatedShops,
+		RemovedShops:                delta.RemovedShops,
+		AddedPlayersShops:           delta.AddedPlayersShops,
+		RemovedPlayersShops:         delta.RemovedPlayersShops,
+		UpdatedOtherPlayerPositions: protoUpdatedOtherPlayerPositions,
+		RemovedOtherPlayerPositions: delta.RemovedOtherPlayerPositions,
+		Timestamp:                   delta.Timestamp,
 	}
 }
 

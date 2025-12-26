@@ -461,7 +461,7 @@ func (e *Engine) updatePreviousState(playerID string) {
 	// Save objects to previous state for delta computation
 	prevState.players = make(map[string]*types.Player)
 	for id, p := range e.state.players {
-		if p.ID != playerID && !p.IsVisibleToPlayer(player) {
+		if p.ID != playerID && (!p.IsVisibleToPlayer(player) || !p.IsPositionDetectable()) {
 			continue
 		}
 
@@ -1482,22 +1482,32 @@ func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
 	if !exists {
 		// Return empty state if player doesn't exist
 		return types.GameState{
-			Players:   make(map[string]*types.Player),
-			Bullets:   make(map[string]*types.Bullet),
-			Walls:     make(map[string]*types.Wall),
-			Enemies:   make(map[string]*types.Enemy),
-			Bonuses:   make(map[string]*types.Bonus),
-			Shops:     make(map[string]*types.Shop),
-			Timestamp: time.Now().UnixMilli(),
+			Players:              make(map[string]*types.Player),
+			Bullets:              make(map[string]*types.Bullet),
+			Walls:                make(map[string]*types.Wall),
+			Enemies:              make(map[string]*types.Enemy),
+			Bonuses:              make(map[string]*types.Bonus),
+			Shops:                make(map[string]*types.Shop),
+			OtherPlayerPositions: make(map[string]*types.Vector2),
+			Timestamp:            time.Now().UnixMilli(),
 		}
 	}
 
 	// Deep copy with filtering
 	playersCopy := make(map[string]*types.Player)
+	otherPlayerPositions := make(map[string]*types.Vector2)
 	for k, v := range e.state.players {
 		if v.IsVisibleToPlayer(player) {
 			playersCopy[k] = v.Clone()
 		}
+
+		if k != playerID && v.IsAlive && v.NightVisionTimer <= 0 {
+			otherPlayerPositions[k] = &types.Vector2{
+				X: v.Position.X,
+				Y: v.Position.Y,
+			}
+		}
+
 	}
 
 	bulletsCopy := make(map[string]*types.Bullet)
@@ -1546,14 +1556,15 @@ func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
 	}
 
 	return types.GameState{
-		Players:      playersCopy,
-		Bullets:      bulletsCopy,
-		Walls:        wallsCopy,
-		Enemies:      enemiesCopy,
-		Bonuses:      bonusesCopy,
-		Shops:        shopsCopy,
-		PlayersShops: playersShops,
-		Timestamp:    time.Now().UnixMilli(),
+		Players:              playersCopy,
+		Bullets:              bulletsCopy,
+		Walls:                wallsCopy,
+		Enemies:              enemiesCopy,
+		Bonuses:              bonusesCopy,
+		Shops:                shopsCopy,
+		PlayersShops:         playersShops,
+		OtherPlayerPositions: otherPlayerPositions,
+		Timestamp:            time.Now().UnixMilli(),
 	}
 }
 
@@ -1569,54 +1580,58 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 	if !exists {
 		// Return empty delta if player doesn't exist
 		return &types.GameStateDelta{
-			UpdatedPlayers: make(map[string]*types.Player),
-			RemovedPlayers: make([]string, 0),
-			UpdatedBullets: make(map[string]*types.Bullet),
-			RemovedBullets: make(map[string]*types.Bullet),
-			UpdatedWalls:   make(map[string]*types.Wall),
-			RemovedWalls:   make([]string, 0),
-			UpdatedEnemies: make(map[string]*types.Enemy),
-			RemovedEnemies: make([]string, 0),
-			UpdatedBonuses: make(map[string]*types.Bonus),
-			UpdatedShops:   make(map[string]*types.Shop),
-			RemovedShops:   make([]string, 0),
-			Timestamp:      time.Now().UnixMilli(),
+			UpdatedPlayers:              make(map[string]*types.Player),
+			UpdatedBullets:              make(map[string]*types.Bullet),
+			RemovedBullets:              make(map[string]*types.Bullet),
+			UpdatedWalls:                make(map[string]*types.Wall),
+			UpdatedEnemies:              make(map[string]*types.Enemy),
+			UpdatedBonuses:              make(map[string]*types.Bonus),
+			UpdatedShops:                make(map[string]*types.Shop),
+			UpdatedOtherPlayerPositions: make(map[string]*types.Vector2),
+			Timestamp:                   time.Now().UnixMilli(),
 		}
 	}
 
 	playerChunkX, playerChunkY := utils.ChunkXYFromPosition(player.Position.X, player.Position.Y)
 
 	delta := &types.GameStateDelta{
-		UpdatedPlayers: make(map[string]*types.Player),
-		RemovedPlayers: make([]string, 0),
-		UpdatedBullets: make(map[string]*types.Bullet),
-		RemovedBullets: make(map[string]*types.Bullet),
-		UpdatedWalls:   make(map[string]*types.Wall),
-		RemovedWalls:   make([]string, 0),
-		UpdatedEnemies: make(map[string]*types.Enemy),
-		RemovedEnemies: make([]string, 0),
-		UpdatedBonuses: make(map[string]*types.Bonus),
-		RemovedBonuses: make([]string, 0),
-		UpdatedShops:   make(map[string]*types.Shop),
-		RemovedShops:   make([]string, 0),
-		Timestamp:      time.Now().UnixMilli(),
+		UpdatedPlayers:              make(map[string]*types.Player),
+		UpdatedBullets:              make(map[string]*types.Bullet),
+		RemovedBullets:              make(map[string]*types.Bullet),
+		UpdatedWalls:                make(map[string]*types.Wall),
+		UpdatedEnemies:              make(map[string]*types.Enemy),
+		UpdatedBonuses:              make(map[string]*types.Bonus),
+		UpdatedShops:                make(map[string]*types.Shop),
+		UpdatedOtherPlayerPositions: make(map[string]*types.Vector2),
+		Timestamp:                   time.Now().UnixMilli(),
 	}
 
 	// Check for added/updated players in visible chunks
 	for id, p := range e.state.players {
+		prev, prevExists := prevState.players[id]
 		if p.ID == playerID || p.IsVisibleToPlayer(player) {
-			prev := prevState.players[id]
 			if !types.PlayersEqual(prev, p) {
 				delta.UpdatedPlayers[id] = p.Clone()
+			}
+		}
+
+		if p.ID != playerID && p.IsPositionDetectable() && (!prevExists || prev.Position.X != p.Position.X || prev.Position.Y != p.Position.Y) {
+			delta.UpdatedOtherPlayerPositions[id] = &types.Vector2{
+				X: p.Position.X,
+				Y: p.Position.Y,
 			}
 		}
 	}
 
 	// Check for removed players that were in visible chunks
-	for id := range prevState.players {
-		current, exists := e.state.players[id]
-		if !exists || !current.IsVisibleToPlayer(player) {
+	for id, p := range prevState.players {
+		current, currentExists := e.state.players[id]
+		if (!currentExists || !current.IsVisibleToPlayer(player)) && p.IsVisibleToPlayer(player) {
 			delta.RemovedPlayers = append(delta.RemovedPlayers, id)
+		}
+
+		if id != playerID && (!currentExists || !current.IsPositionDetectable()) {
+			delta.RemovedOtherPlayerPositions = append(delta.RemovedOtherPlayerPositions, id)
 		}
 	}
 
@@ -1678,9 +1693,17 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 			for id, shop := range e.state.shopsByChunk[neighborChunkKey] {
 				currentVisible := shop.IsVisibleToPlayer(player)
 				prev, existsInPrev := prevState.shopsByChunk[neighborChunkKey][id]
+				prevPlayer := prevState.players[playerID]
 
-				if currentVisible && shop.IsPlayerInShop(player) {
-					delta.PlayersShops = append(delta.PlayersShops, id)
+				if currentVisible && shop.IsPlayerInShop(player) && (prevPlayer == nil || !shop.IsPlayerInShop(prevPlayer)) {
+					delta.AddedPlayersShops = append(delta.AddedPlayersShops, id)
+				}
+
+				if prev != nil && prevPlayer != nil &&
+					prev.IsVisibleToPlayer(prevPlayer) &&
+					shop.IsPlayerInShop(prevPlayer) &&
+					(!currentVisible || !shop.IsPlayerInShop(player)) {
+					delta.RemovedPlayersShops = append(delta.RemovedPlayersShops, id)
 				}
 
 				if currentVisible && !types.ShopsEqual(prev, shop) {

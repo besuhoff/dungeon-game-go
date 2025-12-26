@@ -135,6 +135,14 @@ func (p *Player) IsVisibleToPlayer(player *Player) bool {
 	return p.DistanceToPoint(detectionPoint) <= detectionDistance+config.PlayerRadius*2
 }
 
+func (p *Player) IsPositionDetectable() bool {
+	if !p.IsAlive || p.NightVisionTimer > 0 {
+		return false
+	}
+
+	return true
+}
+
 func (p *Player) InventoryItem(itemID InventoryItemID) *InventoryItem {
 	for _, item := range p.Inventory {
 		if item.Type == itemID {
