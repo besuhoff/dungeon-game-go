@@ -97,6 +97,9 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			if bonusType, ok := obj.Properties["bonus_type"].(string); ok {
 				bonus.Type = bonusType
 			}
+			if droppedBy, ok := obj.Properties["dropped_by"].(string); ok {
+				bonus.DroppedBy = droppedBy
+			}
 			e.state.bonuses[id] = bonus
 		} else if obj.Type == "shop" {
 			shop := &types.Shop{
@@ -319,6 +322,7 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 			Y:        bonus.Position.Y,
 			Properties: map[string]interface{}{
 				"bonus_type": bonus.Type,
+				"dropped_by": bonus.DroppedBy,
 			},
 		}
 	}

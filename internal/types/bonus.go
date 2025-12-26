@@ -6,16 +6,27 @@ import (
 	"github.com/besuhoff/dungeon-game-go/internal/config"
 )
 
+const (
+	BonusTypeAidKit  = "aid_kit"
+	BonusTypeGoggles = "goggles"
+	BonusTypeChest   = "chest"
+)
+
 // Bonus represents a pickup item
 type Bonus struct {
 	ScreenObject
-	Type       string          `json:"type"` // "aid_kit" or "goggles"
+	Type       string          `json:"type"`
 	PickedUpBy string          `json:"picked_up_by,omitempty"`
+	DroppedBy  string          `json:"dropped_by,omitempty"`
 	PickedUpAt time.Time       `json:"-"`
 	Inventory  []InventoryItem `json:"inventory"`
 }
 
 func (b *Bonus) IsVisibleToPlayer(player *Player) bool {
+	if b.DroppedBy == player.ID {
+		return true
+	}
+
 	if player.NightVisionTimer > 0 {
 		return b.DistanceToPoint(player.Position) <= config.SightRadius
 	}
@@ -25,11 +36,11 @@ func (b *Bonus) IsVisibleToPlayer(player *Player) bool {
 
 	bonusSize := 0.0
 	switch b.Type {
-	case "aid_kit":
+	case BonusTypeAidKit:
 		bonusSize = config.AidKitSize
-	case "goggles":
+	case BonusTypeGoggles:
 		bonusSize = config.GogglesSize
-	case "chest":
+	case BonusTypeChest:
 		bonusSize = config.ChestSize
 	}
 	return distance <= detectionDistance+bonusSize

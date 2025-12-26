@@ -1042,7 +1042,7 @@ func (e *Engine) Update() {
 			}
 
 			bonusRadius := config.AidKitSize / 2
-			if bonus.Type == "goggles" {
+			if bonus.Type == types.BonusTypeGoggles {
 				bonusRadius = config.GogglesSize / 2
 			}
 
@@ -1438,10 +1438,10 @@ func (e *Engine) spawnBonus(pos *types.Vector2) {
 		return
 	}
 
-	bonusType := "aid_kit"
+	bonusType := types.BonusTypeAidKit
 	inventoryItemID := types.InventoryItemAidKit
 	if rand.Float64() < config.EnemyDropChanceGoggles {
-		bonusType = "goggles"
+		bonusType = types.BonusTypeGoggles
 		inventoryItemID = types.InventoryItemGoggles
 	}
 

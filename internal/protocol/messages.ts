@@ -224,6 +224,10 @@ export interface Bonus {
      * @generated from protobuf field: string picked_up_by = 4
      */
     pickedUpBy: string;
+    /**
+     * @generated from protobuf field: string dropped_by = 5
+     */
+    droppedBy: string;
 }
 /**
  * @generated from protobuf message protocol.ShopItem
@@ -1129,7 +1133,8 @@ class Bonus$Type extends MessageType$<Bonus> {
             { no: 1, name: "id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "position", kind: "message", T: () => Vector2 },
             { no: 3, name: "type", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "picked_up_by", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+            { no: 4, name: "picked_up_by", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "dropped_by", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<Bonus>): Bonus {
@@ -1137,6 +1142,7 @@ class Bonus$Type extends MessageType$<Bonus> {
         message.id = "";
         message.type = "";
         message.pickedUpBy = "";
+        message.droppedBy = "";
         if (value !== undefined)
             reflectionMergePartial<Bonus>(this, message, value);
         return message;
@@ -1157,6 +1163,9 @@ class Bonus$Type extends MessageType$<Bonus> {
                     break;
                 case /* string picked_up_by */ 4:
                     message.pickedUpBy = reader.string();
+                    break;
+                case /* string dropped_by */ 5:
+                    message.droppedBy = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1182,6 +1191,9 @@ class Bonus$Type extends MessageType$<Bonus> {
         /* string picked_up_by = 4; */
         if (message.pickedUpBy !== "")
             writer.tag(4, WireType.LengthDelimited).string(message.pickedUpBy);
+        /* string dropped_by = 5; */
+        if (message.droppedBy !== "")
+            writer.tag(5, WireType.LengthDelimited).string(message.droppedBy);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

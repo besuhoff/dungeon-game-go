@@ -629,6 +629,7 @@ type Bonus struct {
 	Position      *Vector2               `protobuf:"bytes,2,opt,name=position,proto3" json:"position,omitempty"`
 	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
 	PickedUpBy    string                 `protobuf:"bytes,4,opt,name=picked_up_by,json=pickedUpBy,proto3" json:"picked_up_by,omitempty"`
+	DroppedBy     string                 `protobuf:"bytes,5,opt,name=dropped_by,json=droppedBy,proto3" json:"dropped_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -687,6 +688,13 @@ func (x *Bonus) GetType() string {
 func (x *Bonus) GetPickedUpBy() string {
 	if x != nil {
 		return x.PickedUpBy
+	}
+	return ""
+}
+
+func (x *Bonus) GetDroppedBy() string {
+	if x != nil {
+		return x.DroppedBy
 	}
 	return ""
 }
@@ -1557,13 +1565,15 @@ const file_messages_proto_rawDesc = "" +
 	"\brotation\x18\x03 \x01(\x01R\brotation\x12\x14\n" +
 	"\x05lives\x18\x04 \x01(\x02R\x05lives\x12\x17\n" +
 	"\awall_id\x18\x05 \x01(\tR\x06wallId\x12\x17\n" +
-	"\ais_dead\x18\x06 \x01(\bR\x06isDead\"|\n" +
+	"\ais_dead\x18\x06 \x01(\bR\x06isDead\"\x9b\x01\n" +
 	"\x05Bonus\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12-\n" +
 	"\bposition\x18\x02 \x01(\v2\x11.protocol.Vector2R\bposition\x12\x12\n" +
 	"\x04type\x18\x03 \x01(\tR\x04type\x12 \n" +
 	"\fpicked_up_by\x18\x04 \x01(\tR\n" +
-	"pickedUpBy\"Y\n" +
+	"pickedUpBy\x12\x1d\n" +
+	"\n" +
+	"dropped_by\x18\x05 \x01(\tR\tdroppedBy\"Y\n" +
 	"\bShopItem\x12\x1a\n" +
 	"\bquantity\x18\x01 \x01(\x05R\bquantity\x12\x1b\n" +
 	"\tpack_size\x18\x02 \x01(\x05R\bpackSize\x12\x14\n" +

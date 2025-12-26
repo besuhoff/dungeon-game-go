@@ -289,8 +289,9 @@ func (p *Player) DropInventory() *Bonus {
 			ID:       uuid.New().String(),
 			Position: &Vector2{X: p.Position.X, Y: p.Position.Y},
 		},
-		Type:      "chest",
+		Type:      BonusTypeChest,
 		Inventory: make([]InventoryItem, len(p.Inventory)),
+		DroppedBy: p.ID,
 	}
 
 	for i, item := range p.Inventory {

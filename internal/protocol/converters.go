@@ -116,6 +116,7 @@ func ToProtoBonus(b *types.Bonus) *Bonus {
 		Position:   ToProtoVector2(b.Position),
 		Type:       b.Type,
 		PickedUpBy: b.PickedUpBy,
+		DroppedBy:  b.DroppedBy,
 	}
 }
 

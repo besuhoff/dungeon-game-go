@@ -80,6 +80,7 @@ message Bonus {
   Vector2 position = 2;
   string type = 3;
   string picked_up_by = 4;
+  string dropped_by = 5;
 }
 
 message ShopItem {
