@@ -888,6 +888,11 @@ func (e *Engine) Update() {
 						enemy.Rotation = -90 * enemy.Direction
 					}
 
+					// Skip collision checks if no movement
+					if dx == 0 && dy == 0 {
+						continue
+					}
+
 					// Check collisions with walls
 					collision := false
 					for neighborChunkX := enemyChunkX - 1; neighborChunkX <= enemyChunkX+1; neighborChunkX++ {
@@ -906,6 +911,9 @@ func (e *Engine) Update() {
 									break
 								}
 							}
+							if collision {
+								break
+							}
 
 							// Check collisions with other enemies
 							for _, other := range e.state.enemiesByChunk[neighborChunkKey] {
@@ -918,17 +926,25 @@ func (e *Engine) Update() {
 									}
 								}
 							}
+							if collision {
+								break
+							}
+						}
+						if collision {
+							break
 						}
 					}
 
-					// Check collisions with players
-					for _, player := range e.state.players {
-						if player.IsAlive {
-							if utils.CheckCircleCollision(
-								enemy.Position.X+dx, enemy.Position.Y+dy, config.EnemyRadius,
-								player.Position.X, player.Position.Y, config.PlayerRadius) {
-								collision = true
-								break
+					// Check collisions with players (only if no collision detected yet)
+					if !collision {
+						for _, player := range e.state.players {
+							if player.IsAlive {
+								if utils.CheckCircleCollision(
+									enemy.Position.X+dx, enemy.Position.Y+dy, config.EnemyRadius,
+									player.Position.X, player.Position.Y, config.PlayerRadius) {
+									collision = true
+									break
+								}
 							}
 						}
 					}
