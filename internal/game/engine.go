@@ -458,11 +458,22 @@ func (e *Engine) updatePreviousState(playerID string) {
 
 	prevState := e.prevState[playerID]
 
+	playersAbleToSee := make(map[string]*types.Player)
+	playersAbleToSee[playerID] = player
+
+	shouldCheckOtherPlayers := player.NightVisionTimer <= 0
+
 	// Save objects to previous state for delta computation
 	prevState.players = make(map[string]*types.Player)
 	for id, p := range e.state.players {
-		if p.ID != playerID && (!p.IsVisibleToPlayer(player) || !p.IsPositionDetectable()) {
+		isVisibleToPlayer := p.IsVisibleToPlayer(player)
+		isPositionDetectable := p.IsPositionDetectable()
+		if p.ID != playerID && (!isVisibleToPlayer || !isPositionDetectable) {
 			continue
+		}
+
+		if shouldCheckOtherPlayers && isVisibleToPlayer && isPositionDetectable && p.ID != playerID {
+			playersAbleToSee[id] = p
 		}
 
 		prevState.players[id] = p.Clone()
@@ -482,42 +493,51 @@ func (e *Engine) updatePreviousState(playerID string) {
 			prevState.shopsByChunk[chunkKey] = make(map[string]*types.Shop)
 
 			for _, w := range e.state.wallsByChunk[chunkKey] {
-				if !w.IsVisibleToPlayer(player) {
-					continue
+				// Walls are always visible to players so no need to check nearby players
+				if w.IsVisibleToPlayer(player) {
+					prevState.wallsByChunk[chunkKey][w.ID] = w.Clone()
 				}
-				prevState.wallsByChunk[chunkKey][w.ID] = w.Clone()
 			}
 
 			for _, enemy := range e.state.enemiesByChunk[chunkKey] {
-				if !enemy.IsVisibleToPlayer(player) {
-					continue
+				for _, p := range playersAbleToSee {
+					if enemy.IsVisibleToPlayer(p) {
+						prevState.enemiesByChunk[chunkKey][enemy.ID] = enemy.Clone()
+						break
+					}
 				}
-				prevState.enemiesByChunk[chunkKey][enemy.ID] = enemy.Clone()
 			}
 
 			for _, shop := range e.state.shopsByChunk[chunkKey] {
-				if !shop.IsVisibleToPlayer(player) {
-					continue
+				for _, p := range playersAbleToSee {
+					if shop.IsVisibleToPlayer(p) {
+						prevState.shopsByChunk[chunkKey][shop.ID] = shop.Clone()
+						break
+					}
 				}
-				prevState.shopsByChunk[chunkKey][shop.ID] = shop.Clone()
 			}
 		}
 	}
 
 	prevState.bullets = make(map[string]*types.Bullet)
 	for id, bullet := range e.state.bullets {
-		if !bullet.IsVisibleToPlayer(player) {
-			continue
+		for _, p := range playersAbleToSee {
+			if bullet.IsVisibleToPlayer(p) {
+				prevState.bullets[id] = bullet.Clone()
+				break
+			}
 		}
-		prevState.bullets[id] = bullet.Clone()
 	}
 
 	prevState.bonuses = make(map[string]*types.Bonus)
 	for id, bonus := range e.state.bonuses {
-		if !bonus.IsVisibleToPlayer(player) {
-			continue
+		for _, p := range playersAbleToSee {
+
+			if bonus.IsVisibleToPlayer(p) {
+				prevState.bonuses[id] = bonus.Clone()
+				break
+			}
 		}
-		prevState.bonuses[id] = bonus.Clone()
 	}
 }
 
@@ -1606,28 +1626,62 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 		Timestamp:                   time.Now().UnixMilli(),
 	}
 
+	playersAbleToSee := make(map[string]*types.Player)
+	playersAbleToSee[playerID] = player
+
+	if player.NightVisionTimer <= 0 {
+		for id, playerFromState := range e.state.players {
+			if id != playerID && playerFromState.IsPositionDetectable() && playerFromState.IsVisibleToPlayer(player) {
+				playersAbleToSee[id] = playerFromState
+			}
+		}
+	}
+
 	// Check for added/updated players in visible chunks
-	for id, p := range e.state.players {
+	for id, playerFromState := range e.state.players {
 		prev, prevExists := prevState.players[id]
-		if p.ID == playerID || p.IsVisibleToPlayer(player) {
-			if !types.PlayersEqual(prev, p) {
-				delta.UpdatedPlayers[id] = p.Clone()
+		for _, playerAbleToSee := range playersAbleToSee {
+			if playerFromState.ID == playerID || playerFromState.IsVisibleToPlayer(playerAbleToSee) {
+				if !types.PlayersEqual(prev, playerFromState) {
+					delta.UpdatedPlayers[id] = playerFromState.Clone()
+				}
+				break
 			}
 		}
 
-		if p.ID != playerID && p.IsPositionDetectable() && (!prevExists || prev.Position.X != p.Position.X || prev.Position.Y != p.Position.Y) {
+		if playerFromState.ID != playerID && playerFromState.IsPositionDetectable() && (!prevExists || prev.Position.X != playerFromState.Position.X || prev.Position.Y != playerFromState.Position.Y) {
 			delta.UpdatedOtherPlayerPositions[id] = &types.Vector2{
-				X: p.Position.X,
-				Y: p.Position.Y,
+				X: playerFromState.Position.X,
+				Y: playerFromState.Position.Y,
 			}
 		}
 	}
 
 	// Check for removed players that were in visible chunks
-	for id, p := range prevState.players {
+	for id, prev := range prevState.players {
 		current, currentExists := e.state.players[id]
-		if (!currentExists || !current.IsVisibleToPlayer(player)) && p.IsVisibleToPlayer(player) {
+		if !currentExists {
 			delta.RemovedPlayers = append(delta.RemovedPlayers, id)
+		} else {
+			isCurrentVisible := false
+			isPrevVisible := false
+			for _, playerAbleToSee := range playersAbleToSee {
+				if current.IsVisibleToPlayer(playerAbleToSee) {
+					isCurrentVisible = true
+				}
+
+				prevPlayerAbleToSee, existsInPrev := prevState.players[playerAbleToSee.ID]
+				if !existsInPrev {
+					continue
+				}
+				if prev.IsVisibleToPlayer(prevPlayerAbleToSee) {
+					isPrevVisible = true
+				}
+			}
+
+			if isPrevVisible && !isCurrentVisible {
+				delta.RemovedPlayers = append(delta.RemovedPlayers, id)
+			}
 		}
 
 		if id != playerID && (!currentExists || !current.IsPositionDetectable()) {
@@ -1638,7 +1692,13 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 	// Check for added bullets in visible chunks
 	for id, bullet := range e.state.bullets {
 		prev, exists := prevState.bullets[id]
-		isBulletVisible := bullet.IsVisibleToPlayer(player)
+		isBulletVisible := false
+		for _, playerAbleToSee := range playersAbleToSee {
+			if bullet.IsVisibleToPlayer(playerAbleToSee) {
+				isBulletVisible = true
+				break
+			}
+		}
 		if isBulletVisible || exists {
 			bulletCopy := bullet.Clone()
 			if !types.BulletsEqual(prev, bullet) {
@@ -1660,7 +1720,14 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 
 			// Check for added/updated enemies in visible chunks
 			for id, enemy := range e.state.enemiesByChunk[neighborChunkKey] {
-				currentVisible := enemy.IsVisibleToPlayer(player)
+				currentVisible := false
+				for _, playerAbleToSee := range playersAbleToSee {
+					if enemy.IsVisibleToPlayer(playerAbleToSee) {
+						currentVisible = true
+						break
+					}
+				}
+
 				prev, existsInPrev := prevState.enemiesByChunk[neighborChunkKey][id]
 
 				if currentVisible && !types.EnemiesEqual(prev, enemy) {
@@ -1676,6 +1743,7 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 			}
 
 			for id, wall := range e.state.wallsByChunk[neighborChunkKey] {
+				// Walls are always visible to players so no need to check nearby players
 				currentVisible := wall.IsVisibleToPlayer(player) || enemiesHaveWall(delta.UpdatedEnemies, wall.ID)
 				_, existsInPrev := prevState.wallsByChunk[neighborChunkKey][id]
 				if currentVisible && !existsInPrev {
@@ -1691,7 +1759,23 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 			}
 
 			for id, shop := range e.state.shopsByChunk[neighborChunkKey] {
-				currentVisible := shop.IsVisibleToPlayer(player)
+				currentVisible := false
+				prevVisible := false
+				for _, playerAbleToSee := range playersAbleToSee {
+					if shop.IsVisibleToPlayer(playerAbleToSee) {
+						currentVisible = true
+					}
+
+					prevPlayerAbleToSee, existsInPrev := prevState.players[playerAbleToSee.ID]
+					if existsInPrev && shop.IsVisibleToPlayer(prevPlayerAbleToSee) {
+						prevVisible = true
+					}
+				}
+
+				if !currentVisible && !prevVisible {
+					continue
+				}
+
 				prev, existsInPrev := prevState.shopsByChunk[neighborChunkKey][id]
 				prevPlayer := prevState.players[playerID]
 
@@ -1700,7 +1784,7 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 				}
 
 				if prev != nil && prevPlayer != nil &&
-					prev.IsVisibleToPlayer(prevPlayer) &&
+					prevVisible &&
 					shop.IsPlayerInShop(prevPlayer) &&
 					(!currentVisible || !shop.IsPlayerInShop(player)) {
 					delta.RemovedPlayersShops = append(delta.RemovedPlayersShops, id)
@@ -1743,7 +1827,15 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 
 	// Check for added bonuses in visible chunks
 	for id, bonus := range e.state.bonuses {
-		if bonus.IsVisibleToPlayer(player) {
+		currentVisible := false
+		for _, playerAbleToSee := range playersAbleToSee {
+			if bonus.IsVisibleToPlayer(playerAbleToSee) {
+				currentVisible = true
+				break
+			}
+		}
+
+		if currentVisible {
 			prevBonus, prevExists := prevState.bonuses[id]
 
 			if !prevExists || prevBonus.PickedUpBy != bonus.PickedUpBy {
@@ -1754,7 +1846,17 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 
 	for id := range prevState.bonuses {
 		current, exists := e.state.bonuses[id]
-		if !exists || !current.IsVisibleToPlayer(player) {
+		currentVisible := false
+		if exists {
+			for _, playerAbleToSee := range playersAbleToSee {
+				if exists && current.IsVisibleToPlayer(playerAbleToSee) {
+					currentVisible = true
+					break
+				}
+			}
+		}
+
+		if !exists || !currentVisible {
 			delta.RemovedBonuses = append(delta.RemovedBonuses, id)
 		}
 	}
