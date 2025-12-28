@@ -104,8 +104,8 @@ func NewEngine(sessionID string) *Engine {
 	}
 }
 
-// AddPlayer adds a new player to the game
-func (e *Engine) AddPlayer(id, username string) *types.Player {
+// ConnectPlayer adds a new player to the game
+func (e *Engine) ConnectPlayer(id, username string) *types.Player {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -145,6 +145,7 @@ func (e *Engine) AddPlayer(id, username string) *types.Player {
 			},
 			InvulnerableTimer: config.PlayerSpawnInvulnerabilityTime,
 			IsAlive:           true,
+			IsConnected:       true,
 			Inventory: []types.InventoryItem{
 				{Type: types.InventoryItemBlaster, Quantity: 1},
 			},
@@ -152,8 +153,12 @@ func (e *Engine) AddPlayer(id, username string) *types.Player {
 		}
 
 		e.state.players[id] = player
-	} else if !player.IsAlive {
-		e.addPlayerToRespawnQueue(id)
+	} else {
+		if !player.IsAlive {
+			e.addPlayerToRespawnQueue(id)
+		}
+
+		player.IsConnected = true
 	}
 
 	e.prevState[id] = &EngineGameState{}
@@ -312,17 +317,23 @@ func (e *Engine) pickSpawnPoint(playerPos *types.Vector2) *types.Vector2 {
 
 	for _, enemy := range e.state.enemiesByChunk {
 		for _, enemy := range enemy {
-			if !enemy.IsDead {
-				objectsToCheck = append(objectsToCheck, &types.CollisionObject{
-					LeftTopPos: types.Vector2{X: enemy.Position.X - config.EnemyRadius, Y: enemy.Position.Y - config.EnemyRadius},
-					Width:      config.EnemyRadius * 2,
-					Height:     config.EnemyRadius * 2,
-				})
+			if enemy.IsDead {
+				continue
 			}
+
+			objectsToCheck = append(objectsToCheck, &types.CollisionObject{
+				LeftTopPos: types.Vector2{X: enemy.Position.X - config.EnemyRadius, Y: enemy.Position.Y - config.EnemyRadius},
+				Width:      config.EnemyRadius * 2,
+				Height:     config.EnemyRadius * 2,
+			})
 		}
 	}
 
 	for _, otherPlayer := range e.state.players {
+		if !otherPlayer.IsConnected || !otherPlayer.IsAlive {
+			continue
+		}
+
 		objectsToCheck = append(objectsToCheck, &types.CollisionObject{
 			LeftTopPos: types.Vector2{X: otherPlayer.Position.X - config.PlayerRadius, Y: otherPlayer.Position.Y - config.PlayerRadius},
 			Width:      config.PlayerRadius * 2,
@@ -409,11 +420,15 @@ func (e *Engine) RespawnPlayer(id string) {
 	e.addPlayerToRespawnQueue(id)
 }
 
-// RemovePlayer removes a player from the game
-func (e *Engine) RemovePlayer(id string) {
+// DisconnectPlayer removes a player from the game
+func (e *Engine) DisconnectPlayer(id string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	delete(e.state.players, id)
+	player, exists := e.state.players[id]
+	if exists {
+		player.IsConnected = false
+	}
+
 	delete(e.prevState, id)
 	delete(e.playerInputState, id)
 	delete(e.respawnQueue, id)
@@ -466,6 +481,10 @@ func (e *Engine) updatePreviousState(playerID string) {
 	// Save objects to previous state for delta computation
 	prevState.players = make(map[string]*types.Player)
 	for id, p := range e.state.players {
+		if !p.IsConnected {
+			continue
+		}
+
 		isVisibleToPlayer := p.IsVisibleToPlayer(player)
 		isPositionDetectable := p.IsPositionDetectable()
 		if p.ID != playerID && (!isVisibleToPlayer || !isPositionDetectable) {
@@ -556,6 +575,10 @@ func (e *Engine) Update() {
 
 	// Update players
 	for _, player := range e.state.players {
+		if !player.IsConnected {
+			continue
+		}
+
 		if !player.IsAlive {
 			if _, exists := e.respawnQueue[player.ID]; exists {
 				// Respawn player
@@ -694,6 +717,10 @@ func (e *Engine) Update() {
 				}
 
 				for _, otherPlayer := range e.state.players {
+					if !otherPlayer.IsConnected {
+						continue
+					}
+
 					if otherPlayer.ID != player.ID && otherPlayer.IsAlive {
 						objectsToCheck = append(objectsToCheck, &types.CollisionObject{
 							LeftTopPos: types.Vector2{X: otherPlayer.Position.X - config.PlayerRadius*2, Y: otherPlayer.Position.Y - config.PlayerRadius*2},
@@ -813,47 +840,49 @@ func (e *Engine) Update() {
 			minDist := math.MaxFloat64
 
 			for _, player := range e.state.players {
-				if player.IsAlive {
-					detectionPoint, detectionDistance := player.DetectionParams()
+				if !player.IsConnected || !player.IsAlive {
+					continue
+				}
 
-					dist := enemy.DistanceToPoint(detectionPoint)
-					if dist < config.SightRadius {
-						hasPlayersInSight = true
-					}
-					if dist < detectionDistance {
-						// Add line-of-sight check with walls
-						lineClear := true
+				detectionPoint, detectionDistance := player.DetectionParams()
 
-						for neighborChunkX := enemyChunkX - 1; neighborChunkX <= enemyChunkX+1; neighborChunkX++ {
-							for neighborChunkY := enemyChunkY - 1; neighborChunkY <= enemyChunkY+1; neighborChunkY++ {
-								neighborChunkKey := fmt.Sprintf("%d,%d", neighborChunkX, neighborChunkY)
-								if !e.chunkHash[neighborChunkKey] {
-									continue
+				dist := enemy.DistanceToPoint(detectionPoint)
+				if dist < config.SightRadius {
+					hasPlayersInSight = true
+				}
+				if dist < detectionDistance {
+					// Add line-of-sight check with walls
+					lineClear := true
+
+					for neighborChunkX := enemyChunkX - 1; neighborChunkX <= enemyChunkX+1; neighborChunkX++ {
+						for neighborChunkY := enemyChunkY - 1; neighborChunkY <= enemyChunkY+1; neighborChunkY++ {
+							neighborChunkKey := fmt.Sprintf("%d,%d", neighborChunkX, neighborChunkY)
+							if !e.chunkHash[neighborChunkKey] {
+								continue
+							}
+							for _, wall := range e.state.wallsByChunk[neighborChunkKey] {
+								distanceToWall := enemy.DistanceToPoint(wall.GetCenter())
+								if distanceToWall > 2*wall.GetRadius()+detectionDistance {
+									continue // Wall is beyond player
 								}
-								for _, wall := range e.state.wallsByChunk[neighborChunkKey] {
-									distanceToWall := enemy.DistanceToPoint(wall.GetCenter())
-									if distanceToWall > 2*wall.GetRadius()+detectionDistance {
-										continue // Wall is beyond player
-									}
 
-									wallTopLeft := wall.GetTopLeft()
-									if utils.CheckLineRectCollision(
-										enemy.Position.X, enemy.Position.Y,
-										detectionPoint.X, detectionPoint.Y,
-										wallTopLeft.X, wallTopLeft.Y,
-										wall.Width, wall.Height) {
-										lineClear = false
-										break
-									}
+								wallTopLeft := wall.GetTopLeft()
+								if utils.CheckLineRectCollision(
+									enemy.Position.X, enemy.Position.Y,
+									detectionPoint.X, detectionPoint.Y,
+									wallTopLeft.X, wallTopLeft.Y,
+									wall.Width, wall.Height) {
+									lineClear = false
+									break
 								}
 							}
 						}
-						if lineClear {
-							canSee = true
-							if dist < minDist {
-								minDist = dist
-								closestVisiblePlayer = player
-							}
+					}
+					if lineClear {
+						canSee = true
+						if dist < minDist {
+							minDist = dist
+							closestVisiblePlayer = player
 						}
 					}
 				}
@@ -938,13 +967,15 @@ func (e *Engine) Update() {
 					// Check collisions with players (only if no collision detected yet)
 					if !collision {
 						for _, player := range e.state.players {
-							if player.IsAlive {
-								if utils.CheckCircleCollision(
-									enemy.Position.X+dx, enemy.Position.Y+dy, config.EnemyRadius,
-									player.Position.X, player.Position.Y, config.PlayerRadius) {
-									collision = true
-									break
-								}
+							if !player.IsAlive || !player.IsConnected {
+								continue
+							}
+
+							if utils.CheckCircleCollision(
+								enemy.Position.X+dx, enemy.Position.Y+dy, config.EnemyRadius,
+								player.Position.X, player.Position.Y, config.PlayerRadius) {
+								collision = true
+								break
 							}
 						}
 					}
@@ -1074,7 +1105,7 @@ func (e *Engine) Update() {
 
 		// Check pickup by players
 		for _, player := range e.state.players {
-			if !player.IsAlive {
+			if !player.IsAlive || !player.IsConnected {
 				continue
 			}
 
@@ -1187,7 +1218,7 @@ func (e *Engine) applyBulletDamage(bullet *types.Bullet, newPosition *types.Vect
 	hitFound = false
 	// Check collision with players
 	for _, player := range e.state.players {
-		if !player.IsAlive || player.ID == bullet.OwnerID || player.InvulnerableTimer > 0 {
+		if !player.IsConnected || !player.IsAlive || player.ID == bullet.OwnerID || player.InvulnerableTimer > 0 {
 			continue
 		}
 
@@ -1440,7 +1471,7 @@ func (e *Engine) applyRocketExplosionDamage(explosionCenter *types.Vector2, hitO
 	}
 
 	for _, player := range e.state.players {
-		if !player.IsAlive || hitObjectIDs[player.ID] {
+		if !player.IsConnected || !player.IsAlive || hitObjectIDs[player.ID] {
 			continue
 		}
 
@@ -1515,7 +1546,7 @@ func (e *Engine) GetGameStateForPlayer(playerID string) types.GameState {
 	defer e.mu.RUnlock()
 
 	player, exists := e.state.players[playerID]
-	if !exists {
+	if !exists || !player.IsConnected {
 		// Return empty state if player doesn't exist
 		return types.GameState{
 			Players:              make(map[string]*types.Player),
@@ -1613,7 +1644,7 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 	prevState := e.prevState[playerID]
 
 	player, exists := e.state.players[playerID]
-	if !exists {
+	if !exists || !player.IsConnected {
 		// Return empty delta if player doesn't exist
 		return &types.GameStateDelta{
 			UpdatedPlayers:              make(map[string]*types.Player),
@@ -1647,7 +1678,7 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 
 	if player.NightVisionTimer <= 0 {
 		for id, playerFromState := range e.state.players {
-			if id != playerID && playerFromState.IsPositionDetectable() && playerFromState.IsVisibleToPlayer(player) {
+			if playerFromState.IsConnected && id != playerID && playerFromState.IsPositionDetectable() && playerFromState.IsVisibleToPlayer(player) {
 				playersAbleToSee[id] = playerFromState
 			}
 		}
@@ -1655,6 +1686,10 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 
 	// Check for added/updated players in visible chunks
 	for id, playerFromState := range e.state.players {
+		if !playerFromState.IsConnected {
+			continue
+		}
+
 		prev, prevExists := prevState.players[id]
 		for _, playerAbleToSee := range playersAbleToSee {
 			if playerFromState.ID == playerID || playerFromState.IsVisibleToPlayer(playerAbleToSee) {
@@ -1676,7 +1711,7 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 	// Check for removed players that were in visible chunks
 	for id, prev := range prevState.players {
 		current, currentExists := e.state.players[id]
-		if !currentExists {
+		if !currentExists || !current.IsConnected {
 			delta.RemovedPlayers = append(delta.RemovedPlayers, id)
 		} else {
 			isCurrentVisible := false

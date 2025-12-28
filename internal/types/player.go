@@ -29,6 +29,7 @@ type Player struct {
 	InvulnerableTimer       float64          `json:"invulnerableTimer"`
 	NightVisionTimer        float64          `json:"nightVisionTimer"`
 	IsAlive                 bool             `json:"isAlive"`
+	IsConnected             bool             `json:"-"`
 	Inventory               []InventoryItem  `json:"inventory"`
 	SelectedGunType         string           `json:"selectedGunType"`
 }

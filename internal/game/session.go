@@ -204,6 +204,7 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			NightVisionTimer:        playerState.NightVisionTimer,
 			Kills:                   playerState.Kills,
 			IsAlive:                 playerState.IsAlive,
+			IsConnected:             playerState.IsConnected,
 			Inventory:               inventory,
 			SelectedGunType:         gunType,
 		}
@@ -249,6 +250,7 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 			InvulnerableTimer:       player.InvulnerableTimer,
 			NightVisionTimer:        player.NightVisionTimer,
 			IsAlive:                 player.IsAlive,
+			IsConnected:             player.IsConnected,
 			SelectedGunType:         player.SelectedGunType,
 			Inventory:               inventory,
 		}

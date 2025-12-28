@@ -234,7 +234,7 @@ func (gs *GameServer) registerClient(client *WebsocketClient) {
 	gs.mu.Unlock()
 
 	// Add player to game engine
-	player := session.Engine.AddPlayer(client.UserID.Hex(), client.Username)
+	player := session.Engine.ConnectPlayer(client.UserID.Hex(), client.Username)
 
 	// Update user's current session in database
 	ctx := context.Background()
@@ -297,7 +297,7 @@ func (gs *GameServer) unregisterClient(client *WebsocketClient) {
 	}
 
 	// Remove player from game engine
-	session.Engine.RemovePlayer(client.UserID.Hex())
+	session.Engine.DisconnectPlayer(client.UserID.Hex())
 
 	// Decrement player count
 	session.mu.Lock()
