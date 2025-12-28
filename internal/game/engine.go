@@ -184,6 +184,13 @@ func (e *Engine) generateInitialWorld(center *types.Vector2) {
 
 // generateChunk generates walls and enemies for a specific chunk
 func (e *Engine) generateChunk(chunkX, chunkY int, playerPos *types.Vector2) {
+	now := time.Now()
+	defer func() {
+		if e.debugMode {
+			log.Printf("Generated chunk (%d,%d) in %v", chunkX, chunkY, time.Since(now))
+		}
+	}()
+
 	// Check if chunk already exists
 	chunkKey := fmt.Sprintf("%d,%d", chunkX, chunkY)
 	if e.chunkHash[chunkKey] {
