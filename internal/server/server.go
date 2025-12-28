@@ -297,7 +297,7 @@ func (gs *GameServer) unregisterClient(client *WebsocketClient) {
 	}
 
 	// Remove player from game engine
-	session.Engine.RemovePlayer(client.ID)
+	session.Engine.RemovePlayer(client.UserID.Hex())
 
 	// Decrement player count
 	session.mu.Lock()
@@ -328,11 +328,11 @@ func (gs *GameServer) unregisterClient(client *WebsocketClient) {
 		// Clear engine state
 		session.Engine.Clear()
 	} else {
-		gs.broadcastPlayerLeftMessage(client.SessionID, client.ID)
+		gs.broadcastPlayerLeftMessage(client.SessionID, client.UserID.Hex())
 	}
 
 	log.Printf("Player %s (%s) left session %s (remaining: %d)",
-		client.Username, client.ID, client.SessionID, playerCount)
+		client.Username, client.UserID.Hex(), client.SessionID, playerCount)
 }
 
 func (gs *GameServer) broadcastMessage(message []byte) {
@@ -487,7 +487,7 @@ func (gs *GameServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("New client connected (ID: %s, User: %s, Session: %s, Binary: %v)",
-		client.ID, client.Username, client.SessionID, useBinary)
+		client.UserID.Hex(), client.Username, client.SessionID, useBinary)
 
 	// Start client goroutines
 	go client.writePump()
