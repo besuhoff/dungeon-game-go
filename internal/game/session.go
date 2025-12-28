@@ -279,6 +279,9 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 	// Save enemies
 	for _, enemies := range e.state.enemiesByChunk {
 		for id, enemy := range enemies {
+			if enemy.IsDead {
+				continue // Skip dead enemies
+			}
 			session.SharedObjects[id] = db.WorldObject{
 				ObjectID: id,
 				Type:     "enemy",
