@@ -144,56 +144,6 @@ func ToProtoShop(s *types.Shop) *Shop {
 	return shop
 }
 
-// ToProtoGameState converts types.GameState to proto GameState
-func ToProtoGameState(gs types.GameState) *GameStateMessage {
-	protoPlayers := make(map[string]*Player)
-	for k, v := range gs.Players {
-		protoPlayers[k] = ToProtoPlayer(v)
-	}
-
-	protoBullets := make(map[string]*Bullet)
-	for k, v := range gs.Bullets {
-		protoBullets[k] = ToProtoBullet(v)
-	}
-
-	protoWalls := make(map[string]*Wall)
-	for k, v := range gs.Walls {
-		protoWalls[k] = ToProtoWall(v)
-	}
-
-	protoEnemies := make(map[string]*Enemy)
-	for k, v := range gs.Enemies {
-		protoEnemies[k] = ToProtoEnemy(v)
-	}
-
-	protoBonuses := make(map[string]*Bonus)
-	for k, v := range gs.Bonuses {
-		protoBonuses[k] = ToProtoBonus(v)
-	}
-
-	protoShops := make(map[string]*Shop)
-	for k, v := range gs.Shops {
-		protoShops[k] = ToProtoShop(v)
-	}
-
-	otherPlayerPositions := make(map[string]*Vector2)
-	for k, v := range gs.OtherPlayerPositions {
-		otherPlayerPositions[k] = ToProtoVector2(v)
-	}
-
-	return &GameStateMessage{
-		Players:              protoPlayers,
-		Bullets:              protoBullets,
-		Walls:                protoWalls,
-		Enemies:              protoEnemies,
-		Bonuses:              protoBonuses,
-		Shops:                protoShops,
-		PlayersShops:         gs.PlayersShops,
-		OtherPlayerPositions: otherPlayerPositions,
-		Timestamp:            gs.Timestamp,
-	}
-}
-
 // ToProtoGameStateDelta converts types.GameStateDelta to proto GameStateDelta
 func ToProtoGameStateDelta(delta *types.GameStateDelta) *GameStateDeltaMessage {
 	protoUpdatedPlayers := make(map[string]*Player)

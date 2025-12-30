@@ -158,22 +158,6 @@ func (c *WebsocketClient) SendBinary(msg *protocol.GameMessage) {
 	}
 }
 
-func (c *WebsocketClient) SendGameState(gameState types.GameState) {
-	protoState := protocol.ToProtoGameState(gameState)
-	msg := &protocol.GameMessage{
-		Type: protocol.MessageType_GAME_STATE,
-		Payload: &protocol.GameMessage_GameState{
-			GameState: protoState,
-		},
-	}
-
-	if c.UseBinary {
-		c.SendBinary(msg)
-	} else {
-		c.SendJSON(msg)
-	}
-}
-
 func (c *WebsocketClient) SendGameStateDelta(delta *types.GameStateDelta) {
 	protoDelta := protocol.ToProtoGameStateDelta(delta)
 	msg := &protocol.GameMessage{

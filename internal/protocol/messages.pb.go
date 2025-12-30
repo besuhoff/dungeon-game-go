@@ -919,115 +919,6 @@ func (x *InputMessage) GetPurchaseItemKey() map[int32]bool {
 	return nil
 }
 
-// Server -> Client messages
-type GameStateMessage struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	Players              map[string]*Player     `protobuf:"bytes,1,rep,name=players,proto3" json:"players,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Bullets              map[string]*Bullet     `protobuf:"bytes,2,rep,name=bullets,proto3" json:"bullets,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Walls                map[string]*Wall       `protobuf:"bytes,3,rep,name=walls,proto3" json:"walls,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Enemies              map[string]*Enemy      `protobuf:"bytes,4,rep,name=enemies,proto3" json:"enemies,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Bonuses              map[string]*Bonus      `protobuf:"bytes,5,rep,name=bonuses,proto3" json:"bonuses,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Shops                map[string]*Shop       `protobuf:"bytes,7,rep,name=shops,proto3" json:"shops,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	PlayersShops         []string               `protobuf:"bytes,8,rep,name=players_shops,json=playersShops,proto3" json:"players_shops,omitempty"`
-	OtherPlayerPositions map[string]*Vector2    `protobuf:"bytes,9,rep,name=other_player_positions,json=otherPlayerPositions,proto3" json:"other_player_positions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Timestamp            int64                  `protobuf:"varint,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
-}
-
-func (x *GameStateMessage) Reset() {
-	*x = GameStateMessage{}
-	mi := &file_messages_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GameStateMessage) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GameStateMessage) ProtoMessage() {}
-
-func (x *GameStateMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_messages_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GameStateMessage.ProtoReflect.Descriptor instead.
-func (*GameStateMessage) Descriptor() ([]byte, []int) {
-	return file_messages_proto_rawDescGZIP(), []int{10}
-}
-
-func (x *GameStateMessage) GetPlayers() map[string]*Player {
-	if x != nil {
-		return x.Players
-	}
-	return nil
-}
-
-func (x *GameStateMessage) GetBullets() map[string]*Bullet {
-	if x != nil {
-		return x.Bullets
-	}
-	return nil
-}
-
-func (x *GameStateMessage) GetWalls() map[string]*Wall {
-	if x != nil {
-		return x.Walls
-	}
-	return nil
-}
-
-func (x *GameStateMessage) GetEnemies() map[string]*Enemy {
-	if x != nil {
-		return x.Enemies
-	}
-	return nil
-}
-
-func (x *GameStateMessage) GetBonuses() map[string]*Bonus {
-	if x != nil {
-		return x.Bonuses
-	}
-	return nil
-}
-
-func (x *GameStateMessage) GetShops() map[string]*Shop {
-	if x != nil {
-		return x.Shops
-	}
-	return nil
-}
-
-func (x *GameStateMessage) GetPlayersShops() []string {
-	if x != nil {
-		return x.PlayersShops
-	}
-	return nil
-}
-
-func (x *GameStateMessage) GetOtherPlayerPositions() map[string]*Vector2 {
-	if x != nil {
-		return x.OtherPlayerPositions
-	}
-	return nil
-}
-
-func (x *GameStateMessage) GetTimestamp() int64 {
-	if x != nil {
-		return x.Timestamp
-	}
-	return 0
-}
-
 type GameStateDeltaMessage struct {
 	state                       protoimpl.MessageState `protogen:"open.v1"`
 	UpdatedPlayers              map[string]*Player     `protobuf:"bytes,1,rep,name=updated_players,json=updatedPlayers,proto3" json:"updated_players,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
@@ -1053,7 +944,7 @@ type GameStateDeltaMessage struct {
 
 func (x *GameStateDeltaMessage) Reset() {
 	*x = GameStateDeltaMessage{}
-	mi := &file_messages_proto_msgTypes[11]
+	mi := &file_messages_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1065,7 +956,7 @@ func (x *GameStateDeltaMessage) String() string {
 func (*GameStateDeltaMessage) ProtoMessage() {}
 
 func (x *GameStateDeltaMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_messages_proto_msgTypes[11]
+	mi := &file_messages_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1078,7 +969,7 @@ func (x *GameStateDeltaMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GameStateDeltaMessage.ProtoReflect.Descriptor instead.
 func (*GameStateDeltaMessage) Descriptor() ([]byte, []int) {
-	return file_messages_proto_rawDescGZIP(), []int{11}
+	return file_messages_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GameStateDeltaMessage) GetUpdatedPlayers() map[string]*Player {
@@ -1209,7 +1100,7 @@ type PlayerJoinMessage struct {
 
 func (x *PlayerJoinMessage) Reset() {
 	*x = PlayerJoinMessage{}
-	mi := &file_messages_proto_msgTypes[12]
+	mi := &file_messages_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1221,7 +1112,7 @@ func (x *PlayerJoinMessage) String() string {
 func (*PlayerJoinMessage) ProtoMessage() {}
 
 func (x *PlayerJoinMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_messages_proto_msgTypes[12]
+	mi := &file_messages_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1234,7 +1125,7 @@ func (x *PlayerJoinMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerJoinMessage.ProtoReflect.Descriptor instead.
 func (*PlayerJoinMessage) Descriptor() ([]byte, []int) {
-	return file_messages_proto_rawDescGZIP(), []int{12}
+	return file_messages_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *PlayerJoinMessage) GetPlayer() *Player {
@@ -1253,7 +1144,7 @@ type PlayerLeaveMessage struct {
 
 func (x *PlayerLeaveMessage) Reset() {
 	*x = PlayerLeaveMessage{}
-	mi := &file_messages_proto_msgTypes[13]
+	mi := &file_messages_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1265,7 +1156,7 @@ func (x *PlayerLeaveMessage) String() string {
 func (*PlayerLeaveMessage) ProtoMessage() {}
 
 func (x *PlayerLeaveMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_messages_proto_msgTypes[13]
+	mi := &file_messages_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1278,7 +1169,7 @@ func (x *PlayerLeaveMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerLeaveMessage.ProtoReflect.Descriptor instead.
 func (*PlayerLeaveMessage) Descriptor() ([]byte, []int) {
-	return file_messages_proto_rawDescGZIP(), []int{13}
+	return file_messages_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *PlayerLeaveMessage) GetPlayerId() string {
@@ -1296,7 +1187,7 @@ type PlayerRespawnMessage struct {
 
 func (x *PlayerRespawnMessage) Reset() {
 	*x = PlayerRespawnMessage{}
-	mi := &file_messages_proto_msgTypes[14]
+	mi := &file_messages_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1308,7 +1199,7 @@ func (x *PlayerRespawnMessage) String() string {
 func (*PlayerRespawnMessage) ProtoMessage() {}
 
 func (x *PlayerRespawnMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_messages_proto_msgTypes[14]
+	mi := &file_messages_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1321,7 +1212,7 @@ func (x *PlayerRespawnMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerRespawnMessage.ProtoReflect.Descriptor instead.
 func (*PlayerRespawnMessage) Descriptor() ([]byte, []int) {
-	return file_messages_proto_rawDescGZIP(), []int{14}
+	return file_messages_proto_rawDescGZIP(), []int{13}
 }
 
 type ErrorMessage struct {
@@ -1333,7 +1224,7 @@ type ErrorMessage struct {
 
 func (x *ErrorMessage) Reset() {
 	*x = ErrorMessage{}
-	mi := &file_messages_proto_msgTypes[15]
+	mi := &file_messages_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1345,7 +1236,7 @@ func (x *ErrorMessage) String() string {
 func (*ErrorMessage) ProtoMessage() {}
 
 func (x *ErrorMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_messages_proto_msgTypes[15]
+	mi := &file_messages_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1358,7 +1249,7 @@ func (x *ErrorMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorMessage.ProtoReflect.Descriptor instead.
 func (*ErrorMessage) Descriptor() ([]byte, []int) {
-	return file_messages_proto_rawDescGZIP(), []int{15}
+	return file_messages_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ErrorMessage) GetMessage() string {
@@ -1375,7 +1266,6 @@ type GameMessage struct {
 	// Types that are valid to be assigned to Payload:
 	//
 	//	*GameMessage_Input
-	//	*GameMessage_GameState
 	//	*GameMessage_GameStateDelta
 	//	*GameMessage_PlayerJoin
 	//	*GameMessage_PlayerLeave
@@ -1388,7 +1278,7 @@ type GameMessage struct {
 
 func (x *GameMessage) Reset() {
 	*x = GameMessage{}
-	mi := &file_messages_proto_msgTypes[16]
+	mi := &file_messages_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1400,7 +1290,7 @@ func (x *GameMessage) String() string {
 func (*GameMessage) ProtoMessage() {}
 
 func (x *GameMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_messages_proto_msgTypes[16]
+	mi := &file_messages_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1413,7 +1303,7 @@ func (x *GameMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GameMessage.ProtoReflect.Descriptor instead.
 func (*GameMessage) Descriptor() ([]byte, []int) {
-	return file_messages_proto_rawDescGZIP(), []int{16}
+	return file_messages_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GameMessage) GetType() MessageType {
@@ -1434,15 +1324,6 @@ func (x *GameMessage) GetInput() *InputMessage {
 	if x != nil {
 		if x, ok := x.Payload.(*GameMessage_Input); ok {
 			return x.Input
-		}
-	}
-	return nil
-}
-
-func (x *GameMessage) GetGameState() *GameStateMessage {
-	if x != nil {
-		if x, ok := x.Payload.(*GameMessage_GameState); ok {
-			return x.GameState
 		}
 	}
 	return nil
@@ -1501,10 +1382,6 @@ type GameMessage_Input struct {
 	Input *InputMessage `protobuf:"bytes,3,opt,name=input,proto3,oneof"`
 }
 
-type GameMessage_GameState struct {
-	GameState *GameStateMessage `protobuf:"bytes,5,opt,name=game_state,json=gameState,proto3,oneof"`
-}
-
 type GameMessage_GameStateDelta struct {
 	GameStateDelta *GameStateDeltaMessage `protobuf:"bytes,11,opt,name=game_state_delta,json=gameStateDelta,proto3,oneof"`
 }
@@ -1526,8 +1403,6 @@ type GameMessage_Error struct {
 }
 
 func (*GameMessage_Input) isGameMessage_Payload() {}
-
-func (*GameMessage_GameState) isGameMessage_Payload() {}
 
 func (*GameMessage_GameStateDelta) isGameMessage_Payload() {}
 
@@ -1631,40 +1506,7 @@ const file_messages_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\x1aB\n" +
 	"\x14PurchaseItemKeyEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"\xed\b\n" +
-	"\x10GameStateMessage\x12A\n" +
-	"\aplayers\x18\x01 \x03(\v2'.protocol.GameStateMessage.PlayersEntryR\aplayers\x12A\n" +
-	"\abullets\x18\x02 \x03(\v2'.protocol.GameStateMessage.BulletsEntryR\abullets\x12;\n" +
-	"\x05walls\x18\x03 \x03(\v2%.protocol.GameStateMessage.WallsEntryR\x05walls\x12A\n" +
-	"\aenemies\x18\x04 \x03(\v2'.protocol.GameStateMessage.EnemiesEntryR\aenemies\x12A\n" +
-	"\abonuses\x18\x05 \x03(\v2'.protocol.GameStateMessage.BonusesEntryR\abonuses\x12;\n" +
-	"\x05shops\x18\a \x03(\v2%.protocol.GameStateMessage.ShopsEntryR\x05shops\x12#\n" +
-	"\rplayers_shops\x18\b \x03(\tR\fplayersShops\x12j\n" +
-	"\x16other_player_positions\x18\t \x03(\v24.protocol.GameStateMessage.OtherPlayerPositionsEntryR\x14otherPlayerPositions\x12\x1c\n" +
-	"\ttimestamp\x18\x06 \x01(\x03R\ttimestamp\x1aL\n" +
-	"\fPlayersEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12&\n" +
-	"\x05value\x18\x02 \x01(\v2\x10.protocol.PlayerR\x05value:\x028\x01\x1aL\n" +
-	"\fBulletsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12&\n" +
-	"\x05value\x18\x02 \x01(\v2\x10.protocol.BulletR\x05value:\x028\x01\x1aH\n" +
-	"\n" +
-	"WallsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12$\n" +
-	"\x05value\x18\x02 \x01(\v2\x0e.protocol.WallR\x05value:\x028\x01\x1aK\n" +
-	"\fEnemiesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12%\n" +
-	"\x05value\x18\x02 \x01(\v2\x0f.protocol.EnemyR\x05value:\x028\x01\x1aK\n" +
-	"\fBonusesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12%\n" +
-	"\x05value\x18\x02 \x01(\v2\x0f.protocol.BonusR\x05value:\x028\x01\x1aH\n" +
-	"\n" +
-	"ShopsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12$\n" +
-	"\x05value\x18\x02 \x01(\v2\x0e.protocol.ShopR\x05value:\x028\x01\x1aZ\n" +
-	"\x19OtherPlayerPositionsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12'\n" +
-	"\x05value\x18\x02 \x01(\v2\x11.protocol.Vector2R\x05value:\x028\x01\"\xdd\x0e\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"\xdd\x0e\n" +
 	"\x15GameStateDeltaMessage\x12\\\n" +
 	"\x0fupdated_players\x18\x01 \x03(\v23.protocol.GameStateDeltaMessage.UpdatedPlayersEntryR\x0eupdatedPlayers\x12'\n" +
 	"\x0fremoved_players\x18\x02 \x03(\tR\x0eremovedPlayers\x12\\\n" +
@@ -1714,12 +1556,10 @@ const file_messages_proto_rawDesc = "" +
 	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\"\x16\n" +
 	"\x14PlayerRespawnMessage\"(\n" +
 	"\fErrorMessage\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage\"\xf9\x03\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\"\xbc\x03\n" +
 	"\vGameMessage\x12)\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x15.protocol.MessageTypeR\x04type\x12.\n" +
-	"\x05input\x18\x03 \x01(\v2\x16.protocol.InputMessageH\x00R\x05input\x12;\n" +
-	"\n" +
-	"game_state\x18\x05 \x01(\v2\x1a.protocol.GameStateMessageH\x00R\tgameState\x12K\n" +
+	"\x05input\x18\x03 \x01(\v2\x16.protocol.InputMessageH\x00R\x05input\x12K\n" +
 	"\x10game_state_delta\x18\v \x01(\v2\x1f.protocol.GameStateDeltaMessageH\x00R\x0egameStateDelta\x12>\n" +
 	"\vplayer_join\x18\x06 \x01(\v2\x1b.protocol.PlayerJoinMessageH\x00R\n" +
 	"playerJoin\x12A\n" +
@@ -1753,7 +1593,7 @@ func file_messages_proto_rawDescGZIP() []byte {
 }
 
 var file_messages_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_messages_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+var file_messages_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_messages_proto_goTypes = []any{
 	(MessageType)(0),              // 0: protocol.MessageType
 	(*Vector2)(nil),               // 1: protocol.Vector2
@@ -1766,37 +1606,29 @@ var file_messages_proto_goTypes = []any{
 	(*ShopItem)(nil),              // 8: protocol.ShopItem
 	(*Shop)(nil),                  // 9: protocol.Shop
 	(*InputMessage)(nil),          // 10: protocol.InputMessage
-	(*GameStateMessage)(nil),      // 11: protocol.GameStateMessage
-	(*GameStateDeltaMessage)(nil), // 12: protocol.GameStateDeltaMessage
-	(*PlayerJoinMessage)(nil),     // 13: protocol.PlayerJoinMessage
-	(*PlayerLeaveMessage)(nil),    // 14: protocol.PlayerLeaveMessage
-	(*PlayerRespawnMessage)(nil),  // 15: protocol.PlayerRespawnMessage
-	(*ErrorMessage)(nil),          // 16: protocol.ErrorMessage
-	(*GameMessage)(nil),           // 17: protocol.GameMessage
-	nil,                           // 18: protocol.Player.BulletsLeftByWeaponTypeEntry
-	nil,                           // 19: protocol.Shop.InventoryEntry
-	nil,                           // 20: protocol.InputMessage.ItemKeyEntry
-	nil,                           // 21: protocol.InputMessage.PurchaseItemKeyEntry
-	nil,                           // 22: protocol.GameStateMessage.PlayersEntry
-	nil,                           // 23: protocol.GameStateMessage.BulletsEntry
-	nil,                           // 24: protocol.GameStateMessage.WallsEntry
-	nil,                           // 25: protocol.GameStateMessage.EnemiesEntry
-	nil,                           // 26: protocol.GameStateMessage.BonusesEntry
-	nil,                           // 27: protocol.GameStateMessage.ShopsEntry
-	nil,                           // 28: protocol.GameStateMessage.OtherPlayerPositionsEntry
-	nil,                           // 29: protocol.GameStateDeltaMessage.UpdatedPlayersEntry
-	nil,                           // 30: protocol.GameStateDeltaMessage.UpdatedBulletsEntry
-	nil,                           // 31: protocol.GameStateDeltaMessage.RemovedBulletsEntry
-	nil,                           // 32: protocol.GameStateDeltaMessage.UpdatedWallsEntry
-	nil,                           // 33: protocol.GameStateDeltaMessage.UpdatedEnemiesEntry
-	nil,                           // 34: protocol.GameStateDeltaMessage.UpdatedBonusesEntry
-	nil,                           // 35: protocol.GameStateDeltaMessage.UpdatedShopsEntry
-	nil,                           // 36: protocol.GameStateDeltaMessage.UpdatedOtherPlayerPositionsEntry
+	(*GameStateDeltaMessage)(nil), // 11: protocol.GameStateDeltaMessage
+	(*PlayerJoinMessage)(nil),     // 12: protocol.PlayerJoinMessage
+	(*PlayerLeaveMessage)(nil),    // 13: protocol.PlayerLeaveMessage
+	(*PlayerRespawnMessage)(nil),  // 14: protocol.PlayerRespawnMessage
+	(*ErrorMessage)(nil),          // 15: protocol.ErrorMessage
+	(*GameMessage)(nil),           // 16: protocol.GameMessage
+	nil,                           // 17: protocol.Player.BulletsLeftByWeaponTypeEntry
+	nil,                           // 18: protocol.Shop.InventoryEntry
+	nil,                           // 19: protocol.InputMessage.ItemKeyEntry
+	nil,                           // 20: protocol.InputMessage.PurchaseItemKeyEntry
+	nil,                           // 21: protocol.GameStateDeltaMessage.UpdatedPlayersEntry
+	nil,                           // 22: protocol.GameStateDeltaMessage.UpdatedBulletsEntry
+	nil,                           // 23: protocol.GameStateDeltaMessage.RemovedBulletsEntry
+	nil,                           // 24: protocol.GameStateDeltaMessage.UpdatedWallsEntry
+	nil,                           // 25: protocol.GameStateDeltaMessage.UpdatedEnemiesEntry
+	nil,                           // 26: protocol.GameStateDeltaMessage.UpdatedBonusesEntry
+	nil,                           // 27: protocol.GameStateDeltaMessage.UpdatedShopsEntry
+	nil,                           // 28: protocol.GameStateDeltaMessage.UpdatedOtherPlayerPositionsEntry
 }
 var file_messages_proto_depIdxs = []int32{
 	1,  // 0: protocol.Player.position:type_name -> protocol.Vector2
 	1,  // 1: protocol.Player.velocity:type_name -> protocol.Vector2
-	18, // 2: protocol.Player.bullets_left_by_weapon_type:type_name -> protocol.Player.BulletsLeftByWeaponTypeEntry
+	17, // 2: protocol.Player.bullets_left_by_weapon_type:type_name -> protocol.Player.BulletsLeftByWeaponTypeEntry
 	2,  // 3: protocol.Player.inventory:type_name -> protocol.InventoryItem
 	1,  // 4: protocol.Bullet.position:type_name -> protocol.Vector2
 	1,  // 5: protocol.Bullet.velocity:type_name -> protocol.Vector2
@@ -1804,54 +1636,39 @@ var file_messages_proto_depIdxs = []int32{
 	1,  // 7: protocol.Enemy.position:type_name -> protocol.Vector2
 	1,  // 8: protocol.Bonus.position:type_name -> protocol.Vector2
 	1,  // 9: protocol.Shop.position:type_name -> protocol.Vector2
-	19, // 10: protocol.Shop.inventory:type_name -> protocol.Shop.InventoryEntry
-	20, // 11: protocol.InputMessage.item_key:type_name -> protocol.InputMessage.ItemKeyEntry
-	21, // 12: protocol.InputMessage.purchase_item_key:type_name -> protocol.InputMessage.PurchaseItemKeyEntry
-	22, // 13: protocol.GameStateMessage.players:type_name -> protocol.GameStateMessage.PlayersEntry
-	23, // 14: protocol.GameStateMessage.bullets:type_name -> protocol.GameStateMessage.BulletsEntry
-	24, // 15: protocol.GameStateMessage.walls:type_name -> protocol.GameStateMessage.WallsEntry
-	25, // 16: protocol.GameStateMessage.enemies:type_name -> protocol.GameStateMessage.EnemiesEntry
-	26, // 17: protocol.GameStateMessage.bonuses:type_name -> protocol.GameStateMessage.BonusesEntry
-	27, // 18: protocol.GameStateMessage.shops:type_name -> protocol.GameStateMessage.ShopsEntry
-	28, // 19: protocol.GameStateMessage.other_player_positions:type_name -> protocol.GameStateMessage.OtherPlayerPositionsEntry
-	29, // 20: protocol.GameStateDeltaMessage.updated_players:type_name -> protocol.GameStateDeltaMessage.UpdatedPlayersEntry
-	30, // 21: protocol.GameStateDeltaMessage.updated_bullets:type_name -> protocol.GameStateDeltaMessage.UpdatedBulletsEntry
-	31, // 22: protocol.GameStateDeltaMessage.removed_bullets:type_name -> protocol.GameStateDeltaMessage.RemovedBulletsEntry
-	32, // 23: protocol.GameStateDeltaMessage.updated_walls:type_name -> protocol.GameStateDeltaMessage.UpdatedWallsEntry
-	33, // 24: protocol.GameStateDeltaMessage.updated_enemies:type_name -> protocol.GameStateDeltaMessage.UpdatedEnemiesEntry
-	34, // 25: protocol.GameStateDeltaMessage.updated_bonuses:type_name -> protocol.GameStateDeltaMessage.UpdatedBonusesEntry
-	35, // 26: protocol.GameStateDeltaMessage.updated_shops:type_name -> protocol.GameStateDeltaMessage.UpdatedShopsEntry
-	36, // 27: protocol.GameStateDeltaMessage.updated_other_player_positions:type_name -> protocol.GameStateDeltaMessage.UpdatedOtherPlayerPositionsEntry
-	3,  // 28: protocol.PlayerJoinMessage.player:type_name -> protocol.Player
-	0,  // 29: protocol.GameMessage.type:type_name -> protocol.MessageType
-	10, // 30: protocol.GameMessage.input:type_name -> protocol.InputMessage
-	11, // 31: protocol.GameMessage.game_state:type_name -> protocol.GameStateMessage
-	12, // 32: protocol.GameMessage.game_state_delta:type_name -> protocol.GameStateDeltaMessage
-	13, // 33: protocol.GameMessage.player_join:type_name -> protocol.PlayerJoinMessage
-	14, // 34: protocol.GameMessage.player_leave:type_name -> protocol.PlayerLeaveMessage
-	15, // 35: protocol.GameMessage.player_respawn:type_name -> protocol.PlayerRespawnMessage
-	16, // 36: protocol.GameMessage.error:type_name -> protocol.ErrorMessage
-	8,  // 37: protocol.Shop.InventoryEntry.value:type_name -> protocol.ShopItem
-	3,  // 38: protocol.GameStateMessage.PlayersEntry.value:type_name -> protocol.Player
-	4,  // 39: protocol.GameStateMessage.BulletsEntry.value:type_name -> protocol.Bullet
-	5,  // 40: protocol.GameStateMessage.WallsEntry.value:type_name -> protocol.Wall
-	6,  // 41: protocol.GameStateMessage.EnemiesEntry.value:type_name -> protocol.Enemy
-	7,  // 42: protocol.GameStateMessage.BonusesEntry.value:type_name -> protocol.Bonus
-	9,  // 43: protocol.GameStateMessage.ShopsEntry.value:type_name -> protocol.Shop
-	1,  // 44: protocol.GameStateMessage.OtherPlayerPositionsEntry.value:type_name -> protocol.Vector2
-	3,  // 45: protocol.GameStateDeltaMessage.UpdatedPlayersEntry.value:type_name -> protocol.Player
-	4,  // 46: protocol.GameStateDeltaMessage.UpdatedBulletsEntry.value:type_name -> protocol.Bullet
-	4,  // 47: protocol.GameStateDeltaMessage.RemovedBulletsEntry.value:type_name -> protocol.Bullet
-	5,  // 48: protocol.GameStateDeltaMessage.UpdatedWallsEntry.value:type_name -> protocol.Wall
-	6,  // 49: protocol.GameStateDeltaMessage.UpdatedEnemiesEntry.value:type_name -> protocol.Enemy
-	7,  // 50: protocol.GameStateDeltaMessage.UpdatedBonusesEntry.value:type_name -> protocol.Bonus
-	9,  // 51: protocol.GameStateDeltaMessage.UpdatedShopsEntry.value:type_name -> protocol.Shop
-	1,  // 52: protocol.GameStateDeltaMessage.UpdatedOtherPlayerPositionsEntry.value:type_name -> protocol.Vector2
-	53, // [53:53] is the sub-list for method output_type
-	53, // [53:53] is the sub-list for method input_type
-	53, // [53:53] is the sub-list for extension type_name
-	53, // [53:53] is the sub-list for extension extendee
-	0,  // [0:53] is the sub-list for field type_name
+	18, // 10: protocol.Shop.inventory:type_name -> protocol.Shop.InventoryEntry
+	19, // 11: protocol.InputMessage.item_key:type_name -> protocol.InputMessage.ItemKeyEntry
+	20, // 12: protocol.InputMessage.purchase_item_key:type_name -> protocol.InputMessage.PurchaseItemKeyEntry
+	21, // 13: protocol.GameStateDeltaMessage.updated_players:type_name -> protocol.GameStateDeltaMessage.UpdatedPlayersEntry
+	22, // 14: protocol.GameStateDeltaMessage.updated_bullets:type_name -> protocol.GameStateDeltaMessage.UpdatedBulletsEntry
+	23, // 15: protocol.GameStateDeltaMessage.removed_bullets:type_name -> protocol.GameStateDeltaMessage.RemovedBulletsEntry
+	24, // 16: protocol.GameStateDeltaMessage.updated_walls:type_name -> protocol.GameStateDeltaMessage.UpdatedWallsEntry
+	25, // 17: protocol.GameStateDeltaMessage.updated_enemies:type_name -> protocol.GameStateDeltaMessage.UpdatedEnemiesEntry
+	26, // 18: protocol.GameStateDeltaMessage.updated_bonuses:type_name -> protocol.GameStateDeltaMessage.UpdatedBonusesEntry
+	27, // 19: protocol.GameStateDeltaMessage.updated_shops:type_name -> protocol.GameStateDeltaMessage.UpdatedShopsEntry
+	28, // 20: protocol.GameStateDeltaMessage.updated_other_player_positions:type_name -> protocol.GameStateDeltaMessage.UpdatedOtherPlayerPositionsEntry
+	3,  // 21: protocol.PlayerJoinMessage.player:type_name -> protocol.Player
+	0,  // 22: protocol.GameMessage.type:type_name -> protocol.MessageType
+	10, // 23: protocol.GameMessage.input:type_name -> protocol.InputMessage
+	11, // 24: protocol.GameMessage.game_state_delta:type_name -> protocol.GameStateDeltaMessage
+	12, // 25: protocol.GameMessage.player_join:type_name -> protocol.PlayerJoinMessage
+	13, // 26: protocol.GameMessage.player_leave:type_name -> protocol.PlayerLeaveMessage
+	14, // 27: protocol.GameMessage.player_respawn:type_name -> protocol.PlayerRespawnMessage
+	15, // 28: protocol.GameMessage.error:type_name -> protocol.ErrorMessage
+	8,  // 29: protocol.Shop.InventoryEntry.value:type_name -> protocol.ShopItem
+	3,  // 30: protocol.GameStateDeltaMessage.UpdatedPlayersEntry.value:type_name -> protocol.Player
+	4,  // 31: protocol.GameStateDeltaMessage.UpdatedBulletsEntry.value:type_name -> protocol.Bullet
+	4,  // 32: protocol.GameStateDeltaMessage.RemovedBulletsEntry.value:type_name -> protocol.Bullet
+	5,  // 33: protocol.GameStateDeltaMessage.UpdatedWallsEntry.value:type_name -> protocol.Wall
+	6,  // 34: protocol.GameStateDeltaMessage.UpdatedEnemiesEntry.value:type_name -> protocol.Enemy
+	7,  // 35: protocol.GameStateDeltaMessage.UpdatedBonusesEntry.value:type_name -> protocol.Bonus
+	9,  // 36: protocol.GameStateDeltaMessage.UpdatedShopsEntry.value:type_name -> protocol.Shop
+	1,  // 37: protocol.GameStateDeltaMessage.UpdatedOtherPlayerPositionsEntry.value:type_name -> protocol.Vector2
+	38, // [38:38] is the sub-list for method output_type
+	38, // [38:38] is the sub-list for method input_type
+	38, // [38:38] is the sub-list for extension type_name
+	38, // [38:38] is the sub-list for extension extendee
+	0,  // [0:38] is the sub-list for field type_name
 }
 
 func init() { file_messages_proto_init() }
@@ -1859,9 +1676,8 @@ func file_messages_proto_init() {
 	if File_messages_proto != nil {
 		return
 	}
-	file_messages_proto_msgTypes[16].OneofWrappers = []any{
+	file_messages_proto_msgTypes[15].OneofWrappers = []any{
 		(*GameMessage_Input)(nil),
-		(*GameMessage_GameState)(nil),
 		(*GameMessage_GameStateDelta)(nil),
 		(*GameMessage_PlayerJoin)(nil),
 		(*GameMessage_PlayerLeave)(nil),
@@ -1874,7 +1690,7 @@ func file_messages_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_messages_proto_rawDesc), len(file_messages_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   36,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

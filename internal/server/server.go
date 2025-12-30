@@ -246,8 +246,6 @@ func (gs *GameServer) registerClient(client *WebsocketClient) {
 
 	gs.broadcastPlayerJoinedMessage(client.SessionID, player)
 
-	client.SendGameState(session.Engine.GetGameStateForPlayer(player.ID))
-
 	log.Printf("Player %s (%s) joined session %s (players: %d)",
 		client.Username, client.UserID.Hex(), client.SessionID, playerCount)
 }

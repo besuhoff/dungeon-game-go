@@ -128,6 +128,10 @@ func (p *Player) DetectionParams() (*Vector2, float64) {
 }
 
 func (p *Player) IsVisibleToPlayer(player *Player) bool {
+	if !p.IsConnected {
+		return false
+	}
+
 	if player.NightVisionTimer > 0 || (p.IsAlive && p.NightVisionTimer <= 0) {
 		return p.DistanceToPoint(player.Position) <= config.SightRadius
 	}

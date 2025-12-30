@@ -106,19 +106,6 @@ message InputMessage {
   map<int32, bool> purchase_item_key = 7;
 }
 
-// Server -> Client messages
-message GameStateMessage {
-  map<string, Player> players = 1;
-  map<string, Bullet> bullets = 2;
-  map<string, Wall> walls = 3;
-  map<string, Enemy> enemies = 4;
-  map<string, Bonus> bonuses = 5;
-  map<string, Shop> shops = 7;
-  repeated string players_shops = 8;
-  map<string, Vector2> other_player_positions = 9;
-  int64 timestamp = 6;
-}
-
 message GameStateDeltaMessage {
   map<string, Player> updated_players = 1;
   repeated string removed_players = 2;
@@ -167,7 +154,6 @@ message GameMessage {
   MessageType type = 1;
   oneof payload {
     InputMessage input = 3;
-    GameStateMessage game_state = 5;
     GameStateDeltaMessage game_state_delta = 11;
     PlayerJoinMessage player_join = 6;
     PlayerLeaveMessage player_leave = 7;
