@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/besuhoff/dungeon-game-go/internal/protocol"
-	"github.com/besuhoff/dungeon-game-go/internal/types"
 	"github.com/gorilla/websocket"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -158,12 +157,11 @@ func (c *WebsocketClient) SendBinary(msg *protocol.GameMessage) {
 	}
 }
 
-func (c *WebsocketClient) SendGameStateDelta(delta *types.GameStateDelta) {
-	protoDelta := protocol.ToProtoGameStateDelta(delta)
+func (c *WebsocketClient) SendGameStateDelta(delta *protocol.GameStateDeltaMessage) {
 	msg := &protocol.GameMessage{
 		Type: protocol.MessageType_GAME_STATE_DELTA,
 		Payload: &protocol.GameMessage_GameStateDelta{
-			GameStateDelta: protoDelta,
+			GameStateDelta: delta,
 		},
 	}
 

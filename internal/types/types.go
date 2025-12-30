@@ -19,47 +19,6 @@ type GameState struct {
 	Timestamp            int64               `json:"timestamp"`
 }
 
-// GameStateDelta represents changes to the game state
-type GameStateDelta struct {
-	UpdatedPlayers map[string]*Player `json:"updatedPlayers,omitempty"`
-	RemovedPlayers []string           `json:"removedPlayers,omitempty"`
-
-	UpdatedBullets map[string]*Bullet `json:"updatedBullets,omitempty"`
-	RemovedBullets map[string]*Bullet `json:"removedBullets,omitempty"`
-
-	UpdatedWalls map[string]*Wall `json:"updatedWalls,omitempty"`
-	RemovedWalls []string         `json:"removedWalls,omitempty"`
-
-	UpdatedEnemies map[string]*Enemy `json:"updatedEnemies,omitempty"`
-	RemovedEnemies []string          `json:"removedEnemies,omitempty"`
-
-	UpdatedBonuses map[string]*Bonus `json:"updatedBonuses,omitempty"`
-	RemovedBonuses []string          `json:"removedBonuses,omitempty"`
-
-	UpdatedShops map[string]*Shop `json:"updatedShops,omitempty"`
-	RemovedShops []string         `json:"removedShops,omitempty"`
-
-	AddedPlayersShops   []string `json:"playersShops,omitempty"`
-	RemovedPlayersShops []string `json:"removedPlayersShops,omitempty"`
-
-	UpdatedOtherPlayerPositions map[string]*Vector2 `json:"otherPlayerPositions,omitempty"`
-	RemovedOtherPlayerPositions []string            `json:"removedOtherPlayerPositions,omitempty"`
-
-	Timestamp int64 `json:"timestamp"`
-}
-
-// IsEmpty checks if the delta contains no changes
-func (d *GameStateDelta) IsEmpty() bool {
-	return len(d.UpdatedPlayers) == 0 && len(d.RemovedPlayers) == 0 &&
-		len(d.UpdatedBullets) == 0 && len(d.RemovedBullets) == 0 &&
-		len(d.UpdatedWalls) == 0 && len(d.RemovedWalls) == 0 &&
-		len(d.UpdatedEnemies) == 0 && len(d.RemovedEnemies) == 0 &&
-		len(d.UpdatedBonuses) == 0 && len(d.RemovedBonuses) == 0 &&
-		len(d.UpdatedShops) == 0 && len(d.RemovedShops) == 0 &&
-		len(d.UpdatedOtherPlayerPositions) == 0 && len(d.RemovedOtherPlayerPositions) == 0 &&
-		len(d.AddedPlayersShops) == 0 && len(d.RemovedPlayersShops) == 0
-}
-
 // InputPayload for player input
 type InputPayload struct {
 	Forward         bool           `json:"forward"`

@@ -141,7 +141,7 @@ func (p *Player) IsVisibleToPlayer(player *Player) bool {
 }
 
 func (p *Player) IsPositionDetectable() bool {
-	if !p.IsAlive || p.NightVisionTimer > 0 {
+	if !p.IsConnected || !p.IsAlive || p.NightVisionTimer > 0 {
 		return false
 	}
 

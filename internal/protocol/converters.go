@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"maps"
 	"time"
 
 	"github.com/besuhoff/dungeon-game-go/internal/types"
@@ -57,6 +58,86 @@ func ToProtoPlayer(p *types.Player) *Player {
 	}
 }
 
+func ToProtoPlayerUpdate(prev, curr *types.Player, isCurrentPlayer bool) *PlayerUpdate {
+	if prev == nil || curr == nil {
+		return nil
+	}
+
+	update := &PlayerUpdate{}
+	if prev.Position.X != curr.Position.X || prev.Position.Y != curr.Position.Y || prev.Rotation != curr.Rotation {
+		update.Position = &PositionUpdate{
+			X:        curr.Position.X,
+			Y:        curr.Position.Y,
+			Rotation: curr.Rotation,
+		}
+	}
+
+	if isCurrentPlayer && (prev.Kills != curr.Kills || prev.Score != curr.Score || prev.Money != curr.Money) {
+		update.Score = &ScoreUpdate{
+			Kills: int32(curr.Kills),
+			Score: int32(curr.Score),
+			Money: int32(curr.Money),
+		}
+	}
+	if isCurrentPlayer && !maps.Equal(prev.BulletsLeftByWeaponType, curr.BulletsLeftByWeaponType) {
+		update.PlayerBullets = &PlayerBulletsUpdate{
+			BulletsLeftByWeaponType: curr.BulletsLeftByWeaponType,
+		}
+	}
+
+	if prev.NightVisionTimer != curr.NightVisionTimer || prev.InvulnerableTimer != curr.InvulnerableTimer {
+		update.Timers = &TimersUpdate{
+			NightVisionTimer:  curr.NightVisionTimer,
+			InvulnerableTimer: curr.InvulnerableTimer,
+		}
+	}
+
+	if prev.IsAlive != curr.IsAlive || prev.Lives != curr.Lives {
+		update.Lives = &LivesUpdate{
+			IsAlive: curr.IsAlive,
+			Lives:   curr.Lives,
+		}
+	}
+
+	inventoryEqual := true
+	if isCurrentPlayer {
+		inventoryEqual = len(prev.Inventory) == len(curr.Inventory)
+		if inventoryEqual {
+			for i := range prev.Inventory {
+				if prev.Inventory[i].Type != curr.Inventory[i].Type || prev.Inventory[i].Quantity != curr.Inventory[i].Quantity {
+					inventoryEqual = false
+					break
+				}
+			}
+		}
+	}
+
+	if prev.SelectedGunType != curr.SelectedGunType || !inventoryEqual {
+		update.Inventory = &InventoryUpdate{
+			SelectedGunType: curr.SelectedGunType,
+		}
+
+		if isCurrentPlayer {
+			inventory := make([]*InventoryItem, len(curr.Inventory))
+			for i, item := range curr.Inventory {
+				inventory[i] = &InventoryItem{
+					Type:     int32(item.Type),
+					Quantity: int32(item.Quantity),
+				}
+			}
+
+			update.Inventory.Inventory = inventory
+		}
+	}
+
+	if update.Position == nil && update.Score == nil && update.PlayerBullets == nil &&
+		update.Timers == nil && update.Lives == nil && update.Inventory == nil {
+		return nil
+	}
+
+	return update
+}
+
 // ToProtoBullet converts types.Bullet to proto Bullet
 func ToProtoBullet(b *types.Bullet) *Bullet {
 	if b == nil {
@@ -74,6 +155,21 @@ func ToProtoBullet(b *types.Bullet) *Bullet {
 		InactiveMs: time.Since(b.DeletedAt).Milliseconds(),
 		WeaponType: b.WeaponType,
 	}
+}
+
+func ToProtoBulletUpdate(prev, curr *types.Bullet) *PositionUpdate {
+	if prev == nil || curr == nil {
+		return nil
+	}
+
+	if prev.Position.X != curr.Position.X || prev.Position.Y != curr.Position.Y {
+		return &PositionUpdate{
+			X: curr.Position.X,
+			Y: curr.Position.Y,
+		}
+	}
+
+	return nil
 }
 
 // ToProtoWall converts types.Wall to proto Wall
@@ -101,8 +197,36 @@ func ToProtoEnemy(e *types.Enemy) *Enemy {
 		Rotation: e.Rotation,
 		Lives:    e.Lives,
 		WallId:   e.WallID,
-		IsDead:   e.IsDead,
+		IsAlive:  e.IsAlive,
 	}
+}
+
+func ToProtoEnemyUpdate(prev, curr *types.Enemy) *EnemyUpdate {
+	if prev == nil || curr == nil {
+		return nil
+	}
+
+	update := &EnemyUpdate{}
+	if prev.Position.X != curr.Position.X || prev.Position.Y != curr.Position.Y || prev.Rotation != curr.Rotation {
+		update.Position = &PositionUpdate{
+			X:        curr.Position.X,
+			Y:        curr.Position.Y,
+			Rotation: curr.Rotation,
+		}
+	}
+
+	if prev.Lives != curr.Lives {
+		update.Lives = &LivesUpdate{
+			Lives:   curr.Lives,
+			IsAlive: curr.IsAlive,
+		}
+	}
+
+	if update.Position == nil && update.Lives == nil {
+		return nil
+	}
+
+	return update
 }
 
 // ToProtoBonus converts types.Bonus to proto Bonus
@@ -118,6 +242,20 @@ func ToProtoBonus(b *types.Bonus) *Bonus {
 		PickedUpBy: b.PickedUpBy,
 		DroppedBy:  b.DroppedBy,
 	}
+}
+
+func ToProtoBonusUpdate(prev, curr *types.Bonus) *BonusUpdate {
+	if prev == nil || curr == nil {
+		return nil
+	}
+
+	if prev.PickedUpBy != curr.PickedUpBy {
+		return &BonusUpdate{
+			PickedUpBy: curr.PickedUpBy,
+		}
+	}
+
+	return nil
 }
 
 // ToProtoShop converts types.Shop to proto Shop
@@ -144,67 +282,27 @@ func ToProtoShop(s *types.Shop) *Shop {
 	return shop
 }
 
-// ToProtoGameStateDelta converts types.GameStateDelta to proto GameStateDelta
-func ToProtoGameStateDelta(delta *types.GameStateDelta) *GameStateDeltaMessage {
-	protoUpdatedPlayers := make(map[string]*Player)
-	for k, v := range delta.UpdatedPlayers {
-		protoUpdatedPlayers[k] = ToProtoPlayer(v)
+func ToProtoShopUpdate(prev, curr *types.Shop) *ShopUpdate {
+	if prev == nil || curr == nil {
+		return nil
 	}
 
-	protoUpdatedBullets := make(map[string]*Bullet)
-	for k, v := range delta.UpdatedBullets {
-		protoUpdatedBullets[k] = ToProtoBullet(v)
+	if maps.Equal(prev.Inventory, curr.Inventory) {
+		return nil
 	}
 
-	protoRemovedBullets := make(map[string]*Bullet)
-	for k, v := range delta.RemovedBullets {
-		protoRemovedBullets[k] = ToProtoBullet(v)
+	update := &ShopUpdate{}
+	inventory := make(map[int32]*ShopItem)
+	for itemID, item := range curr.Inventory {
+		inventory[int32(itemID)] = &ShopItem{
+			Quantity: int32(item.Quantity),
+			PackSize: int32(item.PackSize),
+			Price:    int32(item.Price),
+		}
 	}
+	update.Inventory = inventory
 
-	protoUpdatedWalls := make(map[string]*Wall)
-	for k, v := range delta.UpdatedWalls {
-		protoUpdatedWalls[k] = ToProtoWall(v)
-	}
-
-	protoUpdatedEnemies := make(map[string]*Enemy)
-	for k, v := range delta.UpdatedEnemies {
-		protoUpdatedEnemies[k] = ToProtoEnemy(v)
-	}
-
-	protoUpdatedBonuses := make(map[string]*Bonus)
-	for k, v := range delta.UpdatedBonuses {
-		protoUpdatedBonuses[k] = ToProtoBonus(v)
-	}
-
-	protoUpdatedShops := make(map[string]*Shop)
-	for k, v := range delta.UpdatedShops {
-		protoUpdatedShops[k] = ToProtoShop(v)
-	}
-
-	protoUpdatedOtherPlayerPositions := make(map[string]*Vector2)
-	for k, v := range delta.UpdatedOtherPlayerPositions {
-		protoUpdatedOtherPlayerPositions[k] = ToProtoVector2(v)
-	}
-
-	return &GameStateDeltaMessage{
-		UpdatedPlayers:              protoUpdatedPlayers,
-		RemovedPlayers:              delta.RemovedPlayers,
-		UpdatedBullets:              protoUpdatedBullets,
-		RemovedBullets:              protoRemovedBullets,
-		UpdatedWalls:                protoUpdatedWalls,
-		RemovedWalls:                delta.RemovedWalls,
-		UpdatedEnemies:              protoUpdatedEnemies,
-		RemovedEnemies:              delta.RemovedEnemies,
-		UpdatedBonuses:              protoUpdatedBonuses,
-		RemovedBonuses:              delta.RemovedBonuses,
-		UpdatedShops:                protoUpdatedShops,
-		RemovedShops:                delta.RemovedShops,
-		AddedPlayersShops:           delta.AddedPlayersShops,
-		RemovedPlayersShops:         delta.RemovedPlayersShops,
-		UpdatedOtherPlayerPositions: protoUpdatedOtherPlayerPositions,
-		RemovedOtherPlayerPositions: delta.RemovedOtherPlayerPositions,
-		Timestamp:                   delta.Timestamp,
-	}
+	return update
 }
 
 // FromProtoInput converts proto InputMessage to types.InputPayload
@@ -221,4 +319,13 @@ func FromProtoInput(input *InputMessage) types.InputPayload {
 		ItemKey:         input.ItemKey,
 		PurchaseItemKey: input.PurchaseItemKey,
 	}
+}
+
+func IsGameStateDeltaEmpty(delta *GameStateDeltaMessage) bool {
+	return len(delta.AddedPlayers) == 0 && len(delta.UpdatedPlayers) == 0 && len(delta.RemovedPlayers) == 0 &&
+		len(delta.AddedBullets) == 0 && len(delta.UpdatedBullets) == 0 && len(delta.RemovedBullets) == 0 &&
+		len(delta.AddedWalls) == 0 && len(delta.RemovedWalls) == 0 &&
+		len(delta.UpdatedEnemies) == 0 && len(delta.RemovedEnemies) == 0 &&
+		len(delta.AddedBonuses) == 0 && len(delta.UpdatedBonuses) == 0 && len(delta.RemovedBonuses) == 0 &&
+		len(delta.AddedShops) == 0 && len(delta.UpdatedShops) == 0 && len(delta.RemovedShops) == 0
 }

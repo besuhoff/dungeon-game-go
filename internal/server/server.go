@@ -404,7 +404,7 @@ func (gs *GameServer) broadcastAllSessionStates() {
 				delta := session.Engine.GetGameStateDeltaForPlayer(client.UserID.Hex())
 
 				// Only send if there are changes
-				if !delta.IsEmpty() {
+				if !protocol.IsGameStateDeltaEmpty(delta) {
 					client.SendGameStateDelta(delta)
 				}
 			}

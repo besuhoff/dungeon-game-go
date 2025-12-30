@@ -14,7 +14,7 @@ type Bullet struct {
 	OwnerID    string    `json:"ownerId"`
 	IsEnemy    bool      `json:"isEnemy"`
 	IsActive   bool      `json:"isActive"`
-	DeletedAt  time.Time `json:"-"`
+	DeletedAt  time.Time `json:"deletedAt"`
 	SpawnTime  time.Time `json:"-"`
 	Damage     float32   `json:"damage"`
 	WeaponType string    `json:"weaponType"`

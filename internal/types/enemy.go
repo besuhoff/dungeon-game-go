@@ -17,7 +17,7 @@ type Enemy struct {
 	Direction  float64   `json:"-"` // patrol direction: 1 or -1
 	ShootDelay float64   `json:"-"`
 	LastShot   time.Time `json:"-"`
-	IsDead     bool      `json:"isDead"`
+	IsAlive    bool      `json:"isAlive"`
 	DeadTimer  float64   `json:"-"`
 }
 
@@ -35,7 +35,7 @@ func EnemiesEqual(a, b *Enemy) bool {
 
 func (a *Enemy) Equal(b *Enemy) bool {
 	return a.Position.X == b.Position.X && a.Position.Y == b.Position.Y &&
-		a.Rotation == b.Rotation && a.Lives == b.Lives && a.IsDead == b.IsDead
+		a.Rotation == b.Rotation && a.Lives == b.Lives && a.IsAlive == b.IsAlive
 }
 
 func (e *Enemy) DistanceToPoint(point *Vector2) float64 {

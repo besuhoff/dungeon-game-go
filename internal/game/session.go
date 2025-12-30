@@ -65,6 +65,7 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 					ID:       id,
 					Position: &types.Vector2{X: obj.X, Y: obj.Y},
 				},
+				IsAlive: true,
 			}
 			if wallID, ok := obj.Properties["wall_id"].(string); ok {
 				enemy.WallID = wallID
@@ -279,7 +280,7 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 	// Save enemies
 	for _, enemies := range e.state.enemiesByChunk {
 		for id, enemy := range enemies {
-			if enemy.IsDead {
+			if !enemy.IsAlive {
 				continue // Skip dead enemies
 			}
 			session.SharedObjects[id] = db.WorldObject{

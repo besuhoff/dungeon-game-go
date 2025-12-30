@@ -72,7 +72,7 @@ message Enemy {
   double rotation = 3;
   float lives = 4;
   string wall_id = 5;
-  bool is_dead = 6;
+  bool is_alive = 6;
 }
 
 message Bonus {
@@ -106,32 +106,95 @@ message InputMessage {
   map<int32, bool> purchase_item_key = 7;
 }
 
+message PositionUpdate {
+  double x = 1;
+  double y = 2;
+  double rotation = 3;
+}
+
+message TimersUpdate {
+  double invulnerable_timer = 1;
+  double night_vision_timer = 2;  
+}
+
+message LivesUpdate {
+  float lives = 1;
+  bool is_alive = 2;
+} 
+
+message InventoryUpdate {
+  repeated InventoryItem inventory = 1;
+  string selected_gun_type = 2;
+}
+
+message ScoreUpdate {
+  int32 score = 1;
+  int32 money = 2;
+  int32 kills = 3;
+}
+
+message PlayerBulletsUpdate {
+  map<string, int32> bullets_left_by_weapon_type = 1;
+}
+
+message PlayerUpdate {
+  PositionUpdate position = 1;
+  TimersUpdate timers = 2;
+  LivesUpdate lives = 3;
+  InventoryUpdate inventory = 4;
+  ScoreUpdate score = 5;
+  PlayerBulletsUpdate player_bullets = 6;
+}
+
+message DeletionUpdate {
+  bool is_active = 1;
+  int64 deleted_at = 2;
+}
+
+message EnemyUpdate {
+  PositionUpdate position = 1;
+  LivesUpdate lives = 2;
+}
+
+message BonusUpdate {
+  string picked_up_by = 1;
+}
+
+message ShopUpdate {
+  map<int32, ShopItem> inventory = 1; 
+}
+
 message GameStateDeltaMessage {
-  map<string, Player> updated_players = 1;
-  repeated string removed_players = 2;
+  map<string, Player> added_players = 1;
+  map<string, PlayerUpdate> updated_players = 2;
+  repeated string removed_players = 3;
   
-  map<string, Bullet> updated_bullets = 3;
-  map<string, Bullet> removed_bullets = 4;
+  map<string, Bullet> added_bullets = 4;
+  map<string, PositionUpdate> updated_bullets = 5;
+  map<string, Bullet> removed_bullets = 6;
   
-  map<string, Wall> updated_walls = 5;
-  repeated string removed_walls = 6;
+  map<string, Wall> added_walls = 7;
+  repeated string removed_walls = 8;
   
-  map<string, Enemy> updated_enemies = 7;
-  repeated string removed_enemies = 8;
+  map<string, Enemy> added_enemies = 9;
+  map<string, EnemyUpdate> updated_enemies = 10;
+  repeated string removed_enemies = 11;
   
-  map<string, Bonus> updated_bonuses = 9;
-  repeated string removed_bonuses = 10;
+  map<string, Bonus> added_bonuses = 12;
+  map<string, BonusUpdate> updated_bonuses = 13;
+  repeated string removed_bonuses = 14;
 
-  map<string, Shop> updated_shops = 12;
-  repeated string removed_shops = 13;
+  map<string, Shop> added_shops = 15;
+  map<string, ShopUpdate> updated_shops = 16;
+  repeated string removed_shops = 17; 
 
-  repeated string added_players_shops = 14;
-  repeated string removed_players_shops = 17;
+  repeated string added_players_shops = 18;
+  repeated string removed_players_shops = 19;
 
-  map<string, Vector2> updated_other_player_positions = 15;
-  repeated string removed_other_player_positions = 16;
+  map<string, Vector2> updated_other_player_positions = 20;
+  repeated string removed_other_player_positions = 21;
   
-  int64 timestamp = 11;
+  int64 timestamp = 22;
 }
 
 message PlayerJoinMessage {

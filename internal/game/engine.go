@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/besuhoff/dungeon-game-go/internal/config"
+	"github.com/besuhoff/dungeon-game-go/internal/protocol"
 	"github.com/besuhoff/dungeon-game-go/internal/types"
 	"github.com/besuhoff/dungeon-game-go/internal/utils"
 	"github.com/google/uuid"
@@ -324,7 +325,7 @@ func (e *Engine) pickSpawnPoint(playerPos *types.Vector2) *types.Vector2 {
 
 	for _, enemy := range e.state.enemiesByChunk {
 		for _, enemy := range enemy {
-			if enemy.IsDead {
+			if !enemy.IsAlive {
 				continue
 			}
 
@@ -409,7 +410,7 @@ func (e *Engine) createEnemyForWall(wall *types.Wall) *types.Enemy {
 		WallID:     wall.ID,
 		Direction:  1.0,
 		ShootDelay: 0,
-		IsDead:     false,
+		IsAlive:    true,
 		DeadTimer:  0,
 	}
 }
@@ -712,7 +713,7 @@ func (e *Engine) Update() {
 						}
 
 						for _, enemy := range e.state.enemiesByChunk[neighborChunkKey] {
-							if !enemy.IsDead {
+							if enemy.IsAlive {
 								objectsToCheck = append(objectsToCheck, &types.CollisionObject{
 									LeftTopPos: types.Vector2{X: enemy.Position.X - config.EnemyRadius - config.PlayerRadius, Y: enemy.Position.Y - config.EnemyRadius - config.PlayerRadius},
 									Width:      config.EnemyRadius*2 + config.PlayerRadius*2,
@@ -826,7 +827,7 @@ func (e *Engine) Update() {
 
 			checkedEnemies++
 
-			if enemy.IsDead {
+			if !enemy.IsAlive {
 				enemy.DeadTimer -= deltaTime
 				if enemy.DeadTimer <= 0 {
 					// Remove completely dead enemies
@@ -953,7 +954,7 @@ func (e *Engine) Update() {
 
 							// Check collisions with other enemies
 							for _, other := range e.state.enemiesByChunk[neighborChunkKey] {
-								if other.ID != enemy.ID && !other.IsDead {
+								if other.ID != enemy.ID && other.IsAlive {
 									if utils.CheckCircleCollision(
 										enemy.Position.X+dx, enemy.Position.Y+dy, config.EnemyRadius,
 										other.Position.X, other.Position.Y, config.EnemyRadius) {
@@ -1268,7 +1269,7 @@ func (e *Engine) applyBulletDamage(bullet *types.Bullet, newPosition *types.Vect
 
 				// Check collision with enemies
 				for _, enemy := range e.state.enemiesByChunk[neighborChunkKey] {
-					if enemy.IsDead {
+					if !enemy.IsAlive {
 						continue
 					}
 
@@ -1279,7 +1280,7 @@ func (e *Engine) applyBulletDamage(bullet *types.Bullet, newPosition *types.Vect
 						// Hit!
 						enemy.Lives -= bullet.Damage
 						if enemy.Lives <= 0 {
-							enemy.IsDead = true
+							enemy.IsAlive = false
 							enemy.DeadTimer = config.EnemyDeathTraceTime
 
 							// Award money to shooter
@@ -1451,7 +1452,7 @@ func (e *Engine) applyRocketExplosionDamage(explosionCenter *types.Vector2, hitO
 
 	for _, enemies := range e.state.enemiesByChunk {
 		for _, enemy := range enemies {
-			if enemy.IsDead || hitObjectIDs[enemy.ID] {
+			if !enemy.IsAlive || hitObjectIDs[enemy.ID] {
 				continue
 			}
 
@@ -1461,7 +1462,7 @@ func (e *Engine) applyRocketExplosionDamage(explosionCenter *types.Vector2, hitO
 				damage := config.RocketLauncherDamage * (1 - distance/config.RocketLauncherDamageRadius)
 				enemy.Lives -= float32(damage)
 				if enemy.Lives <= 0 {
-					enemy.IsDead = true
+					enemy.IsAlive = false
 					enemy.DeadTimer = config.EnemyDeathTraceTime
 
 					if shooterExists {
@@ -1548,7 +1549,7 @@ func (e *Engine) GetAllPlayers() []*types.Player {
 }
 
 // GetGameStateDeltaForPlayer computes the delta filtered to player's surrounding chunks (-1 to 1)
-func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDelta {
+func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *protocol.GameStateDeltaMessage {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
@@ -1558,31 +1559,33 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 	player, exists := e.state.players[playerID]
 	if !exists || !player.IsConnected {
 		// Return empty delta if player doesn't exist
-		return &types.GameStateDelta{
-			UpdatedPlayers:              make(map[string]*types.Player),
-			UpdatedBullets:              make(map[string]*types.Bullet),
-			RemovedBullets:              make(map[string]*types.Bullet),
-			UpdatedWalls:                make(map[string]*types.Wall),
-			UpdatedEnemies:              make(map[string]*types.Enemy),
-			UpdatedBonuses:              make(map[string]*types.Bonus),
-			UpdatedShops:                make(map[string]*types.Shop),
-			UpdatedOtherPlayerPositions: make(map[string]*types.Vector2),
-			Timestamp:                   time.Now().UnixMilli(),
-		}
+		return &protocol.GameStateDeltaMessage{}
 	}
 
 	playerChunkX, playerChunkY := utils.ChunkXYFromPosition(player.Position.X, player.Position.Y)
 
-	delta := &types.GameStateDelta{
-		UpdatedPlayers:              make(map[string]*types.Player),
-		UpdatedBullets:              make(map[string]*types.Bullet),
-		RemovedBullets:              make(map[string]*types.Bullet),
-		UpdatedWalls:                make(map[string]*types.Wall),
-		UpdatedEnemies:              make(map[string]*types.Enemy),
-		UpdatedBonuses:              make(map[string]*types.Bonus),
-		UpdatedShops:                make(map[string]*types.Shop),
-		UpdatedOtherPlayerPositions: make(map[string]*types.Vector2),
-		Timestamp:                   time.Now().UnixMilli(),
+	delta := &protocol.GameStateDeltaMessage{
+		AddedPlayers:   make(map[string]*protocol.Player),
+		UpdatedPlayers: make(map[string]*protocol.PlayerUpdate),
+
+		AddedBullets:   make(map[string]*protocol.Bullet),
+		UpdatedBullets: make(map[string]*protocol.PositionUpdate),
+		RemovedBullets: make(map[string]*protocol.Bullet),
+
+		AddedWalls: make(map[string]*protocol.Wall),
+
+		AddedEnemies:   make(map[string]*protocol.Enemy),
+		UpdatedEnemies: make(map[string]*protocol.EnemyUpdate),
+
+		AddedBonuses:   make(map[string]*protocol.Bonus),
+		UpdatedBonuses: make(map[string]*protocol.BonusUpdate),
+
+		AddedShops:   make(map[string]*protocol.Shop),
+		UpdatedShops: make(map[string]*protocol.ShopUpdate),
+
+		UpdatedOtherPlayerPositions: make(map[string]*protocol.Vector2),
+
+		Timestamp: time.Now().UnixMilli(),
 	}
 
 	playersAbleToSee := make(map[string]*types.Player)
@@ -1605,15 +1608,20 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 		prev, prevExists := prevState.players[id]
 		for _, playerAbleToSee := range playersAbleToSee {
 			if playerFromState.ID == playerID || playerFromState.IsVisibleToPlayer(playerAbleToSee) {
-				if !types.PlayersEqual(prev, playerFromState) {
-					delta.UpdatedPlayers[id] = playerFromState.Clone()
+				if !prevExists {
+					delta.AddedPlayers[id] = protocol.ToProtoPlayer(playerFromState)
+				} else {
+					updatedPlayer := protocol.ToProtoPlayerUpdate(prev, playerFromState, playerFromState.ID == playerID)
+					if updatedPlayer != nil {
+						delta.UpdatedPlayers[id] = updatedPlayer
+					}
 				}
 				break
 			}
 		}
 
 		if playerFromState.ID != playerID && playerFromState.IsPositionDetectable() && (!prevExists || prev.Position.X != playerFromState.Position.X || prev.Position.Y != playerFromState.Position.Y) {
-			delta.UpdatedOtherPlayerPositions[id] = &types.Vector2{
+			delta.UpdatedOtherPlayerPositions[id] = &protocol.Vector2{
 				X: playerFromState.Position.X,
 				Y: playerFromState.Position.Y,
 			}
@@ -1654,7 +1662,7 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 
 	// Check for added bullets in visible chunks
 	for id, bullet := range e.state.bullets {
-		prev, exists := prevState.bullets[id]
+		prev, prevExists := prevState.bullets[id]
 		isBulletVisible := false
 		for _, playerAbleToSee := range playersAbleToSee {
 			if bullet.IsVisibleToPlayer(playerAbleToSee) {
@@ -1662,15 +1670,23 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 				break
 			}
 		}
-		if isBulletVisible || exists {
-			bulletCopy := bullet.Clone()
-			if !types.BulletsEqual(prev, bullet) {
-				if !bullet.IsActive || !isBulletVisible {
-					delta.RemovedBullets[id] = bulletCopy
-					continue
-				}
-				delta.UpdatedBullets[id] = bulletCopy
+
+		bulletCopy := protocol.ToProtoBullet(bullet)
+		if isBulletVisible && bullet.IsActive {
+			if !prevExists {
+				delta.AddedBullets[id] = bulletCopy
+				continue
 			}
+
+			bulletUpdate := protocol.ToProtoBulletUpdate(prev, bullet)
+			if bulletUpdate != nil {
+				delta.UpdatedBullets[id] = bulletUpdate
+				continue
+			}
+		}
+
+		if prevExists {
+			delta.RemovedBullets[id] = bulletCopy
 		}
 	}
 
@@ -1680,6 +1696,8 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 			if !e.chunkHash[neighborChunkKey] {
 				continue
 			}
+
+			enemyIDsInUpdatedState := []string{}
 
 			// Check for added/updated enemies in visible chunks
 			for id, enemy := range e.state.enemiesByChunk[neighborChunkKey] {
@@ -1691,13 +1709,21 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 					}
 				}
 
-				prev, existsInPrev := prevState.enemiesByChunk[neighborChunkKey][id]
+				prev, prevExists := prevState.enemiesByChunk[neighborChunkKey][id]
 
-				if currentVisible && !types.EnemiesEqual(prev, enemy) {
-					delta.UpdatedEnemies[id] = enemy.Clone()
+				if currentVisible {
+					enemyIDsInUpdatedState = append(enemyIDsInUpdatedState, id)
+					if !prevExists {
+						delta.AddedEnemies[id] = protocol.ToProtoEnemy(enemy)
+					} else {
+						enemyUpdate := protocol.ToProtoEnemyUpdate(prev, enemy)
+						if enemyUpdate != nil {
+							delta.UpdatedEnemies[id] = enemyUpdate
+						}
+					}
 				}
 
-				if existsInPrev {
+				if prevExists {
 					if !currentVisible {
 						delta.RemovedEnemies = append(delta.RemovedEnemies, id)
 					}
@@ -1707,13 +1733,13 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 
 			for id, wall := range e.state.wallsByChunk[neighborChunkKey] {
 				// Walls are always visible to players so no need to check nearby players
-				currentVisible := wall.IsVisibleToPlayer(player) || enemiesHaveWall(delta.UpdatedEnemies, wall.ID)
-				_, existsInPrev := prevState.wallsByChunk[neighborChunkKey][id]
-				if currentVisible && !existsInPrev {
-					delta.UpdatedWalls[id] = wall.Clone()
+				currentVisible := wall.IsVisibleToPlayer(player) || e.enemiesHaveWall(enemyIDsInUpdatedState, wall.ID)
+				_, prevExists := prevState.wallsByChunk[neighborChunkKey][id]
+				if currentVisible && !prevExists {
+					delta.AddedWalls[id] = protocol.ToProtoWall(wall)
 				}
 
-				if existsInPrev {
+				if prevExists {
 					if !currentVisible {
 						delta.RemovedWalls = append(delta.RemovedWalls, id)
 					}
@@ -1739,7 +1765,7 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 					continue
 				}
 
-				prev, existsInPrev := prevState.shopsByChunk[neighborChunkKey][id]
+				prev, prevExists := prevState.shopsByChunk[neighborChunkKey][id]
 				prevPlayer := prevState.players[playerID]
 
 				if currentVisible && shop.IsPlayerInShop(player) && (prevPlayer == nil || !shop.IsPlayerInShop(prevPlayer)) {
@@ -1753,11 +1779,18 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 					delta.RemovedPlayersShops = append(delta.RemovedPlayersShops, id)
 				}
 
-				if currentVisible && !types.ShopsEqual(prev, shop) {
-					delta.UpdatedShops[id] = shop.Clone()
+				if currentVisible {
+					if !prevExists {
+						delta.AddedShops[id] = protocol.ToProtoShop(shop)
+					} else {
+						shopUpdate := protocol.ToProtoShopUpdate(prev, shop)
+						if shopUpdate != nil {
+							delta.UpdatedShops[id] = shopUpdate
+						}
+					}
 				}
 
-				if existsInPrev {
+				if prevExists {
 					if !currentVisible {
 						delta.RemovedShops = append(delta.RemovedShops, id)
 					}
@@ -1801,27 +1834,20 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 		if currentVisible {
 			prevBonus, prevExists := prevState.bonuses[id]
 
-			if !prevExists || prevBonus.PickedUpBy != bonus.PickedUpBy {
-				delta.UpdatedBonuses[id] = bonus.Clone()
+			if !prevExists {
+				delta.AddedBonuses[id] = protocol.ToProtoBonus(bonus)
+			} else {
+				bonusUpdate := protocol.ToProtoBonusUpdate(prevBonus, bonus)
+				if bonusUpdate != nil {
+					delta.UpdatedBonuses[id] = bonusUpdate
+				}
+				delete(prevState.bonuses, id)
 			}
 		}
 	}
 
 	for id := range prevState.bonuses {
-		current, exists := e.state.bonuses[id]
-		currentVisible := false
-		if exists {
-			for _, playerAbleToSee := range playersAbleToSee {
-				if exists && current.IsVisibleToPlayer(playerAbleToSee) {
-					currentVisible = true
-					break
-				}
-			}
-		}
-
-		if !exists || !currentVisible {
-			delta.RemovedBonuses = append(delta.RemovedBonuses, id)
-		}
+		delta.RemovedBonuses = append(delta.RemovedBonuses, id)
 	}
 
 	if e.debugMode {
@@ -1841,10 +1867,13 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *types.GameStateDel
 	return delta
 }
 
-func enemiesHaveWall(enemies map[string]*types.Enemy, wallID string) bool {
-	for _, enemy := range enemies {
-		if enemy.WallID == wallID {
-			return true
+func (e *Engine) enemiesHaveWall(enemyIDs []string, wallID string) bool {
+	for _, enemyID := range enemyIDs {
+		for _, enemies := range e.state.enemiesByChunk {
+			enemy, exists := enemies[enemyID]
+			if exists && enemy.WallID == wallID {
+				return true
+			}
 		}
 	}
 	return false
