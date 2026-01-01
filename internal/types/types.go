@@ -61,6 +61,12 @@ const (
 	WeaponTypeRailgun        = "railgun"
 )
 
+const (
+	EnemyTypeSoldier    = "pr"
+	EnemyTypeLieutenant = "lt"
+	EnemyTypeTower      = "tw"
+)
+
 var WeaponTypeByInventoryItem = map[InventoryItemID]string{
 	InventoryItemBlaster:        WeaponTypeBlaster,
 	InventoryItemShotgun:        WeaponTypeShotgun,
@@ -142,4 +148,40 @@ var ShopNames = []string{
 	"The Tactical Tradepost",
 	"Marksman's Market",
 	"The Battle Bodega",
+}
+
+var EnemySizeByType = map[string]float64{
+	EnemyTypeSoldier:    config.EnemySoldierSize,
+	EnemyTypeLieutenant: config.EnemySoldierSize,
+	EnemyTypeTower:      config.EnemyTowerSize,
+}
+
+var EnemyLivesByType = map[string]float32{
+	EnemyTypeSoldier:    config.EnemySoldierLives,
+	EnemyTypeLieutenant: config.EnemyLieutenantLives,
+	EnemyTypeTower:      config.EnemyTowerLives,
+}
+
+var EnemyShootDelayByType = map[string]float64{
+	EnemyTypeSoldier:    config.EnemySoldierShootDelay,
+	EnemyTypeLieutenant: config.EnemyLieutenantShootDelay,
+	EnemyTypeTower:      config.EnemyTowerShootDelay,
+}
+
+var EnemyBulletSpeedByType = map[string]float64{
+	EnemyTypeSoldier:    config.EnemySoldierBulletSpeed,
+	EnemyTypeLieutenant: config.EnemySoldierBulletSpeed,
+	EnemyTypeTower:      config.EnemyTowerBulletSpeed,
+}
+
+var EnemyRewardByType = map[string]float64{
+	EnemyTypeSoldier:    config.EnemySoldierReward,
+	EnemyTypeLieutenant: config.EnemyLieutenantReward,
+	EnemyTypeTower:      config.EnemyTowerReward,
+}
+
+var EnemyGunEndOffestByType = map[string]*Vector2{
+	EnemyTypeSoldier:    {X: config.EnemySoldierGunEndOffsetX, Y: config.EnemySoldierGunEndOffsetY},
+	EnemyTypeLieutenant: {X: config.EnemySoldierGunEndOffsetX, Y: config.EnemySoldierGunEndOffsetY},
+	EnemyTypeTower:      {X: config.EnemyTowerGunEndOffsetX, Y: config.EnemyTowerGunEndOffsetY},
 }

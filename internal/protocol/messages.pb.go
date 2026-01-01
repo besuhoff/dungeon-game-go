@@ -355,6 +355,7 @@ type Bullet struct {
 	OwnerId       string                 `protobuf:"bytes,4,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
 	Damage        float32                `protobuf:"fixed32,5,opt,name=damage,proto3" json:"damage,omitempty"`
 	IsEnemy       bool                   `protobuf:"varint,6,opt,name=is_enemy,json=isEnemy,proto3" json:"is_enemy,omitempty"`
+	EnemyType     string                 `protobuf:"bytes,11,opt,name=enemy_type,json=enemyType,proto3" json:"enemy_type,omitempty"`
 	IsActive      bool                   `protobuf:"varint,7,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
 	DeletedAt     int64                  `protobuf:"varint,10,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
 	InactiveMs    int64                  `protobuf:"varint,9,opt,name=inactive_ms,json=inactiveMs,proto3" json:"inactive_ms,omitempty"`
@@ -433,6 +434,13 @@ func (x *Bullet) GetIsEnemy() bool {
 		return x.IsEnemy
 	}
 	return false
+}
+
+func (x *Bullet) GetEnemyType() string {
+	if x != nil {
+		return x.EnemyType
+	}
+	return ""
 }
 
 func (x *Bullet) GetIsActive() bool {
@@ -547,6 +555,7 @@ type Enemy struct {
 	Lives         float32                `protobuf:"fixed32,4,opt,name=lives,proto3" json:"lives,omitempty"`
 	WallId        string                 `protobuf:"bytes,5,opt,name=wall_id,json=wallId,proto3" json:"wall_id,omitempty"`
 	IsAlive       bool                   `protobuf:"varint,6,opt,name=is_alive,json=isAlive,proto3" json:"is_alive,omitempty"`
+	Type          string                 `protobuf:"bytes,7,opt,name=type,proto3" json:"type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -621,6 +630,13 @@ func (x *Enemy) GetIsAlive() bool {
 		return x.IsAlive
 	}
 	return false
+}
+
+func (x *Enemy) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
 }
 
 type Bonus struct {
@@ -2080,14 +2096,16 @@ const file_messages_proto_rawDesc = "" +
 	"\x11selected_gun_type\x18\x0f \x01(\tR\x0fselectedGunType\x1aJ\n" +
 	"\x1cBulletsLeftByWeaponTypeEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\xc2\x02\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\xe1\x02\n" +
 	"\x06Bullet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12-\n" +
 	"\bposition\x18\x02 \x01(\v2\x11.protocol.Vector2R\bposition\x12-\n" +
 	"\bvelocity\x18\x03 \x01(\v2\x11.protocol.Vector2R\bvelocity\x12\x19\n" +
 	"\bowner_id\x18\x04 \x01(\tR\aownerId\x12\x16\n" +
 	"\x06damage\x18\x05 \x01(\x02R\x06damage\x12\x19\n" +
-	"\bis_enemy\x18\x06 \x01(\bR\aisEnemy\x12\x1b\n" +
+	"\bis_enemy\x18\x06 \x01(\bR\aisEnemy\x12\x1d\n" +
+	"\n" +
+	"enemy_type\x18\v \x01(\tR\tenemyType\x12\x1b\n" +
 	"\tis_active\x18\a \x01(\bR\bisActive\x12\x1d\n" +
 	"\n" +
 	"deleted_at\x18\n" +
@@ -2101,14 +2119,15 @@ const file_messages_proto_rawDesc = "" +
 	"\bposition\x18\x02 \x01(\v2\x11.protocol.Vector2R\bposition\x12\x14\n" +
 	"\x05width\x18\x03 \x01(\x01R\x05width\x12\x16\n" +
 	"\x06height\x18\x04 \x01(\x01R\x06height\x12 \n" +
-	"\vorientation\x18\x05 \x01(\tR\vorientation\"\xac\x01\n" +
+	"\vorientation\x18\x05 \x01(\tR\vorientation\"\xc0\x01\n" +
 	"\x05Enemy\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12-\n" +
 	"\bposition\x18\x02 \x01(\v2\x11.protocol.Vector2R\bposition\x12\x1a\n" +
 	"\brotation\x18\x03 \x01(\x01R\brotation\x12\x14\n" +
 	"\x05lives\x18\x04 \x01(\x02R\x05lives\x12\x17\n" +
 	"\awall_id\x18\x05 \x01(\tR\x06wallId\x12\x19\n" +
-	"\bis_alive\x18\x06 \x01(\bR\aisAlive\"\x9b\x01\n" +
+	"\bis_alive\x18\x06 \x01(\bR\aisAlive\x12\x12\n" +
+	"\x04type\x18\a \x01(\tR\x04type\"\x9b\x01\n" +
 	"\x05Bonus\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12-\n" +
 	"\bposition\x18\x02 \x01(\v2\x11.protocol.Vector2R\bposition\x12\x12\n" +

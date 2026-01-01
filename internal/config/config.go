@@ -9,7 +9,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const GameVersion = "1.1.1"
+const GameVersion = "1.2.0"
 
 type Config struct {
 	MongoDBURL               string
@@ -143,20 +143,39 @@ const (
 	RailgunRange      = SightRadius
 
 	// Enemy constants
-	EnemySpeed = 120.0 // Units per second
+	EnemyDeathTraceTime   = 5.0 // Seconds
+	EnemyLieutenantChance = 0.2 // 20% chance to spawn lieutenant instead of soldier
 
-	EnemySize          = 24.0
-	EnemyRadius        = EnemySize / 2
-	EnemyGunEndOffsetX = -1.0
-	EnemyGunEndOffsetY = 26.0
+	// Enemy soldier constants
+	EnemySoldierSpeed         = 120.0 // Units per second
+	EnemySoldierSize          = 24.0
+	EnemySoldierGunEndOffsetX = -1.0
+	EnemySoldierGunEndOffsetY = 26.0
 
-	EnemyLives             = 1.0
-	EnemyShootDelay        = 1.0   // Seconds
-	EnemyBulletSpeed       = 240.0 // Units per second
-	EnemyDeathTraceTime    = 5.0   // Seconds
-	EnemyReward            = 10.0  // Money reward
-	EnemyDropChance        = 0.3   // 30% chance to drop bonus
-	EnemyDropChanceGoggles = 0.2   // 20% chance to drop goggles if dropping bonus
+	EnemySoldierLives       = 1.0
+	EnemySoldierShootDelay  = 1.0   // Seconds
+	EnemySoldierBulletSpeed = 240.0 // Units per second
+
+	EnemySoldierReward            = 20.0 // Money reward
+	EnemySoldierDropChance        = 0.3  // 30% chance to drop bonus
+	EnemySoldierDropChanceGoggles = 0.2  // 20% chance to drop goggles if dropping bonus
+
+	// Enemy lieutenant constants
+	EnemyLieutenantLives            = 2.0
+	EnemyLieutenantShootDelay       = 0.5  // Seconds
+	EnemyLieutenantReward           = 50.0 // Money reward
+	EnemyLieutenantDropChance       = 0.5  // 50% chance to drop bonus
+	EnemyLieutenantDropChanceWeapon = 0.3  // 30% chance to drop weapon if dropping bonus
+
+	// Enemy tower constants
+	EnemyTowerLives       = 30.0
+	EnemyTowerShootDelay  = 2.0   // Seconds
+	EnemyTowerReward      = 200.0 // Money reward
+	EnemyTowerSize        = 120.0
+	EnemyTowerBulletSpeed = 300.0 // Units per second
+
+	EnemyTowerGunEndOffsetX = 0.0
+	EnemyTowerGunEndOffsetY = 70.0
 
 	// Bonus constants
 	AidKitSize        = 32.0

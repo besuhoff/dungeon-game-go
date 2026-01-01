@@ -70,6 +70,16 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			if wallID, ok := obj.Properties["wall_id"].(string); ok {
 				enemy.WallID = wallID
 			}
+			if enemyType, ok := obj.Properties["type"].(string); ok {
+				enemy.Type = enemyType
+			}
+			if enemy.Type == "" {
+				if rand.Float64() < config.EnemyLieutenantChance {
+					enemy.Type = types.EnemyTypeLieutenant
+				} else {
+					enemy.Type = types.EnemyTypeSoldier
+				}
+			}
 			// Handle both float32 and float64 since JSON unmarshaling uses float64
 			if lives, ok := obj.Properties["lives"].(float64); ok {
 				enemy.Lives = float32(lives)
@@ -292,6 +302,7 @@ func (e *Engine) SaveToSession(session *db.GameSession) {
 					"wall_id":   enemy.WallID,
 					"direction": enemy.Direction,
 					"lives":     enemy.Lives,
+					"type":      enemy.Type,
 				},
 			}
 		}

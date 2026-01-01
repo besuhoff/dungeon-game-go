@@ -134,6 +134,10 @@ export interface Bullet {
      */
     isEnemy: boolean;
     /**
+     * @generated from protobuf field: string enemy_type = 11
+     */
+    enemyType: string;
+    /**
      * @generated from protobuf field: bool is_active = 7
      */
     isActive: boolean;
@@ -203,6 +207,10 @@ export interface Enemy {
      * @generated from protobuf field: bool is_alive = 6
      */
     isAlive: boolean;
+    /**
+     * @generated from protobuf field: string type = 7
+     */
+    type: string;
 }
 /**
  * @generated from protobuf message protocol.Bonus
@@ -1001,6 +1009,7 @@ class Bullet$Type extends MessageType$<Bullet> {
             { no: 4, name: "owner_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 5, name: "damage", kind: "scalar", T: 2 /*ScalarType.FLOAT*/ },
             { no: 6, name: "is_enemy", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 11, name: "enemy_type", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 7, name: "is_active", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 10, name: "deleted_at", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
             { no: 9, name: "inactive_ms", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
@@ -1013,6 +1022,7 @@ class Bullet$Type extends MessageType$<Bullet> {
         message.ownerId = "";
         message.damage = 0;
         message.isEnemy = false;
+        message.enemyType = "";
         message.isActive = false;
         message.deletedAt = 0n;
         message.inactiveMs = 0n;
@@ -1043,6 +1053,9 @@ class Bullet$Type extends MessageType$<Bullet> {
                     break;
                 case /* bool is_enemy */ 6:
                     message.isEnemy = reader.bool();
+                    break;
+                case /* string enemy_type */ 11:
+                    message.enemyType = reader.string();
                     break;
                 case /* bool is_active */ 7:
                     message.isActive = reader.bool();
@@ -1098,6 +1111,9 @@ class Bullet$Type extends MessageType$<Bullet> {
         /* int64 deleted_at = 10; */
         if (message.deletedAt !== 0n)
             writer.tag(10, WireType.Varint).int64(message.deletedAt);
+        /* string enemy_type = 11; */
+        if (message.enemyType !== "")
+            writer.tag(11, WireType.LengthDelimited).string(message.enemyType);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1195,7 +1211,8 @@ class Enemy$Type extends MessageType$<Enemy> {
             { no: 3, name: "rotation", kind: "scalar", T: 1 /*ScalarType.DOUBLE*/ },
             { no: 4, name: "lives", kind: "scalar", T: 2 /*ScalarType.FLOAT*/ },
             { no: 5, name: "wall_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 6, name: "is_alive", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
+            { no: 6, name: "is_alive", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 7, name: "type", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<Enemy>): Enemy {
@@ -1205,6 +1222,7 @@ class Enemy$Type extends MessageType$<Enemy> {
         message.lives = 0;
         message.wallId = "";
         message.isAlive = false;
+        message.type = "";
         if (value !== undefined)
             reflectionMergePartial<Enemy>(this, message, value);
         return message;
@@ -1231,6 +1249,9 @@ class Enemy$Type extends MessageType$<Enemy> {
                     break;
                 case /* bool is_alive */ 6:
                     message.isAlive = reader.bool();
+                    break;
+                case /* string type */ 7:
+                    message.type = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1262,6 +1283,9 @@ class Enemy$Type extends MessageType$<Enemy> {
         /* bool is_alive = 6; */
         if (message.isAlive !== false)
             writer.tag(6, WireType.Varint).bool(message.isAlive);
+        /* string type = 7; */
+        if (message.type !== "")
+            writer.tag(7, WireType.LengthDelimited).string(message.type);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

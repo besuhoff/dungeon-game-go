@@ -217,7 +217,7 @@ func (e *Engine) generateChunk(chunkX, chunkY int, playerPos *types.Vector2) {
 
 	e.state.shopsByChunk[chunkKey][shop.ID] = shop
 
-	for i := 0; i < numWalls; i++ {
+	for numWalls > 0 {
 		// Random orientation
 		orientation := "vertical"
 		if rand.Float64() < 0.5 {
@@ -243,26 +243,38 @@ func (e *Engine) generateChunk(chunkX, chunkY int, playerPos *types.Vector2) {
 			continue
 		}
 
+		wallID := uuid.New().String()
+		wall := &types.Wall{
+			ScreenObject: types.ScreenObject{
+				ID:       wallID,
+				Position: &types.Vector2{X: x, Y: y},
+			},
+			Width:       width,
+			Height:      height,
+			Orientation: orientation,
+		}
+		wallTopLeft := wall.GetTopLeft()
+		safeWallPadding := config.EnemySoldierSize
+
 		// Check overlap with existing walls
 		overlaps := false
 		for _, wall := range e.state.wallsByChunk[chunkKey] {
-			if e.checkWallOverlap(x, y, width, height, wall) {
+			checkedTopLeft := wall.GetTopLeft()
+
+			if utils.CheckRectCollision(
+				checkedTopLeft.X-safeWallPadding,
+				checkedTopLeft.Y-safeWallPadding,
+				wall.Width+2*safeWallPadding,
+				wall.Height+2*safeWallPadding,
+				wallTopLeft.X, wallTopLeft.Y, width, height,
+			) {
 				overlaps = true
 				break
 			}
 		}
 
 		if !overlaps {
-			wallID := uuid.New().String()
-			wall := &types.Wall{
-				ScreenObject: types.ScreenObject{
-					ID:       wallID,
-					Position: &types.Vector2{X: x, Y: y},
-				},
-				Width:       width,
-				Height:      height,
-				Orientation: orientation,
-			}
+			numWalls--
 			e.state.wallsByChunk[chunkKey][wallID] = wall
 
 			// Create enemy for this wall
@@ -330,9 +342,9 @@ func (e *Engine) pickSpawnPoint(playerPos *types.Vector2) *types.Vector2 {
 			}
 
 			objectsToCheck = append(objectsToCheck, &types.CollisionObject{
-				LeftTopPos: types.Vector2{X: enemy.Position.X - config.EnemyRadius, Y: enemy.Position.Y - config.EnemyRadius},
-				Width:      config.EnemyRadius * 2,
-				Height:     config.EnemyRadius * 2,
+				LeftTopPos: types.Vector2{X: enemy.Position.X - enemy.Size()/2, Y: enemy.Position.Y - enemy.Size()/2},
+				Width:      enemy.Size(),
+				Height:     enemy.Size(),
 			})
 		}
 	}
@@ -379,6 +391,13 @@ func (e *Engine) pickSpawnPoint(playerPos *types.Vector2) *types.Vector2 {
 // createEnemyForWall creates an enemy that patrols along a wall
 func (e *Engine) createEnemyForWall(wall *types.Wall) *types.Enemy {
 	enemyID := uuid.New().String()
+	enemyType := types.EnemyTypeSoldier
+	enemyLives := config.EnemySoldierLives
+	enemySize := config.EnemySoldierSize
+	if rand.Float64() < config.EnemyLieutenantChance {
+		enemyType = types.EnemyTypeLieutenant
+		enemyLives = config.EnemyLieutenantLives
+	}
 
 	// Spawn enemy on one side of the wall
 	var x, y float64
@@ -388,11 +407,11 @@ func (e *Engine) createEnemyForWall(wall *types.Wall) *types.Enemy {
 	}
 
 	if wall.Orientation == "vertical" {
-		x = wall.Position.X - wallSide*(wall.Width/2+config.EnemySize/2)
+		x = wall.Position.X - wallSide*(wall.Width/2+enemySize/2)
 		y = wall.Position.Y
 	} else {
 		x = wall.Position.X
-		y = wall.Position.Y - wallSide*(wall.Height/2+config.EnemySize/2)
+		y = wall.Position.Y - wallSide*(wall.Height/2+enemySize/2)
 	}
 
 	rotation := 0.0
@@ -406,12 +425,13 @@ func (e *Engine) createEnemyForWall(wall *types.Wall) *types.Enemy {
 			Position: &types.Vector2{X: x, Y: y},
 		},
 		Rotation:   rotation,
-		Lives:      config.EnemyLives,
+		Lives:      float32(enemyLives),
 		WallID:     wall.ID,
 		Direction:  1.0,
 		ShootDelay: 0,
 		IsAlive:    true,
 		DeadTimer:  0,
+		Type:       enemyType,
 	}
 }
 
@@ -715,9 +735,9 @@ func (e *Engine) Update() {
 						for _, enemy := range e.state.enemiesByChunk[neighborChunkKey] {
 							if enemy.IsAlive {
 								objectsToCheck = append(objectsToCheck, &types.CollisionObject{
-									LeftTopPos: types.Vector2{X: enemy.Position.X - config.EnemyRadius - config.PlayerRadius, Y: enemy.Position.Y - config.EnemyRadius - config.PlayerRadius},
-									Width:      config.EnemyRadius*2 + config.PlayerRadius*2,
-									Height:     config.EnemyRadius*2 + config.PlayerRadius*2,
+									LeftTopPos: types.Vector2{X: enemy.Position.X - enemy.Size()/2 - config.PlayerRadius, Y: enemy.Position.Y - enemy.Size()/2 - config.PlayerRadius},
+									Width:      enemy.Size() + config.PlayerRadius*2,
+									Height:     enemy.Size() + config.PlayerRadius*2,
 								})
 							}
 						}
@@ -900,7 +920,7 @@ func (e *Engine) Update() {
 				continue // No players nearby
 			}
 
-			if canSee && closestVisiblePlayer != nil {
+			if canSee {
 				// Aim at player
 				dx := closestVisiblePlayer.Position.X - enemy.Position.X
 				dy := closestVisiblePlayer.Position.Y - enemy.Position.Y
@@ -910,19 +930,33 @@ func (e *Engine) Update() {
 				if enemy.ShootDelay <= 0 {
 					bullet := enemy.Shoot()
 					e.state.bullets[bullet.ID] = bullet
-					enemy.ShootDelay = config.EnemyShootDelay
+					enemy.ShootDelay = types.EnemyShootDelayByType[enemy.Type]
 				}
-			} else {
+			}
+
+			shouldPatrol := false
+			if enemy.Type == types.EnemyTypeSoldier && !canSee {
+				shouldPatrol = true
+			}
+			if enemy.Type == types.EnemyTypeLieutenant {
+				shouldPatrol = true
+			}
+
+			if shouldPatrol {
 				// Patrol logic
 				wall, wallExists := e.state.wallsByChunk[enemyChunkKey][enemy.WallID]
 				if wallExists {
 					var dx, dy float64
 					if wall.Orientation == "vertical" {
-						dy = config.EnemySpeed * enemy.Direction * deltaTime
-						enemy.Rotation = 90 - 90*enemy.Direction
+						dy = config.EnemySoldierSpeed * enemy.Direction * deltaTime
+						if !canSee {
+							enemy.Rotation = 90 - 90*enemy.Direction
+						}
 					} else {
-						dx = config.EnemySpeed * enemy.Direction * deltaTime
-						enemy.Rotation = -90 * enemy.Direction
+						dx = config.EnemySoldierSpeed * enemy.Direction * deltaTime
+						if !canSee {
+							enemy.Rotation = -90 * enemy.Direction
+						}
 					}
 
 					// Skip collision checks if no movement
@@ -942,7 +976,7 @@ func (e *Engine) Update() {
 							for _, w := range e.state.wallsByChunk[neighborChunkKey] {
 								wallTopLeft := w.GetTopLeft()
 								if utils.CheckCircleRectCollision(
-									enemy.Position.X+dx, enemy.Position.Y+dy, config.EnemyRadius,
+									enemy.Position.X+dx, enemy.Position.Y+dy, enemy.Size()/2,
 									wallTopLeft.X, wallTopLeft.Y, w.Width, w.Height) {
 									collision = true
 									break
@@ -956,8 +990,8 @@ func (e *Engine) Update() {
 							for _, other := range e.state.enemiesByChunk[neighborChunkKey] {
 								if other.ID != enemy.ID && other.IsAlive {
 									if utils.CheckCircleCollision(
-										enemy.Position.X+dx, enemy.Position.Y+dy, config.EnemyRadius,
-										other.Position.X, other.Position.Y, config.EnemyRadius) {
+										enemy.Position.X+dx, enemy.Position.Y+dy, enemy.Size()/2,
+										other.Position.X, other.Position.Y, other.Size()/2) {
 										collision = true
 										break
 									}
@@ -980,7 +1014,7 @@ func (e *Engine) Update() {
 							}
 
 							if utils.CheckCircleCollision(
-								enemy.Position.X+dx, enemy.Position.Y+dy, config.EnemyRadius,
+								enemy.Position.X+dx, enemy.Position.Y+dy, enemy.Size()/2,
 								player.Position.X, player.Position.Y, config.PlayerRadius) {
 								collision = true
 								break
@@ -1258,47 +1292,49 @@ func (e *Engine) applyBulletDamage(bullet *types.Bullet, newPosition *types.Vect
 		}
 	}
 
-	if !bullet.IsEnemy {
-		bulletChunkX, bulletChunkY := utils.ChunkXYFromPosition(newPosition.X, newPosition.Y)
-		for neighborChunkX := bulletChunkX - 1; neighborChunkX <= bulletChunkX+1; neighborChunkX++ {
-			for neighborChunkY := bulletChunkY - 1; neighborChunkY <= bulletChunkY+1; neighborChunkY++ {
-				neighborChunkKey := fmt.Sprintf("%d,%d", neighborChunkX, neighborChunkY)
-				if !e.chunkHash[neighborChunkKey] {
+	bulletChunkX, bulletChunkY := utils.ChunkXYFromPosition(newPosition.X, newPosition.Y)
+	for neighborChunkX := bulletChunkX - 1; neighborChunkX <= bulletChunkX+1; neighborChunkX++ {
+		for neighborChunkY := bulletChunkY - 1; neighborChunkY <= bulletChunkY+1; neighborChunkY++ {
+			neighborChunkKey := fmt.Sprintf("%d,%d", neighborChunkX, neighborChunkY)
+			if !e.chunkHash[neighborChunkKey] {
+				continue
+			}
+
+			// Check collision with enemies
+			for _, enemy := range e.state.enemiesByChunk[neighborChunkKey] {
+				if !enemy.IsAlive || (bullet.IsEnemy && enemy.ID == bullet.OwnerID) {
 					continue
 				}
 
-				// Check collision with enemies
-				for _, enemy := range e.state.enemiesByChunk[neighborChunkKey] {
-					if !enemy.IsAlive {
-						continue
-					}
+				closestPointX, closestPointY := utils.ClosestPointOnLineSegment(bullet.Position.X, bullet.Position.Y, newPosition.X, newPosition.Y, enemy.Position.X, enemy.Position.Y)
+				distance := enemy.DistanceToPoint(&types.Vector2{X: closestPointX, Y: closestPointY})
 
-					closestPointX, closestPointY := utils.ClosestPointOnLineSegment(bullet.Position.X, bullet.Position.Y, newPosition.X, newPosition.Y, enemy.Position.X, enemy.Position.Y)
-					distance := enemy.DistanceToPoint(&types.Vector2{X: closestPointX, Y: closestPointY})
+				if distance < enemy.Size()/2+config.BlasterBulletRadius {
+					// Hit!
+					enemy.Lives -= bullet.Damage
+					if enemy.Lives <= 0 {
+						enemy.IsAlive = false
+						enemy.DeadTimer = config.EnemyDeathTraceTime
 
-					if distance < config.EnemyRadius+config.BlasterBulletRadius {
-						// Hit!
-						enemy.Lives -= bullet.Damage
-						if enemy.Lives <= 0 {
-							enemy.IsAlive = false
-							enemy.DeadTimer = config.EnemyDeathTraceTime
-
-							// Award money to shooter
+						// Award money to shooter
+						if !bullet.IsEnemy {
 							if shooter, exists := e.state.players[bullet.OwnerID]; exists {
-								shooter.Money += config.EnemyReward
-								shooter.Score += config.EnemyReward
+								reward := enemy.Reward()
+								shooter.Money += int(reward)
+								shooter.Score += int(reward)
 								shooter.Kills++
 							}
-
-							e.spawnBonus(enemy.Position)
 						}
-						hitFound = true
-						hitObjectIDs[enemy.ID] = true
+
+						e.spawnBonus(enemy.Position)
 					}
+					hitFound = true
+					hitObjectIDs[enemy.ID] = true
 				}
 			}
 		}
 	}
+
 	return hitFound, hitObjectIDs
 }
 
@@ -1466,8 +1502,9 @@ func (e *Engine) applyRocketExplosionDamage(explosionCenter *types.Vector2, hitO
 					enemy.DeadTimer = config.EnemyDeathTraceTime
 
 					if shooterExists {
-						shooter.Money += config.EnemyReward
-						shooter.Score += config.EnemyReward
+						reward := enemy.Reward()
+						shooter.Money += int(reward)
+						shooter.Score += int(reward)
 						shooter.Kills++
 					}
 
@@ -1510,13 +1547,13 @@ func (e *Engine) applyRocketExplosionDamage(explosionCenter *types.Vector2, hitO
 // spawnBonus creates a bonus at the given position
 func (e *Engine) spawnBonus(pos *types.Vector2) {
 	// Maybe spawn bonus
-	if rand.Float64() >= config.EnemyDropChance {
+	if rand.Float64() >= config.EnemySoldierDropChance {
 		return
 	}
 
 	bonusType := types.BonusTypeAidKit
 	inventoryItemID := types.InventoryItemAidKit
-	if rand.Float64() < config.EnemyDropChanceGoggles {
+	if rand.Float64() < config.EnemySoldierDropChanceGoggles {
 		bonusType = types.BonusTypeGoggles
 		inventoryItemID = types.InventoryItemGoggles
 	}

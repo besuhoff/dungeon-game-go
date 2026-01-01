@@ -13,6 +13,7 @@ type Bullet struct {
 	Velocity   *Vector2  `json:"velocity"`
 	OwnerID    string    `json:"ownerId"`
 	IsEnemy    bool      `json:"isEnemy"`
+	EnemyType  string    `json:"enemyType"`
 	IsActive   bool      `json:"isActive"`
 	DeletedAt  time.Time `json:"deletedAt"`
 	SpawnTime  time.Time `json:"-"`

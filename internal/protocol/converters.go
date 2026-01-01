@@ -150,6 +150,7 @@ func ToProtoBullet(b *types.Bullet) *Bullet {
 		OwnerId:    b.OwnerID,
 		Damage:     b.Damage,
 		IsEnemy:    b.IsEnemy,
+		EnemyType:  b.EnemyType,
 		IsActive:   b.IsActive,
 		DeletedAt:  b.DeletedAt.UnixMilli(),
 		InactiveMs: time.Since(b.DeletedAt).Milliseconds(),
@@ -198,6 +199,7 @@ func ToProtoEnemy(e *types.Enemy) *Enemy {
 		Lives:    e.Lives,
 		WallId:   e.WallID,
 		IsAlive:  e.IsAlive,
+		Type:     e.Type,
 	}
 }
 

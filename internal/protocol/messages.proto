@@ -52,6 +52,7 @@ message Bullet {
   string owner_id = 4;
   float damage = 5;
   bool is_enemy = 6;
+  string enemy_type = 11;
   bool is_active = 7;
   int64 deleted_at = 10;
   int64 inactive_ms = 9;
@@ -73,6 +74,7 @@ message Enemy {
   float lives = 4;
   string wall_id = 5;
   bool is_alive = 6;
+  string type = 7;
 }
 
 message Bonus {
