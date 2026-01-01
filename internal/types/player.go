@@ -289,11 +289,17 @@ func (p *Player) Die() {
 }
 
 func (p *Player) DropInventory() *Bonus {
-	if len(p.Inventory) == 0 && p.Money == 0 {
-		return nil
+	hasSomethingToDrop := p.Money > 0
+	if !hasSomethingToDrop {
+		for _, item := range p.Inventory {
+			if item.Type != InventoryItemBlaster && item.Quantity > 0 {
+				hasSomethingToDrop = true
+				break
+			}
+		}
 	}
 
-	if len(p.Inventory) == 1 && p.Inventory[0].Type == InventoryItemBlaster && p.Money == 0 {
+	if !hasSomethingToDrop {
 		return nil
 	}
 

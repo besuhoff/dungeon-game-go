@@ -143,8 +143,9 @@ const (
 	RailgunRange      = SightRadius
 
 	// Enemy constants
-	EnemyDeathTraceTime   = 5.0 // Seconds
-	EnemyLieutenantChance = 0.2 // 20% chance to spawn lieutenant instead of soldier
+	EnemyDeathTraceTime     = 5.0  // Seconds
+	EnemyLieutenantChance   = 0.15 // 15% chance to spawn lieutenant instead of soldier
+	EnemySpawnChancePerWall = 0.7  // 70% chance to spawn enemy for each wall
 
 	// Enemy soldier constants
 	EnemySoldierSpeed         = 120.0 // Units per second
@@ -188,7 +189,8 @@ const (
 	ChunkSize            = 2000.0
 	SightRadius          = 1500.0
 	WallWidth            = 30.0
-	MinWallsPerKiloPixel = 7
+	MinWallsPerKiloPixel = 5
+	MaxWallsPerKiloPixel = 10
 	ShopSize             = 64.0
 
 	// Vision constants

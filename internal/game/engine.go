@@ -206,8 +206,10 @@ func (e *Engine) generateChunk(chunkX, chunkY int, playerPos *types.Vector2) {
 	chunkStartY := float64(chunkY) * config.ChunkSize
 
 	// Randomly generate walls
-	crowdednessFactor := config.MinWallsPerKiloPixel * math.Pow(config.ChunkSize/1000.0, 2)
-	numWalls := rand.Intn(int(crowdednessFactor)+1) + int(crowdednessFactor)
+	kiloPixelsPerChunk := math.Pow(config.ChunkSize/1000.0, 2)
+	minNumWalls := config.MinWallsPerKiloPixel * kiloPixelsPerChunk
+	maxNumWalls := config.MaxWallsPerKiloPixel * kiloPixelsPerChunk
+	numWalls := rand.Intn(int(maxNumWalls-minNumWalls+1)) + int(minNumWalls)
 
 	chunkCenter := &types.Vector2{
 		X: chunkStartX + config.ChunkSize/2,
@@ -278,8 +280,10 @@ func (e *Engine) generateChunk(chunkX, chunkY int, playerPos *types.Vector2) {
 			e.state.wallsByChunk[chunkKey][wallID] = wall
 
 			// Create enemy for this wall
-			enemy := e.createEnemyForWall(wall)
-			e.state.enemiesByChunk[chunkKey][enemy.ID] = enemy
+			if rand.Float64() > config.EnemySpawnChancePerWall {
+				enemy := e.createEnemyForWall(wall)
+				e.state.enemiesByChunk[chunkKey][enemy.ID] = enemy
+			}
 		}
 	}
 }
