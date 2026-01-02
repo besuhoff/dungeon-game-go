@@ -1587,24 +1587,10 @@ func (e *Engine) spawnBonus(enemy *types.Enemy) {
 	if enemy.Type == types.EnemyTypeTower {
 		bonusType = types.BonusTypeChest
 
-		weaponItems := []types.InventoryItemID{
-			types.InventoryItemShotgun,
-			types.InventoryItemRocketLauncher,
-			types.InventoryItemRailgun,
-		}
 		ammoItems := []types.InventoryItemID{
 			types.InventoryItemShotgunAmmo,
 			types.InventoryItemRocket,
 			types.InventoryItemRailgunAmmo,
-		}
-
-		for _, itemID := range weaponItems {
-			if rand.Float64() < config.TowerWeaponProbability {
-				inventory = append(inventory, types.InventoryItem{
-					Type:     itemID,
-					Quantity: int32(config.TowerWeaponMinQuantity + rand.Intn(config.TowerWeaponMaxQuantity-config.TowerWeaponMinQuantity+1)),
-				})
-			}
 		}
 
 		for _, itemID := range ammoItems {

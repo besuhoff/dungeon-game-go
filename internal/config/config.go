@@ -225,10 +225,6 @@ const (
 	TowerAmmoMinQuantity = 5
 	TowerAmmoMaxQuantity = 20
 
-	TowerWeaponProbability = 0.5
-	TowerWeaponMinQuantity = 1
-	TowerWeaponMaxQuantity = 1
-
 	TowerAidKitProbability = 0.3
 	TowerAidKitMinQuantity = 1
 	TowerAidKitMaxQuantity = 3
