@@ -16,7 +16,6 @@ if ! command -v protoc-gen-go &> /dev/null; then
     go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 fi
 
-mkdir -p internal/protocol/generated
 npm ci
 
 # Generate Go code from proto files

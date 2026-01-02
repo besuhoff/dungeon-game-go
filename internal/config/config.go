@@ -9,7 +9,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const GameVersion = "1.2.0"
+const GameVersion = "1.3.0"
 
 type Config struct {
 	MongoDBURL               string
@@ -143,9 +143,10 @@ const (
 	RailgunRange      = SightRadius
 
 	// Enemy constants
-	EnemyDeathTraceTime     = 5.0  // Seconds
-	EnemyLieutenantChance   = 0.15 // 15% chance to spawn lieutenant instead of soldier
-	EnemySpawnChancePerWall = 0.7  // 70% chance to spawn enemy for each wall
+	EnemyDeathTraceTime      = 5.0  // Seconds
+	EnemyTowerDeathTraceTime = 30.0 // Seconds
+	EnemyLieutenantChance    = 0.15 // 15% chance to spawn lieutenant instead of soldier
+	EnemySpawnChancePerWall  = 0.8  // 80% chance to spawn enemy for each wall
 
 	// Enemy soldier constants
 	EnemySoldierSpeed         = 120.0 // Units per second
@@ -176,7 +177,7 @@ const (
 	EnemyTowerBulletSpeed = 300.0 // Units per second
 
 	EnemyTowerGunEndOffsetX = 0.0
-	EnemyTowerGunEndOffsetY = 70.0
+	EnemyTowerGunEndOffsetY = 80.0
 
 	// Bonus constants
 	AidKitSize        = 32.0
@@ -218,4 +219,21 @@ const (
 	ShopGogglesProbability = 0.3
 	ShopGogglesMinQuantity = 3
 	ShopGogglesMaxQuantity = 6
+
+	// Tower constants
+	TowerAmmoProbability = 0.5
+	TowerAmmoMinQuantity = 5
+	TowerAmmoMaxQuantity = 20
+
+	TowerWeaponProbability = 0.5
+	TowerWeaponMinQuantity = 1
+	TowerWeaponMaxQuantity = 1
+
+	TowerAidKitProbability = 0.3
+	TowerAidKitMinQuantity = 1
+	TowerAidKitMaxQuantity = 3
+
+	TowerGogglesProbability = 0.2
+	TowerGogglesMinQuantity = 1
+	TowerGogglesMaxQuantity = 2
 )

@@ -79,8 +79,8 @@ func (e *Enemy) Shoot() *Bullet {
 			X: -math.Sin(rotationRad) * bulletSpeed,
 			Y: math.Cos(rotationRad) * bulletSpeed,
 		},
-		OwnerID: e.ID,
-		IsEnemy: true,
+		OwnerID:   e.ID,
+		IsEnemy:   true,
 		EnemyType: e.Type,
 
 		SpawnTime: time.Now(),
@@ -98,7 +98,7 @@ func (e *Enemy) IsVisibleToPlayer(player *Player) bool {
 
 	detectionPoint, detectionDistance := player.DetectionParams()
 	distance := e.DistanceToPoint(detectionPoint)
-	return distance <= detectionDistance+e.Size()
+	return distance <= detectionDistance+e.Size()/2
 }
 
 func (e *Enemy) Clone() *Enemy {

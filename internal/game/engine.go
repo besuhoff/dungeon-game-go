@@ -219,6 +219,24 @@ func (e *Engine) generateChunk(chunkX, chunkY int, playerPos *types.Vector2) {
 
 	e.state.shopsByChunk[chunkKey][shop.ID] = shop
 
+	// Create enemy tower
+	towerRadius := config.EnemyTowerSize / 2
+	towerPosition := &types.Vector2{
+		X: chunkStartX + towerRadius + rand.Float64()*(config.ChunkSize-towerRadius*2),
+		Y: chunkStartY + towerRadius + rand.Float64()*(config.ChunkSize-towerRadius*2),
+	}
+	towerID := uuid.New().String()
+	e.state.enemiesByChunk[chunkKey][towerID] = &types.Enemy{
+		ScreenObject: types.ScreenObject{
+			ID:       towerID,
+			Position: towerPosition,
+		},
+		Lives:      float32(config.EnemyTowerLives),
+		Type:       types.EnemyTypeTower,
+		ShootDelay: config.EnemyTowerShootDelay,
+		IsAlive:    true,
+	}
+
 	for numWalls > 0 {
 		// Random orientation
 		orientation := "vertical"
@@ -258,6 +276,17 @@ func (e *Engine) generateChunk(chunkX, chunkY int, playerPos *types.Vector2) {
 		wallTopLeft := wall.GetTopLeft()
 		safeWallPadding := config.EnemySoldierSize
 
+		if utils.CheckRectCollision(
+			towerPosition.X-towerRadius-safeWallPadding,
+			towerPosition.Y-towerRadius-safeWallPadding,
+			towerRadius*2+2*safeWallPadding,
+			towerRadius*2+2*safeWallPadding,
+			wallTopLeft.X, wallTopLeft.Y,
+			width, height,
+		) {
+			continue
+		}
+
 		// Check overlap with existing walls
 		overlaps := false
 		for _, wall := range e.state.wallsByChunk[chunkKey] {
@@ -275,26 +304,19 @@ func (e *Engine) generateChunk(chunkX, chunkY int, playerPos *types.Vector2) {
 			}
 		}
 
-		if !overlaps {
-			numWalls--
-			e.state.wallsByChunk[chunkKey][wallID] = wall
+		if overlaps {
+			continue
+		}
 
-			// Create enemy for this wall
-			if rand.Float64() > config.EnemySpawnChancePerWall {
-				enemy := e.createEnemyForWall(wall)
-				e.state.enemiesByChunk[chunkKey][enemy.ID] = enemy
-			}
+		numWalls--
+		e.state.wallsByChunk[chunkKey][wallID] = wall
+
+		// Create enemy for this wall
+		if rand.Float64() < config.EnemySpawnChancePerWall {
+			enemy := e.createEnemyForWall(wall)
+			e.state.enemiesByChunk[chunkKey][enemy.ID] = enemy
 		}
 	}
-}
-
-// checkWallOverlap checks if two walls overlap
-func (e *Engine) checkWallOverlap(x, y, w, h float64, wall *types.Wall) bool {
-	padding := 40.0
-	return x-w/2 < wall.Position.X+wall.Width/2+padding &&
-		x+w/2+padding > wall.Position.X-wall.Width/2 &&
-		y-h/2 < wall.Position.Y+wall.Height/2+padding &&
-		y+h/2+padding > wall.Position.Y-wall.Height/2
 }
 
 func (e *Engine) pickSpawnPoint(playerPos *types.Vector2) *types.Vector2 {
@@ -499,11 +521,7 @@ func (e *Engine) updatePreviousState(playerID string) {
 
 	playerChunkX, playerChunkY := utils.ChunkXYFromPosition(player.Position.X, player.Position.Y)
 
-	if e.prevState[playerID] == nil {
-		e.prevState[playerID] = &EngineGameState{}
-	}
-
-	prevState := e.prevState[playerID]
+	prevState := &EngineGameState{}
 
 	playersAbleToSee := make(map[string]*types.Player)
 	playersAbleToSee[playerID] = player
@@ -543,10 +561,10 @@ func (e *Engine) updatePreviousState(playerID string) {
 			prevState.enemiesByChunk[chunkKey] = make(map[string]*types.Enemy)
 			prevState.shopsByChunk[chunkKey] = make(map[string]*types.Shop)
 
-			for _, w := range e.state.wallsByChunk[chunkKey] {
+			for _, wall := range e.state.wallsByChunk[chunkKey] {
 				// Walls are always visible to players so no need to check nearby players
-				if w.IsVisibleToPlayer(player) {
-					prevState.wallsByChunk[chunkKey][w.ID] = w.Clone()
+				if wall.IsVisibleToPlayer(player) {
+					prevState.wallsByChunk[chunkKey][wall.ID] = wall.Clone()
 				}
 			}
 
@@ -590,6 +608,8 @@ func (e *Engine) updatePreviousState(playerID string) {
 			}
 		}
 	}
+
+	e.prevState[playerID] = prevState
 }
 
 // Update runs one game tick
@@ -882,7 +902,7 @@ func (e *Engine) Update() {
 				if dist < config.SightRadius {
 					hasPlayersInSight = true
 				}
-				if dist < detectionDistance {
+				if dist < detectionDistance+enemy.Size()/2 {
 					// Add line-of-sight check with walls
 					lineClear := true
 
@@ -1319,7 +1339,9 @@ func (e *Engine) applyBulletDamage(bullet *types.Bullet, newPosition *types.Vect
 					if enemy.Lives <= 0 {
 						enemy.IsAlive = false
 						enemy.DeadTimer = config.EnemyDeathTraceTime
-
+						if enemy.Type == types.EnemyTypeTower {
+							enemy.DeadTimer = config.EnemyTowerDeathTraceTime
+						}
 						// Award money to shooter
 						if !bullet.IsEnemy {
 							if shooter, exists := e.state.players[bullet.OwnerID]; exists {
@@ -1330,7 +1352,7 @@ func (e *Engine) applyBulletDamage(bullet *types.Bullet, newPosition *types.Vect
 							}
 						}
 
-						e.spawnBonus(enemy.Position)
+						e.spawnBonus(enemy)
 					}
 					hitFound = true
 					hitObjectIDs[enemy.ID] = true
@@ -1504,6 +1526,9 @@ func (e *Engine) applyRocketExplosionDamage(explosionCenter *types.Vector2, hitO
 				if enemy.Lives <= 0 {
 					enemy.IsAlive = false
 					enemy.DeadTimer = config.EnemyDeathTraceTime
+					if enemy.Type == types.EnemyTypeTower {
+						enemy.DeadTimer = config.EnemyTowerDeathTraceTime
+					}
 
 					if shooterExists {
 						reward := enemy.Reward()
@@ -1513,7 +1538,7 @@ func (e *Engine) applyRocketExplosionDamage(explosionCenter *types.Vector2, hitO
 					}
 
 					// Maybe spawn bonus
-					e.spawnBonus(enemy.Position)
+					e.spawnBonus(enemy)
 				}
 			}
 		}
@@ -1549,28 +1574,79 @@ func (e *Engine) applyRocketExplosionDamage(explosionCenter *types.Vector2, hitO
 }
 
 // spawnBonus creates a bonus at the given position
-func (e *Engine) spawnBonus(pos *types.Vector2) {
+func (e *Engine) spawnBonus(enemy *types.Enemy) {
 	// Maybe spawn bonus
-	if rand.Float64() >= config.EnemySoldierDropChance {
+	if (enemy.Type == types.EnemyTypeSoldier || enemy.Type == types.EnemyTypeLieutenant) &&
+		rand.Float64() >= config.EnemySoldierDropChance {
 		return
 	}
 
-	bonusType := types.BonusTypeAidKit
-	inventoryItemID := types.InventoryItemAidKit
-	if rand.Float64() < config.EnemySoldierDropChanceGoggles {
-		bonusType = types.BonusTypeGoggles
-		inventoryItemID = types.InventoryItemGoggles
+	var bonusType string
+	inventory := []types.InventoryItem{}
+
+	if enemy.Type == types.EnemyTypeTower {
+		bonusType = types.BonusTypeChest
+
+		weaponItems := []types.InventoryItemID{
+			types.InventoryItemShotgun,
+			types.InventoryItemRocketLauncher,
+			types.InventoryItemRailgun,
+		}
+		ammoItems := []types.InventoryItemID{
+			types.InventoryItemShotgunAmmo,
+			types.InventoryItemRocket,
+			types.InventoryItemRailgunAmmo,
+		}
+
+		for _, itemID := range weaponItems {
+			if rand.Float64() < config.TowerWeaponProbability {
+				inventory = append(inventory, types.InventoryItem{
+					Type:     itemID,
+					Quantity: int32(config.TowerWeaponMinQuantity + rand.Intn(config.TowerWeaponMaxQuantity-config.TowerWeaponMinQuantity+1)),
+				})
+			}
+		}
+
+		for _, itemID := range ammoItems {
+			if rand.Float64() >= config.TowerAmmoProbability {
+				inventory = append(inventory, types.InventoryItem{
+					Type:     itemID,
+					Quantity: int32(config.TowerAmmoMinQuantity + rand.Intn(config.TowerAmmoMaxQuantity-config.TowerAmmoMinQuantity+1)),
+				})
+			}
+		}
+
+		if rand.Float64() < config.TowerAidKitProbability {
+			inventory = append(inventory, types.InventoryItem{
+				Type:     types.InventoryItemAidKit,
+				Quantity: int32(config.TowerAidKitMinQuantity + rand.Intn(config.TowerAidKitMaxQuantity-config.TowerAidKitMinQuantity+1)),
+			})
+		}
+
+		if rand.Float64() < config.TowerGogglesProbability {
+			inventory = append(inventory, types.InventoryItem{
+				Type:     types.InventoryItemGoggles,
+				Quantity: int32(config.TowerGogglesMinQuantity + rand.Intn(config.TowerGogglesMaxQuantity-config.TowerGogglesMinQuantity+1)),
+			})
+		}
+
+	} else {
+		bonusType = types.BonusTypeAidKit
+		inventoryItemID := types.InventoryItemAidKit
+		if rand.Float64() < config.EnemySoldierDropChanceGoggles {
+			bonusType = types.BonusTypeGoggles
+			inventoryItemID = types.InventoryItemGoggles
+		}
+		inventory = []types.InventoryItem{{Type: inventoryItemID, Quantity: 1}}
 	}
 
 	bonus := &types.Bonus{
 		ScreenObject: types.ScreenObject{
 			ID:       uuid.New().String(),
-			Position: pos,
+			Position: &types.Vector2{X: enemy.Position.X, Y: enemy.Position.Y},
 		},
-		Type: bonusType,
-		Inventory: []types.InventoryItem{
-			{Type: inventoryItemID, Quantity: 1},
-		},
+		Type:      bonusType,
+		Inventory: inventory,
 	}
 
 	e.state.bonuses[bonus.ID] = bonus
