@@ -3,6 +3,7 @@ package types
 import (
 	"maps"
 	"math"
+	"math/rand"
 	"time"
 
 	"github.com/besuhoff/dungeon-game-go/internal/config"
@@ -289,12 +290,30 @@ func (p *Player) Die() {
 }
 
 func (p *Player) DropInventory() *Bonus {
-	hasSomethingToDrop := p.Money > 0
-	if !hasSomethingToDrop {
-		for _, item := range p.Inventory {
-			if item.Type != InventoryItemBlaster && item.Quantity > 0 {
+	inventory := []InventoryItem{}
+	hasSomethingToDrop := false
+
+	if p.Money > 0 {
+		money := int32(math.Round(rand.Float64()*float64(p.Money)*2.0/3.0 + float64(p.Money)/3.0))
+
+		if money > 0 {
+			hasSomethingToDrop = true
+			inventory = append(inventory, InventoryItem{
+				Type:     InventoryItemMoney,
+				Quantity: money,
+			})
+		}
+	}
+
+	for _, item := range p.Inventory {
+		if item.Type != InventoryItemBlaster && item.Quantity > 0 {
+			newQuantity := int32(math.Round(rand.Float64()*float64(item.Quantity)*(2.0/3.0) + float64(item.Quantity)/3.0))
+			if newQuantity > 0 {
 				hasSomethingToDrop = true
-				break
+				inventory = append(inventory, InventoryItem{
+					Type:     item.Type,
+					Quantity: newQuantity,
+				})
 			}
 		}
 	}
@@ -309,23 +328,9 @@ func (p *Player) DropInventory() *Bonus {
 			Position: &Vector2{X: p.Position.X, Y: p.Position.Y},
 		},
 		Type:      BonusTypeChest,
-		Inventory: make([]InventoryItem, len(p.Inventory)),
+		Inventory: inventory,
 		DroppedBy: p.ID,
 		DroppedAt: time.Now(),
-	}
-
-	for i, item := range p.Inventory {
-		if item.Type == InventoryItemBlaster {
-			continue
-		}
-		bonus.Inventory[i] = item
-	}
-
-	if p.Money > 0 {
-		bonus.Inventory = append(bonus.Inventory, InventoryItem{
-			Type:     InventoryItemMoney,
-			Quantity: int32(p.Money),
-		})
 	}
 
 	p.Money = 0
