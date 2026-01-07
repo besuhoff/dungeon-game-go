@@ -1775,7 +1775,7 @@ func (e *Engine) GetGameStateDeltaForPlayer(playerID string) *protocol.GameState
 		}
 
 		bulletCopy := protocol.ToProtoBullet(bullet)
-		if isBulletVisible && bullet.IsActive {
+		if isBulletVisible {
 			if !prevExists {
 				delta.AddedBullets[id] = bulletCopy
 				continue

@@ -329,5 +329,7 @@ func IsGameStateDeltaEmpty(delta *GameStateDeltaMessage) bool {
 		len(delta.AddedWalls) == 0 && len(delta.RemovedWalls) == 0 &&
 		len(delta.AddedEnemies) == 0 && len(delta.UpdatedEnemies) == 0 && len(delta.RemovedEnemies) == 0 &&
 		len(delta.AddedBonuses) == 0 && len(delta.UpdatedBonuses) == 0 && len(delta.RemovedBonuses) == 0 &&
-		len(delta.AddedShops) == 0 && len(delta.UpdatedShops) == 0 && len(delta.RemovedShops) == 0
+		len(delta.AddedShops) == 0 && len(delta.UpdatedShops) == 0 && len(delta.RemovedShops) == 0 &&
+		len(delta.AddedPlayersShops) == 0 && len(delta.RemovedPlayersShops) == 0 &&
+		len(delta.UpdatedOtherPlayerPositions) == 0 && len(delta.RemovedOtherPlayerPositions) == 0
 }
