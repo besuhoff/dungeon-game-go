@@ -88,10 +88,19 @@ func (gs *GameServer) Run() {
 			gs.mu.RLock()
 			for _, session := range gs.sessions {
 				session.Engine.Update()
-				if (session.lastSaveTime.IsZero() || time.Since(session.lastSaveTime) > config.SessionSaveInterval) && session.PlayerCount > 0 {
-					gs.mu.RUnlock()
-					gs.saveSessionToDatabase(session)
-					gs.mu.RLock()
+
+				// Check if session needs saving (with mutex protection)
+				session.mu.Lock()
+				needsSave := (session.lastSaveTime.IsZero() || time.Since(session.lastSaveTime) > config.SessionSaveInterval) && session.PlayerCount > 0
+				if needsSave {
+					// Update lastSaveTime immediately to prevent duplicate saves
+					session.lastSaveTime = time.Now()
+				}
+				session.mu.Unlock()
+
+				if needsSave {
+					// Save asynchronously to avoid blocking the game loop
+					go gs.saveSessionToDatabase(session)
 				}
 
 				// Check for player deaths and update leaderboard
@@ -270,7 +279,6 @@ func (gs *GameServer) saveSessionToDatabase(session *Session) {
 		// Save engine state to session
 		session.Engine.SaveToSession(dbSession)
 		sessionRepo.Update(ctx, dbSession)
-		session.lastSaveTime = time.Now()
 
 		log.Printf("Session %s saved to database", session.ID)
 	}
