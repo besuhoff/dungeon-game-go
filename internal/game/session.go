@@ -86,8 +86,15 @@ func (e *Engine) LoadFromSession(session *db.GameSession) {
 			} else if lives, ok := obj.Properties["lives"].(float32); ok {
 				enemy.Lives = lives
 			}
-			if direction, ok := obj.Properties["direction"].(float64); ok {
+			if direction, ok := obj.Properties["direction"].(int8); ok {
 				enemy.Direction = direction
+			} else if direction, ok := obj.Properties["direction"].(int32); ok {
+				enemy.Direction = int8(direction)
+			} else if direction, ok := obj.Properties["direction"].(float64); ok {
+				enemy.Direction = int8(direction)
+			}
+			if enemy.Type != types.EnemyTypeTower && enemy.Direction == 0 {
+				enemy.Direction = 1
 			}
 			chunkX, chunkY := utils.ChunkXYFromPosition(enemy.Position.X, enemy.Position.Y)
 			chunkKey := fmt.Sprintf("%d,%d", chunkX, chunkY)

@@ -972,14 +972,14 @@ func (e *Engine) Update() {
 				if wallExists {
 					var dx, dy float64
 					if wall.Orientation == "vertical" {
-						dy = config.EnemySoldierSpeed * enemy.Direction * deltaTime
+						dy = config.EnemySoldierSpeed * float64(enemy.Direction) * deltaTime
 						if !canSee {
-							enemy.Rotation = 90 - 90*enemy.Direction
+							enemy.Rotation = 90 - 90*float64(enemy.Direction)
 						}
 					} else {
-						dx = config.EnemySoldierSpeed * enemy.Direction * deltaTime
+						dx = config.EnemySoldierSpeed * float64(enemy.Direction) * deltaTime
 						if !canSee {
-							enemy.Rotation = -90 * enemy.Direction
+							enemy.Rotation = -90 * float64(enemy.Direction)
 						}
 					}
 

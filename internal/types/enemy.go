@@ -15,7 +15,7 @@ type Enemy struct {
 	Rotation   float64   `json:"rotation"` // rotation in degrees
 	Lives      float32   `json:"lives"`
 	WallID     string    `json:"wallId"`
-	Direction  float64   `json:"-"` // patrol direction: 1 or -1
+	Direction  int8      `json:"-"` // patrol direction: 1 or -1
 	ShootDelay float64   `json:"-"`
 	LastShot   time.Time `json:"-"`
 	IsAlive    bool      `json:"isAlive"`

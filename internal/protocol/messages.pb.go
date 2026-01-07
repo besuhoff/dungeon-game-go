@@ -358,7 +358,6 @@ type Bullet struct {
 	EnemyType     string                 `protobuf:"bytes,11,opt,name=enemy_type,json=enemyType,proto3" json:"enemy_type,omitempty"`
 	IsActive      bool                   `protobuf:"varint,7,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
 	DeletedAt     int64                  `protobuf:"varint,10,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
-	InactiveMs    int64                  `protobuf:"varint,9,opt,name=inactive_ms,json=inactiveMs,proto3" json:"inactive_ms,omitempty"`
 	WeaponType    string                 `protobuf:"bytes,8,opt,name=weapon_type,json=weaponType,proto3" json:"weapon_type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -453,13 +452,6 @@ func (x *Bullet) GetIsActive() bool {
 func (x *Bullet) GetDeletedAt() int64 {
 	if x != nil {
 		return x.DeletedAt
-	}
-	return 0
-}
-
-func (x *Bullet) GetInactiveMs() int64 {
-	if x != nil {
-		return x.InactiveMs
 	}
 	return 0
 }
@@ -2096,7 +2088,7 @@ const file_messages_proto_rawDesc = "" +
 	"\x11selected_gun_type\x18\x0f \x01(\tR\x0fselectedGunType\x1aJ\n" +
 	"\x1cBulletsLeftByWeaponTypeEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\xe1\x02\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\xc0\x02\n" +
 	"\x06Bullet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12-\n" +
 	"\bposition\x18\x02 \x01(\v2\x11.protocol.Vector2R\bposition\x12-\n" +
@@ -2110,8 +2102,6 @@ const file_messages_proto_rawDesc = "" +
 	"\n" +
 	"deleted_at\x18\n" +
 	" \x01(\x03R\tdeletedAt\x12\x1f\n" +
-	"\vinactive_ms\x18\t \x01(\x03R\n" +
-	"inactiveMs\x12\x1f\n" +
 	"\vweapon_type\x18\b \x01(\tR\n" +
 	"weaponType\"\x95\x01\n" +
 	"\x04Wall\x12\x0e\n" +

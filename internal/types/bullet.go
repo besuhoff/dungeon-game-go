@@ -36,8 +36,7 @@ func BulletsEqual(a, b *Bullet) bool {
 func (a *Bullet) Equal(b *Bullet) bool {
 	return a.Position.X == b.Position.X &&
 		a.Position.Y == b.Position.Y &&
-		a.IsActive == b.IsActive &&
-		a.DeletedAt.Equal(b.DeletedAt)
+		a.IsActive == b.IsActive
 }
 
 func (b *Bullet) IsVisibleToPlayer(player *Player) bool {
