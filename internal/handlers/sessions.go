@@ -198,14 +198,15 @@ func (h *SessionHandler) HandleJoinSession(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	playerID := user.ID.Hex()
-	if len(session.Players) >= session.MaxPlayers {
-		_, ok := session.Players[playerID]
-		// Allow re-joining if already in session
-		if !ok {
-			http.Error(w, "Session is full", http.StatusBadRequest)
-			return
+	connectedPlayersCount := 0
+	for _, p := range session.Players {
+		if p.IsConnected {
+			connectedPlayersCount++
 		}
+	} 
+	if connectedPlayersCount >= session.MaxPlayers {
+		http.Error(w, "Session is full", http.StatusBadRequest)
+		return
 	}
 
 	if session.IsPrivate && session.Password != body.Password {
