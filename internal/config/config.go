@@ -179,6 +179,8 @@ const (
 	EnemyTowerGunEndOffsetX = 0.0
 	EnemyTowerGunEndOffsetY = 80.0
 
+	EnemyTowerRotationSpeed = 90.0 // Degrees per second
+
 	// Bonus constants
 	AidKitSize        = 32.0
 	AidKitHealAmount  = 1.0

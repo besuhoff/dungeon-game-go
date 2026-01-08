@@ -948,10 +948,41 @@ func (e *Engine) Update() {
 				// Aim at player
 				dx := closestVisiblePlayer.Position.X - enemy.Position.X
 				dy := closestVisiblePlayer.Position.Y - enemy.Position.Y
-				enemy.Rotation = math.Atan2(-dx, dy) * 180 / math.Pi
+				desiredRotation := math.Atan2(-dx, dy) * 180 / math.Pi
+				if enemy.Type == types.EnemyTypeTower {
+					// Smooth rotation for tower
+					rotationDiff := desiredRotation - enemy.Rotation
+					for rotationDiff < -180 {
+						rotationDiff += 360
+					}
+					for rotationDiff > 180 {
+						rotationDiff -= 360
+					}
+
+					maxRotationChange := config.EnemyTowerRotationSpeed * deltaTime
+					if math.Abs(rotationDiff) < maxRotationChange {
+						enemy.Rotation = desiredRotation
+					} else {
+						if rotationDiff > 0 {
+							enemy.Rotation += maxRotationChange
+						} else {
+							enemy.Rotation -= maxRotationChange
+						}
+
+						// Normalize rotation to 0-360 range
+						for enemy.Rotation < 0 {
+							enemy.Rotation += 360
+						}
+						for enemy.Rotation >= 360 {
+							enemy.Rotation -= 360
+						}
+					}
+				} else {
+					enemy.Rotation = desiredRotation
+				}
 
 				// Shoot at player
-				if enemy.ShootDelay <= 0 {
+				if enemy.ShootDelay <= 0 && enemy.Rotation == desiredRotation {
 					bullet := enemy.Shoot()
 					e.state.bullets[bullet.ID] = bullet
 					enemy.ShootDelay = types.EnemyShootDelayByType[enemy.Type]
@@ -968,7 +999,24 @@ func (e *Engine) Update() {
 
 			if shouldPatrol {
 				// Patrol logic
-				wall, wallExists := e.state.wallsByChunk[enemyChunkKey][enemy.WallID]
+				var wall *types.Wall
+				var wallExists bool
+				enemyChunkX, enemyChunkY := utils.ChunkXYFromPosition(enemy.Position.X, enemy.Position.Y)
+				for neighborChunkX := enemyChunkX - 1; neighborChunkX <= enemyChunkX+1; neighborChunkX++ {
+					for neighborChunkY := enemyChunkY - 1; neighborChunkY <= enemyChunkY+1; neighborChunkY++ {
+						neighborChunkKey := fmt.Sprintf("%d,%d", neighborChunkX, neighborChunkY)
+						if !e.chunkHash[neighborChunkKey] {
+							continue
+						}
+						wall, wallExists = e.state.wallsByChunk[neighborChunkKey][enemy.WallID]
+						if wallExists {
+							break
+						}
+					}
+					if wallExists {
+						break
+					}
+				}
 				if wallExists {
 					var dx, dy float64
 					if wall.Orientation == "vertical" {
